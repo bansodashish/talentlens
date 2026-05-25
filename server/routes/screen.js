@@ -1,0 +1,288 @@
+/**
+ * AI Resume Screener Routes — /api/screen/*
+ *
+ * POST /api/screen/resume — multipart upload of one or more CVs + a JD.
+ *   Each file is scored by Claude (claude-sonnet-4-20250514) and persisted
+ *   to the `screenings` table. Results are returned ranked by overallScore.
+ *
+ * GET  /api/screen/history       — list past screening batches for this user
+ * GET  /api/screen/batch/:batchId — full details of one batch
+ */
+const express = require('express');
+const router  = express.Router();
+const multer  = require('multer');
+const path    = require('path');
+const fs      = require('fs');
+const crypto  = require('crypto');
+
+const db = require('../db');
+const { authMiddleware } = require('../middleware/auth');
+const { decrypt }        = require('../utils/encryption');
+const { limitScreenings } = require('../middleware/planLimits');
+const { parseCV }        = require('../services/cvParser');
+const { screenResume, MODEL } = require('../services/claudeScreener');
+const { scoreCandidate, detectRole, ALL_ROLES } = require('../services/scorer');
+
+// Quick regex-based extraction for local mode (Claude does this natively).
+function extractContact(text) {
+  const emailMatch = text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
+  const phoneMatch = text.match(/(?:\+?\d[\d\s().-]{7,}\d)/);
+  const lines = text.split(/\n/).map(l => l.trim()).filter(Boolean);
+  // Best-effort name = first non-email, non-phone line under 60 chars
+  const name = lines.find(l =>
+    l.length < 60 && !/@|\d{4,}|http/i.test(l) && /[A-Za-z]/.test(l)
+  ) || '';
+  return {
+    email: emailMatch ? emailMatch[0] : '',
+    phone: phoneMatch ? phoneMatch[0].trim() : '',
+    name,
+  };
+}
+
+function extractYears(text) {
+  const m = text.match(/(\d{1,2})\+?\s*years?(?:\s+of)?\s+experience/i);
+  return m ? Number(m[1]) : 0;
+}
+
+// Convert local-scorer output into the same shape the UI / DB expects.
+function toScreeningShape(scored, contact, role, text) {
+  const recMap = { 5: 'Strong Hire', 4: 'Strong Hire', 3: 'Consider', 2: 'Reject', 1: 'Reject' };
+  const overall = scored.score_pct;
+  const skills  = Math.round((scored.details.skills || 0) * 100);
+  const exp     = Math.round((scored.details.experience || 0) * 100);
+  const title   = Math.round((scored.details.title || 0) * 100);
+
+  // Pull a handful of "matched" keywords as keySkills
+  const keySkills = (scored.strengths || [])
+    .map(s => s.replace(/^Matched:\s*/i, ''))
+    .slice(0, 12);
+
+  const roleTitle = role && ALL_ROLES[role] ? ALL_ROLES[role].title : '';
+  const summary = `Local scan — ${scored.label}. ${scored.recommendation}` +
+    (scored.gaps?.length ? `  Key gaps: ${scored.gaps.slice(0, 3).map(g => g.replace(/^Missing:\s*/i, '')).join(', ')}.` : '');
+
+  return {
+    name: contact.name || '',
+    email: contact.email,
+    phone: contact.phone,
+    currentRole: roleTitle,
+    yearsExperience: extractYears(text),
+    keySkills,
+    supplyChainScore: overall,
+    procurementScore: skills,
+    logisticsScore:   exp,
+    technologyScore:  title,
+    overallScore:     overall,
+    recommendation:   recMap[scored.rating] || 'Consider',
+    summary,
+  };
+}
+
+// Temp upload dir
+const tmpDir = path.resolve(__dirname, '../../db/uploads/tmp');
+if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+
+const upload = multer({
+  dest: tmpDir,
+  limits: { fileSize: 15 * 1024 * 1024, files: 25 },
+  fileFilter: (req, file, cb) => {
+    const ok = ['.pdf', '.txt', '.docx', '.doc'].includes(
+      path.extname(file.originalname).toLowerCase()
+    );
+    cb(ok ? null : new Error('Unsupported file type. Use PDF, TXT, DOC or DOCX.'), ok);
+  },
+});
+
+router.use(authMiddleware);
+
+// ── POST /api/screen/resume ──────────────────────────────────────────────────
+router.post('/resume', limitScreenings, upload.array('files', 25), async (req, res) => {
+  const jobDescription = req.body.job_description || req.body.jobDescription || '';
+  const mode  = (req.body.mode || 'ai').toLowerCase() === 'local' ? 'local' : 'ai';
+  const files = req.files || [];
+
+  if (!jobDescription.trim()) {
+    files.forEach(f => { try { fs.unlinkSync(f.path); } catch (_) {} });
+    return res.status(400).json({ error: 'job_description is required.' });
+  }
+  if (!files.length) {
+    return res.status(400).json({ error: 'At least one resume file is required.' });
+  }
+
+  // ── Resolve API key only for AI mode ──
+  let apiKey = null;
+  if (mode === 'ai') {
+    const userRow = db.prepare('SELECT claude_key_enc FROM users WHERE id = ?').get(req.user.id);
+    apiKey = decrypt(userRow?.claude_key_enc)
+      || process.env.CLAUDE_API_KEY
+      || process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      files.forEach(f => { try { fs.unlinkSync(f.path); } catch (_) {} });
+      return res.status(503).json({
+        error: 'Claude API is not configured.',
+        hint:  'Add CLAUDE_API_KEY to server/.env, save a personal key under Profile → Settings, or use Local Scan.',
+      });
+    }
+  }
+
+  const batchId = crypto.randomBytes(8).toString('hex');
+  const results = [];
+
+  const insertStmt = db.prepare(`
+    INSERT INTO screenings
+      (batch_id, file_name, candidate_name, email, phone, current_role, years_experience,
+       key_skills, supply_chain_score, procurement_score, logistics_score, technology_score,
+       overall_score, recommendation, summary, job_description, resume_text, raw_json,
+       status, error_message, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  // Process files sequentially so we don't hammer the Anthropic API
+  for (const file of files) {
+    const ext = path.extname(file.originalname).toLowerCase();
+    let plainText = '';
+    let error    = null;
+    let scored   = null;
+
+    try {
+      // Local mode always needs text extraction. AI mode sends PDFs natively.
+      if (mode === 'local' || ext !== '.pdf') {
+        plainText = await parseCV(file.path, file.originalname);
+        if (!plainText || plainText.trim().length < 20) {
+          throw new Error('Could not extract readable text from file.');
+        }
+      }
+
+      let result, raw;
+      if (mode === 'local') {
+        const detectedRole = detectRole(plainText);
+        const local = scoreCandidate(plainText, jobDescription, detectedRole);
+        const contact = extractContact(plainText);
+        result = toScreeningShape(local, contact, detectedRole, plainText);
+        raw = { mode: 'local', detectedRole, ...local };
+      } else {
+        const out = await screenResume({
+          apiKey,
+          jobDescription,
+          filePath:  ext === '.pdf' ? file.path : null,
+          plainText: ext === '.pdf' ? null : plainText,
+          fileName:  file.originalname,
+          mimeType:  file.mimetype,
+        });
+        result = out.result;
+        raw    = out.raw;
+      }
+      scored = result;
+
+      const inserted = insertStmt.run(
+        batchId, file.originalname,
+        result.name, result.email, result.phone, result.currentRole, result.yearsExperience,
+        JSON.stringify(result.keySkills),
+        result.supplyChainScore, result.procurementScore, result.logisticsScore, result.technologyScore,
+        result.overallScore, result.recommendation, result.summary,
+        jobDescription, plainText || null, JSON.stringify(raw),
+        'completed', null, req.user.id,
+      );
+
+      results.push({ id: inserted.lastInsertRowid, fileName: file.originalname, ...result });
+    } catch (err) {
+      const raw  = err.response?.data?.error?.message || err.message || 'Unknown Claude error';
+      const code = err.response?.status;
+      if (code === 401 || /invalid.*api.?key|authentication/i.test(raw)) {
+        error = 'Invalid Claude API key. Get one at https://console.anthropic.com/settings/keys and save it in Profile → API Keys.';
+      } else if (code === 429 || /rate.?limit/i.test(raw)) {
+        error = 'Claude rate-limit reached — please retry in a minute.';
+      } else if (code === 402 || /credit|quota|insufficient/i.test(raw)) {
+        error = 'Your Anthropic account is out of credits. Top up at https://console.anthropic.com/settings/billing.';
+      } else {
+        error = raw;
+      }
+      console.error(`[screen] ${file.originalname} failed:`, error);
+      const inserted = insertStmt.run(
+        batchId, file.originalname,
+        '', '', '', '', 0, '[]', 0, 0, 0, 0, 0,
+        'Reject', `Screening failed: ${error}`,
+        jobDescription, plainText || null, null,
+        'failed', error, req.user.id,
+      );
+      results.push({
+        id: inserted.lastInsertRowid,
+        fileName: file.originalname,
+        error,
+        status: 'failed',
+        overallScore: 0,
+        recommendation: 'Reject',
+      });
+    } finally {
+      try { fs.unlinkSync(file.path); } catch (_) {}
+    }
+  }
+
+  results.sort((a, b) => (b.overallScore || 0) - (a.overallScore || 0));
+
+  db.prepare(`
+    INSERT INTO activities (type, description, entity_type, entity_id, user_id)
+    VALUES ('resume_screened', ?, 'screening_batch', NULL, ?)
+  `).run(`Screened ${results.length} resume(s) (${mode === 'local' ? 'local scan' : 'Claude'})`, req.user.id);
+
+  res.json({ batchId, mode, model: mode === 'ai' ? MODEL : 'local-scorer', count: results.length, results });
+});
+
+// ── GET /api/screen/history ──────────────────────────────────────────────────
+router.get('/history', (req, res) => {
+  const rows = db.prepare(`
+    SELECT batch_id,
+           COUNT(*) as total,
+           SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) as completed,
+           SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) as failed,
+           MAX(overall_score) as top_score,
+           MAX(created_at) as created_at,
+           MAX(job_description) as job_description
+    FROM screenings
+    WHERE created_by = ?
+    GROUP BY batch_id
+    ORDER BY created_at DESC
+    LIMIT 50
+  `).all(req.user.id);
+  res.json({ batches: rows });
+});
+
+// ── GET /api/screen/batch/:batchId ───────────────────────────────────────────
+router.get('/batch/:batchId', (req, res) => {
+  const rows = db.prepare(`
+    SELECT * FROM screenings
+    WHERE batch_id = ? AND created_by = ?
+    ORDER BY overall_score DESC
+  `).all(req.params.batchId, req.user.id);
+  if (!rows.length) return res.status(404).json({ error: 'Batch not found.' });
+
+  const results = rows.map(r => ({
+    id: r.id,
+    fileName: r.file_name,
+    name: r.candidate_name,
+    email: r.email,
+    phone: r.phone,
+    currentRole: r.current_role,
+    yearsExperience: r.years_experience,
+    keySkills: r.key_skills ? JSON.parse(r.key_skills) : [],
+    supplyChainScore: r.supply_chain_score,
+    procurementScore: r.procurement_score,
+    logisticsScore:   r.logistics_score,
+    technologyScore:  r.technology_score,
+    overallScore:     r.overall_score,
+    recommendation:   r.recommendation,
+    summary:          r.summary,
+    status:           r.status,
+    error:            r.error_message,
+    createdAt:        r.created_at,
+  }));
+
+  res.json({
+    batchId:        req.params.batchId,
+    jobDescription: rows[0].job_description,
+    createdAt:      rows[0].created_at,
+    results,
+  });
+});
+
+module.exports = router;

@@ -1,0 +1,39 @@
+Backend Engineer - Acquire
+Department: Tech - Acquire
+Location: Barcelona
+
+About the opportunity
+You will work in the Grow & Engage domain. This is the heart of the customer experience ranging from the acquisition and signup to our premium membership tiers and the daily engagement of our users. Specifically, within the Acquire team, you will work in teams delivering the newest and most innovative features serving our customers in the best way possible to ensure a seamless entry into the ecosystem.
+
+This is a hybrid role from Barcelona or Berlin.
+
+In this role, you will:
+- Do discovery, design, develop, test, deploy and maintain software in a thriving environment.
+- Manage individual project priorities and deliverables while working in a team that enjoys knowledge sharing sessions.
+- Stay up to date with the latest trends in technology.
+- Propose new findings during Get Stuff Done Days.
+
+What you need to be successful:
+- Experience in developing software using a JVM language and Spring Boot in large-scale production systems.
+- Kotlin experience is a plus.
+- Sound understanding of microservice architecture.
+- Knowledge of both relational and non-relational databases, preferably Postgres.
+- Appreciation of working in a modern cloud architecture, preferably with AWS.
+- Strong bias for action and getting things done.
+- Ongoing appreciation and consideration for security.
+- Motivation to write code which is well-tested and well-documented.
+- Ability to give and receive open, direct, and timely feedback.
+
+What is in it for you:
+- Career growth in a high-impact engineering environment.
+- Benefits across personal development, work-from-home setup, wellness, language learning, and transportation.
+- Premium account access and related subscriptions.
+- Additional annual leave based on tenure.
+- High autonomy and access to cutting-edge technologies.
+- Relocation package and visa support where needed.
+
+Who we are
+Technology and design empower everything we do, and that is how we are building a global digital banking platform that people love to use.
+
+Equal opportunities
+Applications are welcomed from people of all backgrounds, cultures, genders, sexual orientations, abilities, neurodiversities, and ages. The goal is to create an inclusive workspace where everyone feels valued and respected.

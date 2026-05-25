@@ -1,0 +1,24 @@
+QA Automation Engineer
+Department: Quality Engineering
+Location: Remote
+
+About the opportunity
+You will join the quality engineering function and help improve the release confidence of customer-facing products through strong automated testing practices and modern quality engineering workflows.
+
+In this role, you will:
+- Design, implement, and maintain automated test frameworks for web and API platforms.
+- Collaborate closely with backend and frontend engineers to improve testability and release quality.
+- Build reliable regression coverage for critical business flows.
+- Support CI/CD quality gates and improve defect prevention practices.
+
+What you need to be successful:
+- Strong experience with QA automation using Playwright or Selenium.
+- Good API testing experience using Postman or similar tools.
+- Experience with Python or Java for test automation.
+- Familiarity with CI/CD pipelines and test reporting.
+- Strong understanding of functional, regression, and integration testing.
+- Ability to document issues clearly and work closely with engineering teams.
+
+Nice to have:
+- Experience with performance or contract testing.
+- Familiarity with Jira and agile delivery workflows.

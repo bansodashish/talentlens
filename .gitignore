@@ -1,0 +1,22 @@
+node_modules/
+client/node_modules/
+server/node_modules/
+db/talentlens.db
+db/talentlens.db-shm
+db/talentlens.db-wal
+db/uploads/
+
+# Python (job_hunt)
+job_hunt/venv/
+job_hunt/__pycache__/
+**/__pycache__/
+.env
+*.log
+.DS_Store
+client/build/
+
+# Office / local artifacts
+*.docx
+~$*
+*.tmp
+*.swp
