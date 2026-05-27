@@ -13,8 +13,31 @@ const { authMiddleware } = require('../middleware/auth');
 const { decrypt }        = require('../utils/encryption');
 const { limitSearches }  = require('../middleware/planLimits');
 const { runLinkedInSearch, inferMarket } = require('../services/linkedinSearchService');
+const { runApolloSearch } = require('../services/apolloService');
 
 router.use(authMiddleware);
+
+function dedupeCandidates(raw) {
+  const seen = new Set();
+  const candidates = [];
+
+  for (const c of raw) {
+    const key = (
+      c.profileUrl ||
+      c.linkedin_url ||
+      c.email ||
+      c.source_url ||
+      c.apollo_id ||
+      ''
+    ).toLowerCase().replace(/\/+$/, '');
+
+    if (key && seen.has(key)) continue;
+    if (key) seen.add(key);
+    candidates.push(c);
+  }
+
+  return candidates;
+}
 
 // ── POST /api/search/linkedin ────────────────────────────────────────────────
 router.post('/linkedin', limitSearches, async (req, res) => {
@@ -36,8 +59,8 @@ router.post('/linkedin', limitSearches, async (req, res) => {
   // Record the search session
   const session = db.prepare(`
     INSERT INTO searches
-      (job_title, location, market, experience_level, max_results, status, created_by)
-    VALUES (?, ?, ?, ?, ?, 'running', ?)
+      (job_title, location, market, experience_level, max_results, status, source, created_by)
+    VALUES (?, ?, ?, ?, ?, 'running', 'linkedin', ?)
   `).run(
     jobTitle,
     location || null,
@@ -58,15 +81,7 @@ router.post('/linkedin', limitSearches, async (req, res) => {
       maxResults: max,
     });
 
-    // Deduplicate by profileUrl within the result set
-    const seen = new Set();
-    const candidates = [];
-    for (const c of raw) {
-      const key = (c.profileUrl || '').toLowerCase().replace(/\/+$/, '');
-      if (key && seen.has(key)) continue;
-      if (key) seen.add(key);
-      candidates.push(c);
-    }
+    const candidates = dedupeCandidates(raw);
 
     db.prepare(`
       UPDATE searches
@@ -102,6 +117,82 @@ router.post('/linkedin', limitSearches, async (req, res) => {
   }
 });
 
+// ── POST /api/search/apollo ─────────────────────────────────────────────────
+router.post('/apollo', limitSearches, async (req, res) => {
+  const { jobTitle, location, market, experienceLevel, maxResults } = req.body || {};
+
+  if (!jobTitle) return res.status(400).json({ error: 'jobTitle is required.' });
+  const max = Math.min(100, Math.max(1, parseInt(maxResults) || 50));
+
+  const userRow = db.prepare('SELECT apollo_key_enc FROM users WHERE id = ?').get(req.user.id);
+  const apolloKey = decrypt(userRow?.apollo_key_enc) || process.env.APOLLO_API_KEY;
+  if (!apolloKey) {
+    return res.status(503).json({
+      error: 'Apollo is not configured.',
+      hint: 'Set APOLLO_API_KEY in server/.env, or add a personal Apollo key under Profile → Settings.',
+    });
+  }
+
+  const session = db.prepare(`
+    INSERT INTO searches
+      (job_title, location, market, experience_level, max_results, status, source, created_by)
+    VALUES (?, ?, ?, ?, ?, 'running', 'apollo', ?)
+  `).run(
+    jobTitle,
+    location || null,
+    market || null,
+    experienceLevel || null,
+    max,
+    req.user.id,
+  );
+  const searchId = session.lastInsertRowid;
+
+  try {
+    const raw = await runApolloSearch({
+      apolloKey,
+      jobTitle,
+      location,
+      market,
+      experienceLevel,
+      maxResults: max,
+    });
+
+    const candidates = dedupeCandidates(raw);
+
+    db.prepare(`
+      UPDATE searches
+      SET status='completed', results_count=?, results=?
+      WHERE id=?
+    `).run(candidates.length, JSON.stringify(candidates), searchId);
+
+    db.prepare(`
+      INSERT INTO activities (type, description, entity_type, entity_id, user_id)
+      VALUES ('apollo_search', ?, 'search', ?, ?)
+    `).run(`Apollo search "${jobTitle}" → ${candidates.length} profiles`, searchId, req.user.id);
+
+    res.json({ searchId, count: candidates.length, candidates });
+  } catch (err) {
+    console.error('Apollo search failed:', err.response?.data || err.message);
+    const raw = err.response?.data?.error || err.response?.data?.message || err.message || 'Unknown Apollo error';
+    const code = err.response?.status;
+
+    let friendly = raw;
+    let hint;
+    if (code === 401 || code === 403 || /unauthorized|invalid|api key/i.test(raw)) {
+      friendly = 'Invalid Apollo API key.';
+      hint = 'Create or copy your Apollo API key from Apollo settings and save it under Profile → API Keys.';
+    } else if (code === 429 || /rate.?limit/i.test(raw)) {
+      friendly = 'Apollo rate-limit reached. Please retry in a few minutes.';
+    } else if (code === 402 || /credit|payment|quota|insufficient/i.test(raw)) {
+      friendly = 'Apollo credits or plan access are not available for this request.';
+    }
+
+    db.prepare(`UPDATE searches SET status='failed', error_message=? WHERE id=?`)
+      .run(friendly, searchId);
+    res.status(code === 401 || code === 403 ? 401 : code === 429 ? 429 : 500).json({ error: friendly, hint });
+  }
+});
+
 // ── POST /api/search/save ────────────────────────────────────────────────────
 // Persist selected results from a search session into the candidates table.
 // Deduplicates against existing candidates by profileUrl / email.
@@ -113,11 +204,11 @@ router.post('/save', (req, res) => {
 
   const insertStmt = db.prepare(`
     INSERT INTO candidates
-      (name, email, location, market, current_title, current_company,
+      (name, email, phone, location, market, current_title, current_company,
        headline, linkedin_url, source, source_url,
        experience_json, education_json, skills_json,
        search_id, status, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'linkedin_search', ?, ?, ?, ?, ?, 'new', ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?)
   `);
 
   const inserted = [];
@@ -141,13 +232,15 @@ router.post('/save', (req, res) => {
       const r = insertStmt.run(
         c.name || 'Unknown',
         c.email || null,
+        c.phone || null,
         c.location || null,
         market,
         c.current_title   || c.headline || null,
         c.current_company || null,
         c.headline || null,
         url || null,
-        url || null,
+        c.source || (c.apollo_id ? 'apollo' : 'linkedin_search'),
+        c.source_url || url || null,
         c.experience ? JSON.stringify(c.experience) : null,
         c.education  ? JSON.stringify(c.education)  : null,
         c.skills     ? JSON.stringify(c.skills)     : null,
@@ -165,7 +258,7 @@ router.post('/save', (req, res) => {
 router.get('/history', (req, res) => {
   const sessions = db.prepare(`
     SELECT id, job_title, location, market, experience_level,
-           max_results, results_count, status, error_message, created_at
+           max_results, results_count, status, error_message, source, created_at
     FROM searches
     WHERE created_by = ?
     ORDER BY created_at DESC

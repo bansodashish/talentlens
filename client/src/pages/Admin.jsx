@@ -125,6 +125,9 @@ export default function Admin() {
                     <div className={u.has_claude_key ? 'text-green-600' : 'text-slate-300'}>
                       {u.has_claude_key ? '✅ Claude' : '— Claude'}
                     </div>
+                    <div className={u.has_apollo_key ? 'text-green-600' : 'text-slate-300'}>
+                      {u.has_apollo_key ? '✅ Apollo' : '— Apollo'}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-400">
                     {new Date(u.created_at).toLocaleDateString()}

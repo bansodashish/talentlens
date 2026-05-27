@@ -39,6 +39,13 @@ function ConnectionTestResult({ data }) {
 
 const PLATFORMS = [
   {
+    id: 'apollo',
+    label: 'Apollo.io',
+    icon: '🚀',
+    description: 'Search by job title, company & location with contact enrichment',
+    color: 'purple',
+  },
+  {
     id: 'linkedin',
     label: 'LinkedIn',
     icon: '💼',
@@ -86,6 +93,10 @@ export default function CandidateSearch() {
   const [elapsed, setElapsed]       = useState(0);
   const timerRef                    = useRef(null);
 
+  // Apollo-specific
+  const [experienceLevel, setExperienceLevel] = useState('Mid');
+  const [apolloSearchId, setApolloSearchId]   = useState(null);
+
   // Platform status
   const [platformStatus, setPlatformStatus] = useState({});
 
@@ -116,10 +127,19 @@ export default function CandidateSearch() {
     timerRef.current = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000);
 
     try {
-      const res = await api.post('/scraper/search', { query, location, maxItems, platform, appendToSheet: toSheets });
-      const candidates = res.data.candidates || [];
+      let candidates;
+      if (platform === 'apollo') {
+        const res = await api.post('/search/apollo', {
+          jobTitle: query, location, experienceLevel, maxResults: maxItems,
+        });
+        candidates = res.data.candidates || [];
+        setApolloSearchId(res.data.searchId);
+      } else {
+        const res = await api.post('/scraper/search', { query, location, maxItems, platform, appendToSheet: toSheets });
+        candidates = res.data.candidates || [];
+        setSessionId(res.data.sessionId);
+      }
       setResults(candidates);
-      setSessionId(res.data.sessionId);
       setSelected(new Set(candidates.map((_, i) => i)));
       setSearched(true);
       api.get('/scraper/history').then(r => setHistory(r.data.sessions || [])).catch(() => {});
@@ -160,8 +180,13 @@ export default function CandidateSearch() {
     if (toImport.length === 0) return;
     setImporting(true); setImportMsg('');
     try {
-      const res = await api.post('/scraper/import', { candidates: toImport, sessionId });
-      setImportMsg(`✅ Imported ${res.data.imported} candidates${res.data.skipped > 0 ? ` (${res.data.skipped} duplicates skipped)` : ''}.`);
+      if (platform === 'apollo') {
+        const res = await api.post('/search/save', { searchId: apolloSearchId, candidates: toImport });
+        setImportMsg(`✅ Imported ${res.data.inserted} candidates${res.data.skipped > 0 ? ` (${res.data.skipped} duplicates skipped)` : ''}.`);
+      } else {
+        const res = await api.post('/scraper/import', { candidates: toImport, sessionId });
+        setImportMsg(`✅ Imported ${res.data.imported} candidates${res.data.skipped > 0 ? ` (${res.data.skipped} duplicates skipped)` : ''}.`);
+      }
     } catch (err) {
       setImportMsg('❌ Import failed: ' + (err.response?.data?.error || err.message));
     } finally {
@@ -185,7 +210,7 @@ export default function CandidateSearch() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-800">Candidate Search</h1>
-        <p className="text-sm text-slate-500 mt-1">Search LinkedIn, CV-Library and Reed.co.uk for Supply Chain talent.</p>
+        <p className="text-sm text-slate-500 mt-1">Search Apollo.io, LinkedIn, CV-Library and Reed.co.uk for talent.</p>
       </div>
 
       {/* Tabs */}
@@ -274,7 +299,18 @@ export default function CandidateSearch() {
                   </select>
                 </div>
 
-                {process.env.REACT_APP_SHEETS !== 'false' && (
+                {platform === 'apollo' && (
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Experience level</label>
+                    <select className="input text-sm" value={experienceLevel} onChange={e => setExperienceLevel(e.target.value)}>
+                      <option value="Entry">Entry level</option>
+                      <option value="Mid">Mid level</option>
+                      <option value="Senior">Senior / Director+</option>
+                    </select>
+                  </div>
+                )}
+
+                {process.env.REACT_APP_SHEETS !== 'false' && platform !== 'apollo' && (
                   <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
                     <input type="checkbox" checked={toSheets} onChange={e => setToSheets(e.target.checked)} />
                     Also export to Google Sheets
@@ -374,18 +410,20 @@ export default function CandidateSearch() {
                           {c.location && <span>📍 {c.location}</span>}
                           {c.experience_years && <span>⏱ {c.experience_years} yrs</span>}
                           {c.email && <span>✉️ {c.email}</span>}
-                          {c.linkedin_url && (
-                            <a href={c.linkedin_url} target="_blank" rel="noopener noreferrer"
+                          {c.phone && <span>📞 {c.phone}</span>}
+                          {(c.linkedin_url || c.profileUrl) && (
+                            <a href={c.linkedin_url || c.profileUrl} target="_blank" rel="noopener noreferrer"
                               onClick={e => e.stopPropagation()} className="text-blue-500 hover:underline">LinkedIn ↗</a>
                           )}
                         </div>
                         {c.skills && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {c.skills.split(',').slice(0, 5).map(s => (
-                              <span key={s} className="bg-slate-100 text-slate-600 text-xs px-1.5 py-0.5 rounded">{s.trim()}</span>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                            {(Array.isArray(c.skills) ? c.skills : c.skills.split(','))
+                              .filter(Boolean).slice(0, 5).map((s, idx) => (
+                              <span key={idx} className="bg-slate-100 text-slate-600 text-xs px-1.5 py-0.5 rounded">{typeof s === 'string' ? s.trim() : s}</span>
                             ))}
-                            {c.skills.split(',').length > 5 && (
-                              <span className="text-slate-400 text-xs">+{c.skills.split(',').length - 5} more</span>
+                            {(Array.isArray(c.skills) ? c.skills : c.skills.split(',')).filter(Boolean).length > 5 && (
+                              <span className="text-slate-400 text-xs">+{(Array.isArray(c.skills) ? c.skills : c.skills.split(',')).filter(Boolean).length - 5} more</span>
                             )}
                           </div>
                         )}
@@ -451,16 +489,16 @@ export default function CandidateSearch() {
               </div>
             )}
 
-            {/* Initial empty state */}
-            {!searching && !searched && (
-              <div className="space-y-3">
+                {!searching && !searched && (
+                <div className="space-y-3">
                 <div className="card p-12 text-center text-slate-400">
                   <div className="text-5xl mb-3">🔍</div>
                   <p className="font-medium text-slate-600">Search for candidates</p>
                   <p className="text-sm mt-1">Choose a platform and enter keywords to get started.</p>
                 </div>
 
-                {/* Quick connection test */}
+                {/* Quick connection test — Apify only */}
+                {platform !== 'apollo' && (
                 <div className="card p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div>
@@ -474,8 +512,16 @@ export default function CandidateSearch() {
                   </div>
                   {connTest && <ConnectionTestResult data={connTest} />}
                 </div>
-              </div>
-            )}
+                )}
+
+                {platform === 'apollo' && (
+                <div className="card p-4 bg-purple-50 border border-purple-200">
+                  <p className="text-sm font-semibold text-purple-800 mb-1">🚀 Apollo.io Search</p>
+                  <p className="text-xs text-purple-700">Make sure your Apollo API key is saved under <a href="/profile" className="underline">Profile → API Keys</a>. Apollo returns people with business emails and LinkedIn profiles.</p>
+                </div>
+                )}
+                </div>
+                )}
           </div>
         </div>
       ) : (

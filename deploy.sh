@@ -4,7 +4,7 @@
 # Usage: bash deploy.sh
 
 set -e
-APP_DIR="/var/www/talentlens"
+APP_DIR="/var/www/talentlens/talentlens"
 
 echo "📦 Pulling latest code..."
 cd $APP_DIR

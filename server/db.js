@@ -31,6 +31,7 @@ migrate('ALTER TABLE scraper_sessions ADD COLUMN platform TEXT DEFAULT "linkedin
 migrate('ALTER TABLE users ADD COLUMN market TEXT DEFAULT "Both"');
 migrate('ALTER TABLE users ADD COLUMN apify_key_enc TEXT');
 migrate('ALTER TABLE users ADD COLUMN claude_key_enc TEXT');
+migrate('ALTER TABLE users ADD COLUMN apollo_key_enc TEXT');
 
 // Step 7 — SaaS plans + onboarding
 migrate('ALTER TABLE users ADD COLUMN plan TEXT DEFAULT "starter"');
@@ -49,11 +50,14 @@ migrate(`
     status TEXT DEFAULT 'pending',
     error_message TEXT,
     results TEXT,
+    source TEXT DEFAULT 'linkedin',
     created_by INTEGER NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (created_by) REFERENCES users(id)
   )
 `);
+// Add source column to existing searches tables created before this migration
+migrate("ALTER TABLE searches ADD COLUMN source TEXT DEFAULT 'linkedin'");
 migrate('ALTER TABLE candidates ADD COLUMN headline TEXT');
 migrate('ALTER TABLE candidates ADD COLUMN experience_json TEXT');
 migrate('ALTER TABLE candidates ADD COLUMN education_json TEXT');

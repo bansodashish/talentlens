@@ -59,6 +59,8 @@ app.get('/api/health', (req, res) => {
       recruitment: true,
       cvMatching: true,
       candidateScraper: Boolean(process.env.APIFY_TOKEN),
+      linkedinSearch: Boolean(process.env.APIFY_TOKEN),
+      apolloSearch: Boolean(process.env.APOLLO_API_KEY),
       googleSheets: Boolean(process.env.GOOGLE_SHEET_ID),
       openai: Boolean(process.env.OPENAI_API_KEY),
     },
@@ -84,6 +86,7 @@ app.listen(PORT, () => {
 🚀 TalentLens API  →  http://localhost:${PORT}
 📋 Health          →  http://localhost:${PORT}/api/health
 🔍 Scraper         →  /api/scraper/*
+🔍 Search          →  /api/search/* (LinkedIn + Apollo)
 🤖 CV Match        →  /api/cv-match/*
   `);
 });

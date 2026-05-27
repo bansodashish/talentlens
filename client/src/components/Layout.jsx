@@ -11,7 +11,7 @@ const mainNav = [
 ];
 
 const aiNav = [
-  { path: '/candidate-search', label: 'Search' },
+  { path: '/candidate-search', label: 'Candidate Search' },
   { path: '/cv-match',         label: 'Screen' },
   { path: '/history',          label: 'History' },
 ];

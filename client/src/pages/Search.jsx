@@ -14,6 +14,24 @@ const LOCATION_OPTIONS = [
 
 const EXPERIENCE_OPTIONS = ['Entry', 'Mid', 'Senior'];
 const MAX_RESULT_OPTIONS = [50, 100, 200];
+const SOURCE_OPTIONS = [
+  {
+    value: 'linkedin',
+    label: 'LinkedIn / Apify',
+    description: 'Find LinkedIn-style profiles via the configured Apify actor.',
+    endpoint: '/search/linkedin',
+    button: '🔍 Search LinkedIn',
+    loading: 'Searching LinkedIn…',
+  },
+  {
+    value: 'apollo',
+    label: 'Apollo.io',
+    description: 'Search Apollo people data with verified business contact details when available.',
+    endpoint: '/search/apollo',
+    button: '🔍 Search Apollo',
+    loading: 'Searching Apollo…',
+  },
+];
 
 export default function Search() {
   const [form, setForm] = useState({
@@ -22,6 +40,7 @@ export default function Search() {
     customLocation: '',
     experienceLevel: 'Mid',
     maxResults: 50,
+    source: 'apollo',
   });
   const [loading, setLoading]   = useState(false);
   const [results, setResults]   = useState([]);
@@ -37,6 +56,7 @@ export default function Search() {
 
   const selectedLocation = form.location === '__custom' ? form.customLocation : form.location;
   const market = LOCATION_OPTIONS.find(o => o.value === form.location)?.market || 'Global';
+  const selectedSource = SOURCE_OPTIONS.find(o => o.value === form.source) || SOURCE_OPTIONS[0];
 
   const filtered = useMemo(() => {
     const q = filterText.trim().toLowerCase();
@@ -58,7 +78,7 @@ export default function Search() {
     setError(''); setResults([]); setSearchId(null); setSaveResult(null);
     setLoading(true);
     try {
-      const { data } = await api.post('/search/linkedin', {
+      const { data } = await api.post(selectedSource.endpoint, {
         jobTitle:        form.jobTitle,
         location:        selectedLocation,
         market,
@@ -92,15 +112,17 @@ export default function Search() {
 
   const exportCsv = () => {
     if (!filtered.length) return;
-    const headers = ['rank','name','headline','current_title','current_company','location','email','skills','profileUrl'];
+    const headers = ['rank','source','name','headline','current_title','current_company','location','email','phone','skills','profileUrl'];
     const rows = filtered.map((c, i) => [
       i + 1,
+      c.source || form.source,
       c.name,
       c.headline,
       c.current_title,
       c.current_company,
       c.location,
       c.email,
+      c.phone,
       (c.skills || []).join('; '),
       c.profileUrl,
     ]);
@@ -113,7 +135,7 @@ export default function Search() {
     const url  = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `linkedin_search_${form.jobTitle.replace(/\s+/g, '_')}_${Date.now()}.csv`;
+    a.download = `${form.source}_search_${form.jobTitle.replace(/\s+/g, '_')}_${Date.now()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -123,9 +145,9 @@ export default function Search() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">LinkedIn Candidate Search</h1>
+          <h1 className="text-2xl font-bold text-slate-800">Candidate Search</h1>
           <p className="text-slate-500 text-sm mt-0.5">
-            Find profiles via the harvestapi LinkedIn search actor (Full + email mode)
+            {selectedSource.description}
           </p>
         </div>
         <Link to="/scraper" className="btn-secondary text-sm">📋 Search History</Link>
@@ -135,6 +157,19 @@ export default function Search() {
       <div className="card p-5">
         <form onSubmit={runSearch} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Source</label>
+              <select
+                className="input"
+                value={form.source}
+                onChange={e => setForm({ ...form, source: e.target.value })}
+              >
+                {SOURCE_OPTIONS.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+
             <div className="lg:col-span-2">
               <label className="block text-sm font-medium text-slate-700 mb-1">Job Title *</label>
               <input
@@ -193,15 +228,15 @@ export default function Search() {
 
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <p className="text-xs text-slate-400">
-              Uses the shared Apify token configured on the server (override via <Link to="/profile" className="text-blue-600 hover:underline">Profile → Settings</Link>).
+              Uses the selected source key configured on the server, or your personal key under <Link to="/profile" className="text-blue-600 hover:underline">Profile → Settings</Link>.
             </p>
             <button type="submit" className="btn-primary" disabled={loading}>
               {loading ? (
                 <span className="flex items-center gap-2">
                   <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
-                  Searching LinkedIn…
+                  {selectedSource.loading}
                 </span>
-              ) : '🔍 Search LinkedIn'}
+              ) : selectedSource.button}
             </button>
           </div>
 
@@ -281,6 +316,7 @@ export default function Search() {
                   <th className="text-left px-4 py-3 font-semibold text-slate-600">Current Role</th>
                   <th className="text-left px-4 py-3 font-semibold text-slate-600">Location</th>
                   <th className="text-left px-4 py-3 font-semibold text-slate-600">Email</th>
+                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Phone</th>
                   <th className="text-left px-4 py-3 font-semibold text-slate-600">Skills</th>
                   <th className="text-left px-4 py-3 font-semibold text-slate-600">Profile</th>
                 </tr>
@@ -316,6 +352,7 @@ export default function Search() {
                             : <span className="text-slate-400">••• hidden</span>)
                         : <span className="text-slate-300">—</span>}
                     </td>
+                    <td className="px-4 py-3 text-xs text-slate-600">{c.phone || '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1 max-w-xs">
                         {(c.skills || []).slice(0, 4).map((s, idx) => (
@@ -354,8 +391,8 @@ export default function Search() {
       {!loading && results.length === 0 && !error && (
         <div className="card text-center py-16 text-slate-400">
           <div className="text-4xl mb-3">🔎</div>
-          <p className="font-medium text-slate-600 mb-1">Search LinkedIn for candidates</p>
-          <p className="text-sm">Enter a job title, pick a location and hit Search.</p>
+          <p className="font-medium text-slate-600 mb-1">Search for candidates</p>
+          <p className="text-sm">Choose a source, enter a job title, pick a location and hit Search.</p>
         </div>
       )}
     </div>

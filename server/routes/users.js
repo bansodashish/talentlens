@@ -17,6 +17,7 @@ router.get('/', authMiddleware, adminOnly, (req, res) => {
       u.created_at, u.updated_at,
       (u.apify_key_enc IS NOT NULL)  as has_apify_key,
       (u.claude_key_enc IS NOT NULL) as has_claude_key,
+      (u.apollo_key_enc IS NOT NULL) as has_apollo_key,
       (SELECT COUNT(*) FROM candidates  WHERE created_by = u.id) as candidate_count,
       (SELECT COUNT(*) FROM jobs        WHERE created_by = u.id) as job_count,
       (SELECT COUNT(*) FROM cv_matches  WHERE created_by = u.id) as match_count

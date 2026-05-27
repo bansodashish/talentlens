@@ -20,7 +20,7 @@ export default function Profile() {
   const { user, updateUser } = useAuth();
 
   const [profile, setProfile] = useState({ name: '', company: '', market: 'Both' });
-  const [keys, setKeys] = useState({ apify_key: '', claude_key: '' });
+  const [keys, setKeys] = useState({ apify_key: '', claude_key: '', apollo_key: '' });
   const [passwords, setPasswords] = useState({ current_password: '', new_password: '', confirm_password: '' });
 
   const [saving, setSaving] = useState(false);
@@ -41,7 +41,11 @@ export default function Profile() {
     if (keysLoaded) return;
     try {
       const res = await api.get('/auth/me/keys');
-      setKeys({ apify_key: res.data.apify_key || '', claude_key: res.data.claude_key || '' });
+      setKeys({
+        apify_key: res.data.apify_key || '',
+        claude_key: res.data.claude_key || '',
+        apollo_key: res.data.apollo_key || '',
+      });
       setKeysLoaded(true);
     } catch { setMsgKeys('Failed to load keys.'); }
   };
@@ -168,11 +172,23 @@ export default function Profile() {
               onChange={e => setKeys({ ...keys, claude_key: e.target.value })} />
             {user?.has_claude_key && <p className="text-xs text-green-600 mt-1">✅ Key saved</p>}
           </Field>
+          <Field label="Apollo API Key">
+            <input type={keysLoaded ? 'text' : 'password'} className="input font-mono text-sm"
+              placeholder={user?.has_apollo_key ? '••••••••••••••••••••' : 'apollo_api_key...'}
+              value={keys.apollo_key}
+              onFocus={loadKeys}
+              onChange={e => setKeys({ ...keys, apollo_key: e.target.value })} />
+            {user?.has_apollo_key && <p className="text-xs text-green-600 mt-1">✅ Key saved</p>}
+            <p className="text-xs text-slate-400 mt-1">Used for Apollo People Search candidate sourcing.</p>
+          </Field>
           <div className="flex items-center gap-3">
             <button type="submit" className="btn-primary" disabled={savingKeys}>{savingKeys ? 'Saving…' : 'Save keys'}</button>
-            {keys.apify_key || keys.claude_key ? (
+            {keys.apify_key || keys.claude_key || keys.apollo_key ? (
               <button type="button" className="btn-secondary text-sm"
-                onClick={() => { setKeys({ apify_key: '', claude_key: '' }); updateUser({ apify_key: '', claude_key: '' }).catch(() => {}); }}>
+                onClick={() => {
+                  setKeys({ apify_key: '', claude_key: '', apollo_key: '' });
+                  updateUser({ apify_key: '', claude_key: '', apollo_key: '' }).catch(() => {});
+                }}>
                 Clear keys
               </button>
             ) : null}

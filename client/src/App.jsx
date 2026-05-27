@@ -15,6 +15,7 @@ import JobDetail from './pages/JobDetail';
 import Pipeline from './pages/Pipeline';
 import Scraper from './pages/Scraper';
 import CandidateSearch from './pages/CandidateSearch';
+
 import CVMatch from './pages/Screen';
 import Profile from './pages/Profile';
 import Admin from './pages/Admin';
