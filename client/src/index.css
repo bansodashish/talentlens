@@ -4,11 +4,17 @@
 
 @layer base {
   * { box-sizing: border-box; }
-  html { -webkit-font-smoothing: antialiased; }
+  html {
+    -webkit-font-smoothing: antialiased;
+    /* Bump the root size so every rem-based class (text-xs, text-sm, text-base, …)
+       scales proportionally across all themes and all pages. */
+    font-size: 17px;
+  }
   body {
     font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
     font-feature-settings: 'cv11', 'ss01', 'ss03';
-    letter-spacing: -0.01em;
+    letter-spacing: -0.005em;
+    line-height: 1.55;
     @apply text-slate-900;
     background-color: #f6f7fb;
     background-image:
@@ -21,6 +27,11 @@
     background-size: 100% 100%;
   }
   h1, h2, h3, h4 { letter-spacing: -0.02em; }
+
+  /* Lift micro-labels (10–11px arbitrary sizes used across the app) to a
+     readable minimum so they remain legible in every theme. */
+  .text-\[10px\] { font-size: 0.75rem !important;  line-height: 1.1rem !important; }
+  .text-\[11px\] { font-size: 0.8125rem !important; line-height: 1.15rem !important; }
 
   /* Subtle, branded scrollbar */
   ::-webkit-scrollbar          { width: 10px; height: 10px; }

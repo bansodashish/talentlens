@@ -126,9 +126,9 @@ router.get('/analytics', (req, res) => {
     const end   = new Date(now.getTime() - i * 7 * 86400000);
     const start = new Date(end.getTime() - 7 * 86400000);
     const row = db.prepare(`
-      SELECT AVG(supply_chain_score) as avg FROM screenings
+      SELECT AVG(overall_score) as avg FROM screenings
       WHERE created_by = ? AND created_at >= ? AND created_at < ?
-        AND supply_chain_score IS NOT NULL
+        AND overall_score IS NOT NULL
     `).get(uid, start.toISOString(), end.toISOString());
     scoreTrend.push({
       week: `${start.getUTCMonth() + 1}/${start.getUTCDate()}`,

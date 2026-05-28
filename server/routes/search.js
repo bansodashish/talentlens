@@ -178,7 +178,10 @@ router.post('/apollo', limitSearches, async (req, res) => {
 
     let friendly = raw;
     let hint;
-    if (code === 401 || code === 403 || /unauthorized|invalid|api key/i.test(raw)) {
+    if (err.code === 'APOLLO_PLAN_REQUIRED' || /APOLLO_PLAN_REQUIRED/.test(err.code)) {
+      friendly = 'Apollo People Search requires a paid plan.';
+      hint = 'Upgrade your Apollo account at https://app.apollo.io/ — Basic plan ($49/mo) unlocks full API access.';
+    } else if (code === 401 || code === 403 || /unauthorized|invalid.*api.?key|api.?key.*invalid/i.test(raw)) {
       friendly = 'Invalid Apollo API key.';
       hint = 'Create or copy your Apollo API key from Apollo settings and save it under Profile → API Keys.';
     } else if (code === 429 || /rate.?limit/i.test(raw)) {

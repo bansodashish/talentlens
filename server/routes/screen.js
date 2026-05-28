@@ -131,7 +131,7 @@ router.post('/resume', limitScreenings, upload.array('files', 25), async (req, r
   const insertStmt = db.prepare(`
     INSERT INTO screenings
       (batch_id, file_name, candidate_name, email, phone, current_role, years_experience,
-       key_skills, supply_chain_score, procurement_score, logistics_score, technology_score,
+       key_skills, must_have_score, nice_to_have_score, title_match_score, experience_score,
        overall_score, recommendation, summary, job_description, resume_text, raw_json,
        status, error_message, created_by)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -265,10 +265,10 @@ router.get('/batch/:batchId', (req, res) => {
     currentRole: r.current_role,
     yearsExperience: r.years_experience,
     keySkills: r.key_skills ? JSON.parse(r.key_skills) : [],
-    supplyChainScore: r.supply_chain_score,
-    procurementScore: r.procurement_score,
-    logisticsScore:   r.logistics_score,
-    technologyScore:  r.technology_score,
+    supplyChainScore: r.must_have_score,
+    procurementScore: r.nice_to_have_score,
+    logisticsScore:   r.title_match_score,
+    technologyScore:  r.experience_score,
     overallScore:     r.overall_score,
     recommendation:   r.recommendation,
     summary:          r.summary,
