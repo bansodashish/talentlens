@@ -119,7 +119,7 @@ export default function Dashboard() {
     <div className="space-y-6">
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex items-center justify-between flex-wrap gap-3 animate-fade-up">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">
             {greeting()}, {user?.name?.split(' ')[0] || 'there'} 👋
@@ -136,7 +136,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Stat cards ───────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-up delay-75">
         <StatCard icon="👥" label="Candidates sourced this month"
           value={stats.totalThisMonth ?? 0} sub="This month" accent="badge-blue" to="/candidates" />
         <StatCard icon="📧" label="Email found rate"
@@ -149,7 +149,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Charts row 1 ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-up delay-150">
 
         {/* Sourced chart */}
         <ChartCard title="Candidates sourced — last 4 weeks">
@@ -226,7 +226,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Charts row 2 ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-up delay-200">
         <ChartCard title="Screening recommendations">
           {hasRecs ? (
             <ResponsiveContainer width="100%" height={230}>
@@ -301,7 +301,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Bottom section ───────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-up delay-300">
 
         {/* Recent searches */}
         <div className="card p-5">

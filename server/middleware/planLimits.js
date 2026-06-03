@@ -18,13 +18,15 @@ function getPlan(userId) {
   return PLAN_LIMITS[key] ? key : 'starter';
 }
 
-function monthStartIso() {
+function monthStartSql() {
   const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+  const year = now.getUTCFullYear();
+  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+  return `${year}-${month}-01 00:00:00`;
 }
 
 function getUsage(userId) {
-  const start = monthStartIso();
+  const start = monthStartSql();
   const searches = db.prepare(
     'SELECT COUNT(*) as n FROM searches WHERE created_by = ? AND created_at >= ?'
   ).get(userId, start).n;

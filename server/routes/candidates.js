@@ -243,4 +243,19 @@ router.post('/bulk-delete', (req, res) => {
   res.json({ deleted: ids.length });
 });
 
+// GET /api/candidates/:id/download-cv — gated resume download
+router.get('/:id/download-cv', (req, res) => {
+  const candidate = db.prepare('SELECT cv_path, cv_filename FROM candidates WHERE id = ?').get(req.params.id);
+  if (!candidate || !candidate.cv_path) {
+    return res.status(404).json({ error: 'Resume CV file not found for this candidate.' });
+  }
+
+  const fullPath = path.resolve(__dirname, '../../db/uploads', candidate.cv_path);
+  if (!fs.existsSync(fullPath)) {
+    return res.status(404).json({ error: 'Physical CV file not found on disk.' });
+  }
+
+  res.download(fullPath, candidate.cv_filename || 'resume.pdf');
+});
+
 module.exports = router;

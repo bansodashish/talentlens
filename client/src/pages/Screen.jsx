@@ -11,8 +11,8 @@ const REC_STYLE = {
 const SCORE_BARS = [
   { key: 'supplyChainScore', label: 'Skills Match', color: 'bg-blue-600' },
   { key: 'procurementScore', label: 'Experience',  color: 'bg-brand-600' },
-  { key: 'logisticsScore',   label: 'Domain Fit',  color: 'bg-emerald-600' },
-  { key: 'technologyScore',  label: 'Tools & Tech', color: 'bg-amber-500' },
+  { key: 'logisticsScore',   label: 'Location',  color: 'bg-emerald-600' },
+  { key: 'technologyScore',  label: 'Role / Title', color: 'bg-amber-500' },
 ];
 
 function Bar({ label, value, color }) {
@@ -153,14 +153,53 @@ export default function Screen() {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 600_000,
         onUploadProgress: (e) => {
-          if (e.total) setProgress(Math.round((e.loaded * 100) / e.total));
+          if (e.total) setProgress(Math.round((e.loaded * 90) / e.total)); // Max 90% for upload phase
         },
       });
-      setResults(data.results || []);
-      setBatchId(data.batchId);
+
+      const bId = data.batchId;
+      setBatchId(bId);
+
+      if (data.status === 'completed') {
+        setResults(data.results || []);
+        setLoading(false);
+        setProgress(0);
+        return;
+      }
+
+      // Start polling the gated async batch route
+      let pollCount = 0;
+      const interval = setInterval(async () => {
+        pollCount++;
+        try {
+          const res = await api.get(`/screen/batch/${bId}`);
+          const batch = res.data;
+
+          setResults(batch.results || []);
+
+          if (batch.progress) {
+            const { total, completed, failed } = batch.progress;
+            const done = completed + failed;
+            // Map the remaining 10% - 100% to processing progress
+            const processPct = total > 0 ? Math.round((done * 100) / total) : 0;
+            setProgress(processPct);
+          }
+
+          if (batch.status === 'completed' || pollCount > 300) {
+            clearInterval(interval);
+            setLoading(false);
+            setProgress(0);
+          }
+        } catch (pollErr) {
+          clearInterval(interval);
+          setLoading(false);
+          setProgress(0);
+          setError('Lost connection to screening task: ' + (pollErr.response?.data?.error || pollErr.message));
+        }
+      }, 2000);
+
     } catch (err) {
       setError(err.response?.data?.error || err.response?.data?.hint || err.message || 'Screening failed.');
-    } finally {
       setLoading(false);
       setProgress(0);
     }
@@ -170,7 +209,7 @@ export default function Screen() {
     if (!results.length) return;
     const headers = [
       'rank','fileName','name','email','phone','currentRole','yearsExperience',
-      'overallScore','supplyChainScore','procurementScore','logisticsScore','technologyScore',
+      'overallScore','skillsMatchScore','experienceScore','locationScore','roleTitleScore',
       'recommendation','keySkills','summary',
     ];
     const rows = results.map((c, i) => [
@@ -210,7 +249,7 @@ export default function Screen() {
           <p className="text-slate-500 text-sm mt-0.5">
             {mode === 'ai'
               ? 'Claude scores each CV against your JD across skills, experience, domain fit & tools'
-              : 'Local keyword scoring — instant, no API calls'}
+              : 'Local JD matching across skills, experience, location and role fit'}
           </p>
         </div>
         <Link to="/history" className="btn-secondary text-sm">📋 History</Link>
@@ -296,13 +335,21 @@ export default function Screen() {
         {loading && (
           <div>
             <div className="flex justify-between text-xs text-slate-500 mb-1">
-              <span>{mode === 'ai' ? 'Uploading and analysing with Claude…' : 'Extracting text and scoring locally…'}</span>
-              <span>{progress < 100 ? `${progress}% uploaded` : 'Scoring…'}</span>
+              <span>
+                {progress > 0 && progress < 100
+                  ? `Analysing resumes: ${progress}% complete…`
+                  : progress === 100
+                  ? 'Compiling final scores…'
+                  : mode === 'ai'
+                  ? 'Uploading and processing with Claude…'
+                  : 'Extracting text and scoring locally…'}
+              </span>
+              <span>{progress > 0 ? `${progress}%` : 'Processing…'}</span>
             </div>
             <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all ${progress < 100 ? 'bg-blue-600' : 'bg-blue-600 animate-pulse'}`}
-                style={{ width: `${progress < 100 ? progress : 100}%` }}
+                className={`h-full rounded-full transition-all duration-500 ${progress < 100 ? 'bg-blue-600' : 'bg-blue-600 animate-pulse'}`}
+                style={{ width: `${progress > 0 ? progress : 10}%` }}
               />
             </div>
           </div>
