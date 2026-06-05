@@ -185,7 +185,7 @@ export default function Scraper() {
                     📊 Export to Sheets
                   </button>
                   <button className="btn-primary text-sm" onClick={handleImport} disabled={selected.size === 0 || importing}>
-                    {importing ? 'Importing…' : `⬇ Import ${selected.size} to TalentLens`}
+                    {importing ? 'Importing…' : `⬇ Import ${selected.size} to TalentLenses`}
                   </button>
                 </div>
               </div>

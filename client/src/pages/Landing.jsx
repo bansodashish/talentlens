@@ -36,7 +36,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <span className="w-8 h-8 rounded-lg bg-brand-gradient flex items-center justify-center text-white font-bold text-sm shadow-glow">T</span>
-            <span className="font-display font-bold text-lg tracking-tight">TalentLens</span>
+            <span className="font-display font-bold text-lg tracking-tight">TalentLenses</span>
           </Link>
           <nav className="flex items-center gap-3">
             <a href="#features" className="text-sm text-slate-600 hover:text-slate-900 hidden sm:inline">Features</a>
@@ -143,7 +143,7 @@ export default function Landing() {
 
       <footer className="border-t border-slate-100">
         <div className="max-w-6xl mx-auto px-6 py-8 flex items-center justify-between text-sm text-slate-500">
-          <span>\u00a9 {new Date().getFullYear()} TalentLens</span>
+          <span>\u00a9 {new Date().getFullYear()} TalentLenses</span>
           <div className="flex gap-4">
             <Link to="/login" className="hover:text-slate-700">Sign in</Link>
             <Link to="/register" className="hover:text-slate-700">Register</Link>
