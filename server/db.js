@@ -32,6 +32,7 @@ migrate('ALTER TABLE users ADD COLUMN market TEXT DEFAULT "Both"');
 migrate('ALTER TABLE users ADD COLUMN apify_key_enc TEXT');
 migrate('ALTER TABLE users ADD COLUMN claude_key_enc TEXT');
 migrate('ALTER TABLE users ADD COLUMN apollo_key_enc TEXT');
+migrate('ALTER TABLE users ADD COLUMN openai_key_enc TEXT');
 
 // Step 7 — SaaS plans + onboarding
 migrate('ALTER TABLE users ADD COLUMN plan TEXT DEFAULT "starter"');
@@ -76,10 +77,10 @@ migrate(`
     current_role TEXT,
     years_experience REAL,
     key_skills TEXT,
-    supply_chain_score INTEGER,
-    procurement_score INTEGER,
-    logistics_score INTEGER,
-    technology_score INTEGER,
+    must_have_score INTEGER,
+    nice_to_have_score INTEGER,
+    title_match_score INTEGER,
+    experience_score INTEGER,
     overall_score INTEGER,
     recommendation TEXT,
     summary TEXT,
@@ -93,6 +94,12 @@ migrate(`
     FOREIGN KEY (created_by) REFERENCES users(id)
   )
 `);
+
+// Rename old supply-chain columns to keyword-match columns (idempotent)
+migrate('ALTER TABLE screenings RENAME COLUMN supply_chain_score TO must_have_score');
+migrate('ALTER TABLE screenings RENAME COLUMN procurement_score TO nice_to_have_score');
+migrate('ALTER TABLE screenings RENAME COLUMN logistics_score TO title_match_score');
+migrate('ALTER TABLE screenings RENAME COLUMN technology_score TO experience_score');
 
 console.log(`✅ SQLite database ready: ${dbPath}`);
 module.exports = db;

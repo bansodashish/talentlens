@@ -62,7 +62,7 @@ router.post('/login', async (req, res) => {
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 
-  const { password: _, apify_key_enc, claude_key_enc, apollo_key_enc, ...safeUser } = user;
+  const { password: _, apify_key_enc, claude_key_enc, apollo_key_enc, openai_key_enc, ...safeUser } = user;
   safeUser.onboarding_complete = !!safeUser.onboarding_complete;
   safeUser.plan = (safeUser.plan || 'starter').toLowerCase();
   res.json({ token, user: safeUser });
@@ -73,11 +73,12 @@ router.get('/me', authMiddleware, (req, res) => {
   const row = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
   if (!row) return res.status(404).json({ error: 'User not found.' });
 
-  const { password, apify_key_enc, claude_key_enc, apollo_key_enc, ...safeUser } = row;
+  const { password, apify_key_enc, claude_key_enc, apollo_key_enc, openai_key_enc, ...safeUser } = row;
   // Return masked indicators (not actual values) so the UI can show "key saved"
   safeUser.has_apify_key  = !!apify_key_enc;
   safeUser.has_claude_key = !!claude_key_enc;
   safeUser.has_apollo_key = !!apollo_key_enc;
+  safeUser.has_openai_key = !!openai_key_enc;
 
   // Plan + usage snapshot for the current month
   const planKey = (safeUser.plan || 'starter').toLowerCase();
@@ -101,18 +102,19 @@ router.post('/onboarding/complete', authMiddleware, (req, res) => {
 
 // ── GET /api/auth/me/keys ─── return decrypted keys for profile page ───────
 router.get('/me/keys', authMiddleware, (req, res) => {
-  const row = db.prepare('SELECT apify_key_enc, claude_key_enc, apollo_key_enc FROM users WHERE id = ?').get(req.user.id);
+  const row = db.prepare('SELECT apify_key_enc, claude_key_enc, apollo_key_enc, openai_key_enc FROM users WHERE id = ?').get(req.user.id);
   if (!row) return res.status(404).json({ error: 'User not found.' });
   res.json({
     apify_key:  decrypt(row.apify_key_enc)  || '',
     claude_key: decrypt(row.claude_key_enc) || '',
     apollo_key: decrypt(row.apollo_key_enc) || '',
+    openai_key: decrypt(row.openai_key_enc) || '',
   });
 });
 
 // ── PUT /api/auth/me ── update profile ─────────────────────────────────────
 router.put('/me', authMiddleware, async (req, res) => {
-  const { name, company, market, apify_key, claude_key, apollo_key, current_password, new_password } = req.body;
+  const { name, company, market, apify_key, claude_key, apollo_key, openai_key, current_password, new_password } = req.body;
 
   const row = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
   if (!row) return res.status(404).json({ error: 'User not found.' });
@@ -135,6 +137,7 @@ router.put('/me', authMiddleware, async (req, res) => {
       apify_key_enc  = ?,
       claude_key_enc = ?,
       apollo_key_enc = ?,
+      openai_key_enc = ?,
       password = ?,
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
@@ -145,6 +148,7 @@ router.put('/me', authMiddleware, async (req, res) => {
     apify_key  !== undefined ? (apify_key  ? encrypt(apify_key)  : null) : row.apify_key_enc,
     claude_key !== undefined ? (claude_key ? encrypt(claude_key) : null) : row.claude_key_enc,
     apollo_key !== undefined ? (apollo_key ? encrypt(apollo_key) : null) : row.apollo_key_enc,
+    openai_key !== undefined ? (openai_key ? encrypt(openai_key) : null) : row.openai_key_enc,
     hashedPassword,
     req.user.id
   );
@@ -153,6 +157,7 @@ router.put('/me', authMiddleware, async (req, res) => {
   updated.has_apify_key = apify_key !== undefined ? !!apify_key : !!row.apify_key_enc;
   updated.has_claude_key = claude_key !== undefined ? !!claude_key : !!row.claude_key_enc;
   updated.has_apollo_key = apollo_key !== undefined ? !!apollo_key : !!row.apollo_key_enc;
+  updated.has_openai_key = openai_key !== undefined ? !!openai_key : !!row.openai_key_enc;
   res.json({ user: updated });
 });
 

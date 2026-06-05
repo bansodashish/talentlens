@@ -107,10 +107,26 @@ async function runApolloSearch({ apolloKey, jobTitle, location, market, experien
     'x-api-key': apolloKey,
   };
 
-  const res = await axios.post(`${APOLLO_BASE}/mixed_people/search`, body, {
-    headers,
-    timeout: 60_000,
-  });
+  let res;
+  try {
+    res = await axios.post(`${APOLLO_BASE}/mixed_people/search`, body, {
+      headers,
+      timeout: 60_000,
+    });
+  } catch (axiosErr) {
+    const errorCode = axiosErr.response?.data?.error_code;
+    const errorMsg  = axiosErr.response?.data?.error || axiosErr.message || '';
+
+    if (errorCode === 'API_INACCESSIBLE' || /not accessible.*free plan/i.test(errorMsg)) {
+      const planErr = new Error(
+        'Apollo People Search requires a paid plan. Upgrade at https://app.apollo.io/'
+      );
+      planErr.code = 'APOLLO_PLAN_REQUIRED';
+      throw planErr;
+    }
+
+    throw axiosErr;
+  }
 
   const people = res.data?.people || res.data?.contacts || res.data?.results || [];
   return people.slice(0, max).map(person => normalise(person, market));

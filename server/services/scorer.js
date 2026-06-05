@@ -201,6 +201,73 @@ function findInText(keyword, text) {
   return text.toLowerCase().includes(keyword.toLowerCase());
 }
 
+const GENERAL_SKILLS = [
+  '.net', '.net core', 'agile', 'ai', 'api testing', 'appium', 'aws', 'azure',
+  'azure devops', 'bash', 'bdd', 'bigquery', 'c#', 'ci/cd', 'confluence',
+  'cucumber', 'cypress', 'data analysis', 'databricks', 'dbt', 'django',
+  'docker', 'etl', 'excel', 'fastapi', 'flask', 'gcp', 'git', 'github',
+  'github actions', 'gitlab', 'grafana', 'hibernate', 'html', 'java',
+  'javascript', 'jenkins', 'jira', 'jmeter', 'junit', 'kafka', 'kubernetes',
+  'linux', 'machine learning', 'microservices', 'mongodb', 'mysql', 'node.js',
+  'playwright', 'postman', 'postgresql', 'power bi', 'prometheus', 'pytest',
+  'python', 'qa automation', 'react', 'rest', 'robot framework', 'scrum',
+  'selenium', 'snowflake', 'soap', 'spark', 'spring', 'spring boot', 'sql',
+  'sql server', 'tableau', 'terraform', 'test automation', 'testng',
+  'typescript', 'unit testing', 'vue',
+];
+
+const KNOWN_SKILLS = [...new Set(
+  [...GENERAL_SKILLS, ...Object.values(ALL_ROLES).flatMap(role => role.skills || [])]
+)].sort((a, b) => b.length - a.length);
+
+const LOCATION_ALIASES = {
+  'new york': ['nyc', 'new york city'],
+  'san francisco': ['sf', 'bay area'],
+  'washington': ['washington dc', 'washington d.c.', 'dc'],
+  'london': ['greater london'],
+  'bengaluru': ['bangalore'],
+  'mumbai': ['bombay'],
+  'gurugram': ['gurgaon'],
+  'united states': ['usa', 'us', 'u.s.', 'u.s.a.', 'america'],
+  'united kingdom': ['uk', 'u.k.', 'great britain', 'england'],
+  'india': ['bharat'],
+};
+
+const KNOWN_LOCATIONS = [
+  'united states', 'united kingdom', 'india', 'canada', 'australia', 'germany',
+  'france', 'netherlands', 'singapore', 'uae', 'dubai', 'remote', 'hybrid',
+  'onsite', 'on-site', 'new york', 'san francisco', 'los angeles', 'chicago',
+  'boston', 'seattle', 'austin', 'dallas', 'atlanta', 'washington', 'london',
+  'manchester', 'birmingham', 'glasgow', 'dublin', 'toronto', 'vancouver',
+  'sydney', 'melbourne', 'berlin', 'munich', 'paris', 'amsterdam', 'mumbai',
+  'delhi', 'new delhi', 'bengaluru', 'hyderabad', 'chennai', 'pune', 'gurugram',
+  'noida', 'kolkata', 'ahmedabad',
+];
+
+function unique(values) {
+  return [...new Set(values.filter(Boolean).map(v => v.trim()).filter(Boolean))];
+}
+
+function extractSkillsFromText(text) {
+  const lower = (text || '').toLowerCase();
+  return KNOWN_SKILLS.filter(skill => {
+    const escaped = skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`(^|[^a-z0-9+#./-])${escaped}([^a-z0-9+#./-]|$)`, 'i');
+    return re.test(lower);
+  });
+}
+
+function extractRequiredJdSkills(jd) {
+  const known = extractSkillsFromText(jd);
+  if (known.length > 0) return unique(known).slice(0, 80);
+
+  const extracted = extractJdKeywords(jd)
+    .filter(kw => kw.length >= 3 && kw.length <= 40)
+    .filter(kw => !KNOWN_LOCATIONS.includes(normalizeLocation(kw)))
+    .filter(kw => !/^\d+$/.test(kw));
+  return unique(extracted).slice(0, 40);
+}
+
 function scoreExperience(resumeText, jd) {
   // Look for years of experience in JD requirement
   const jdYearsMatch = jd.match(/(\d+)\+?\s*years?\s*(of\s*)?(experience|exp)/i);
@@ -219,6 +286,18 @@ function scoreExperience(resumeText, jd) {
   return 0.3;
 }
 
+function extractYearsRequirement(text) {
+  const matches = [...(text || '').matchAll(/(\d{1,2})\+?\s*years?\s*(?:of\s*)?(?:relevant\s*)?(?:experience|exp)?/gi)];
+  if (!matches.length) return null;
+  return matches.reduce((max, m) => Math.max(max, Number(m[1]) || 0), 0) || null;
+}
+
+function extractMaxYears(text) {
+  const matches = [...(text || '').matchAll(/(\d{1,2})\+?\s*years?/gi)];
+  if (!matches.length) return 0;
+  return matches.reduce((max, m) => Math.max(max, Number(m[1]) || 0), 0);
+}
+
 function scoreTitleMatch(resumeText, targetRole) {
   if (!targetRole || !ALL_ROLES[targetRole]) return 0.5;
   const patterns = ALL_ROLES[targetRole].titlePatterns || [];
@@ -227,6 +306,91 @@ function scoreTitleMatch(resumeText, targetRole) {
   if (matched.length === 0) return 0.3;
   if (matched.length === 1) return 0.7;
   return 1.0;
+}
+
+function normalizeLocation(value) {
+  return (value || '')
+    .toLowerCase()
+    .replace(/\b(remote|hybrid|onsite|on-site)\b/g, ' $1 ')
+    .replace(/[^a-z\s.-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function addLocationWithAliases(found, value) {
+  const normalized = normalizeLocation(value);
+  if (!normalized) return;
+  found.add(normalized);
+  for (const [canonical, aliases] of Object.entries(LOCATION_ALIASES)) {
+    if (canonical === normalized || aliases.includes(normalized)) {
+      found.add(canonical);
+      aliases.forEach(alias => found.add(alias));
+    }
+  }
+}
+
+function extractLocations(text) {
+  const lower = normalizeLocation(text);
+  const found = new Set();
+
+  for (const loc of KNOWN_LOCATIONS) {
+    const normalized = normalizeLocation(loc);
+    const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (new RegExp(`(^|\\s)${escaped}(\\s|$)`, 'i').test(lower)) {
+      addLocationWithAliases(found, normalized);
+    }
+  }
+
+  const explicitPatterns = [
+    /(?:location|located|based|base location|work location)\s*[:\-]\s*([a-zA-Z .,-]{2,80})/gi,
+    /(?:based in|located in|work from|working from)\s+([a-zA-Z .,-]{2,60})/gi,
+  ];
+  for (const pattern of explicitPatterns) {
+    for (const match of text.matchAll(pattern)) {
+      const value = (match[1] || '').split(/\n|\.|;|\|/)[0].split(/\s+(?:or|and)\s+/i)[0];
+      addLocationWithAliases(found, value);
+    }
+  }
+
+  return [...found];
+}
+
+function locationMode(text) {
+  const lower = (text || '').toLowerCase();
+  if (/\b(remote|work from home|wfh)\b/.test(lower)) return 'remote';
+  if (/\bhybrid\b/.test(lower)) return 'hybrid';
+  if (/\b(on-?site|office based|in office)\b/.test(lower)) return 'onsite';
+  return '';
+}
+
+function scoreLocation(resumeText, jd) {
+  const jdMode = locationMode(jd);
+  const resumeMode = locationMode(resumeText);
+  const jdLocations = extractLocations(jd).filter(l => !['remote', 'hybrid', 'onsite', 'on-site'].includes(l));
+  const resumeLocations = extractLocations(resumeText).filter(l => !['remote', 'hybrid', 'onsite', 'on-site'].includes(l));
+
+  if (jdMode === 'remote') {
+    return { score: 1, jdLocations, resumeLocations, jdMode, resumeMode, explanation: 'JD allows remote work' };
+  }
+
+  if (!jdMode && jdLocations.length === 0) {
+    return { score: 0.75, jdLocations, resumeLocations, jdMode, resumeMode, explanation: 'No clear JD location requirement' };
+  }
+
+  const matched = jdLocations.filter(loc => resumeLocations.includes(loc));
+  if (matched.length > 0) {
+    return { score: 1, jdLocations, resumeLocations, jdMode, resumeMode, matchedLocations: matched, explanation: `Location matched: ${matched[0]}` };
+  }
+
+  if (jdMode === 'hybrid' && resumeMode === 'hybrid') {
+    return { score: 0.7, jdLocations, resumeLocations, jdMode, resumeMode, explanation: 'Both indicate hybrid work, but city was not confirmed' };
+  }
+
+  if (resumeLocations.length === 0) {
+    return { score: 0.45, jdLocations, resumeLocations, jdMode, resumeMode, explanation: 'Candidate location not found in resume' };
+  }
+
+  return { score: jdMode === 'onsite' || jdMode === 'hybrid' ? 0.25 : 0.4, jdLocations, resumeLocations, jdMode, resumeMode, explanation: 'Candidate location does not match JD location' };
 }
 
 function getRatingLabel(rating) {
@@ -263,11 +427,11 @@ function scoreCandidate(resumeText, jobDescription, targetRole = null) {
   }
 
   const roleData = targetRole && ALL_ROLES[targetRole] ? ALL_ROLES[targetRole] : null;
-  const roleKeywords = roleData ? roleData.skills : [];
-  const jdKeywords = extractJdKeywords(jobDescription || '');
+  const jdSkills = extractRequiredJdSkills(jobDescription || '');
+  const roleKeywords = roleData && jdSkills.length === 0 ? roleData.skills : [];
 
-  // Deduplicate combined keyword list
-  const allKeywords = [...new Set([...roleKeywords, ...jdKeywords])];
+  // JD is the source of truth. Role-library skills are only a fallback for very thin JDs.
+  const allKeywords = [...new Set([...jdSkills, ...roleKeywords])];
 
   // Skills match
   const matchedKeywords = allKeywords.filter(kw => findInText(kw, resumeText));
@@ -277,11 +441,14 @@ function scoreCandidate(resumeText, jobDescription, targetRole = null) {
   // Experience match
   const expScore = scoreExperience(resumeText, jobDescription || '');
 
+  // Location match
+  const location = scoreLocation(resumeText, jobDescription || '');
+
   // Title match
   const titleScore = scoreTitleMatch(resumeText, targetRole);
 
   // Weighted final score
-  const finalScore = Math.min(1, (skillsScore * 0.55) + (expScore * 0.25) + (titleScore * 0.20));
+  const finalScore = Math.min(1, (skillsScore * 0.55) + (expScore * 0.25) + (location.score * 0.15) + (titleScore * 0.05));
   const rating = Math.max(1, Math.min(5, Math.round(finalScore * 5)));
   const scorePct = Math.round(finalScore * 100);
 
@@ -291,9 +458,16 @@ function scoreCandidate(resumeText, jobDescription, targetRole = null) {
     .map(kw => `Matched: ${kw}`);
 
   const gaps = missedKeywords
-    .filter(kw => roleKeywords.includes(kw)) // prioritise role-critical gaps
     .slice(0, 6)
     .map(kw => `Missing: ${kw}`);
+
+  if (location.score < 0.5 && location.explanation) {
+    gaps.push(location.explanation);
+  }
+
+  if (location.score >= 0.7 && location.explanation) {
+    strengths.push(location.explanation);
+  }
 
   return {
     score: Math.round(finalScore * 100) / 100,
@@ -306,9 +480,20 @@ function scoreCandidate(resumeText, jobDescription, targetRole = null) {
     details: {
       skills: Math.round(skillsScore * 100) / 100,
       experience: Math.round(expScore * 100) / 100,
+      location: Math.round(location.score * 100) / 100,
       title: Math.round(titleScore * 100) / 100,
       matchedKeywords: matchedKeywords.length,
       totalKeywords: allKeywords.length,
+      matchedSkills: matchedKeywords,
+      missingSkills: missedKeywords,
+      requiredSkills: allKeywords,
+      requiredYears: extractYearsRequirement(jobDescription || ''),
+      candidateYears: extractMaxYears(resumeText),
+      jdLocations: location.jdLocations || [],
+      candidateLocations: location.resumeLocations || [],
+      jdLocationMode: location.jdMode || '',
+      candidateLocationMode: location.resumeMode || '',
+      locationExplanation: location.explanation || '',
     },
   };
 }

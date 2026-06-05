@@ -255,7 +255,7 @@ export default function CandidateDetail() {
               {candidate.cv_text && (
                 <p className="text-xs text-green-600 mb-3">✅ Parsed & scored</p>
               )}
-              <a href={`/uploads/${candidate.cv_path}`} target="_blank" rel="noopener noreferrer"
+              <a href={`/api/candidates/${candidate.id}/download-cv?token=${localStorage.getItem('token')}`} target="_blank" rel="noopener noreferrer"
                 className="btn-secondary text-sm w-full text-center block">
                 View CV
               </a>

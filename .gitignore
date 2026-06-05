@@ -11,6 +11,8 @@ job_hunt/venv/
 job_hunt/__pycache__/
 **/__pycache__/
 .env
+.env.bak*
+server/.env.bak*
 *.log
 .DS_Store
 client/build/

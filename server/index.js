@@ -23,8 +23,7 @@ if (!isProd) {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static file serving (uploaded CVs)
-app.use('/uploads', express.static(path.resolve(__dirname, '../db/uploads')));
+// Static file serving (GATED: served privately via authenticated Express route instead)
 
 // ── Serve React build in production ──────────────────────────────────────────
 if (isProd) {
