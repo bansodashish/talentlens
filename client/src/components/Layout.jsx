@@ -70,7 +70,7 @@ export default function Layout({ children }) {
           <Link to="/dashboard" className="flex items-center gap-2 flex-shrink-0 mr-2">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
               style={{ background: logoBg, color: logoText }}>TL</div>
-            <span className="font-bold text-sm hidden sm:block" style={{ color: navText === 'var(--tl-nav-text)' ? 'inherit' : navText }}>TalentLens</span>
+            <span className="font-bold text-sm hidden sm:block" style={{ color: navText === 'var(--tl-nav-text)' ? 'inherit' : navText }}>TalentLenses</span>
           </Link>
 
           {/* Primary nav */}

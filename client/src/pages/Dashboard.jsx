@@ -447,7 +447,7 @@ export default function Dashboard() {
               </div>
               <h3 className="text-lg font-bold text-slate-800 mb-1">Set up your recruitment pipeline</h3>
               <p className="text-sm text-slate-500">
-                TalentLens is ready — connect your platforms and start sourcing top supply chain talent for UK and Dubai markets.
+                TalentLenses is ready — connect your platforms and start sourcing top supply chain talent for UK and Dubai markets.
               </p>
             </div>
 

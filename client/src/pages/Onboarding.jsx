@@ -86,7 +86,7 @@ export default function Onboarding() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-12 h-12 mx-auto rounded-2xl bg-brand-gradient flex items-center justify-center text-white font-bold text-lg shadow-glow mb-3">T</div>
-          <h1 className="font-display text-3xl font-bold text-slate-800">Welcome to TalentLens</h1>
+          <h1 className="font-display text-3xl font-bold text-slate-800">Welcome to TalentLenses</h1>
           <p className="text-slate-500 text-sm mt-2">Let's get your workspace ready in 4 quick steps.</p>
         </div>
 

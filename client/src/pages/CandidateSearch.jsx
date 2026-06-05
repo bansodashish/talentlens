@@ -374,7 +374,7 @@ export default function CandidateSearch() {
                       📊 Export to Sheets
                     </button>
                     <button onClick={handleImport} className="btn-primary text-sm" disabled={selected.size === 0 || importing}>
-                      {importing ? 'Importing…' : `⬇️ Import ${selected.size} to TalentLens`}
+                      {importing ? 'Importing…' : `⬇️ Import ${selected.size} to TalentLenses`}
                     </button>
                   </div>
                 </div>
