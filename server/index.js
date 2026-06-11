@@ -52,7 +52,7 @@ app.use('/api/users',        require('./routes/users'));     // Admin: user mana
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    service: 'TalentLens API',
+    service: 'TalentLenses API',
     version: '2.0.0',
     modules: {
       recruitment: true,
@@ -82,7 +82,7 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`
-🚀 TalentLens API  →  http://localhost:${PORT}
+🚀 TalentLenses API  →  http://localhost:${PORT}
 📋 Health          →  http://localhost:${PORT}/api/health
 🔍 Scraper         →  /api/scraper/*
 🔍 Search          →  /api/search/* (LinkedIn + Apollo)

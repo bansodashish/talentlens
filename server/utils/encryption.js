@@ -2,11 +2,11 @@ const crypto = require('crypto');
 
 const getKey = () => {
   const secret = process.env.JWT_SECRET;
-  if (!secret || secret === 'talentlens_default_key' || secret === 'change_this_in_production') {
+  if (!secret || secret === 'talentlenses_default_key' || secret === 'change_this_in_production') {
     if (process.env.NODE_ENV === 'production') {
       throw new Error('FATAL: JWT_SECRET environment variable is missing, default, or insecure in production mode.');
     }
-    return crypto.createHash('sha256').update(secret || 'talentlens_default_key').digest();
+    return crypto.createHash('sha256').update(secret || 'talentlenses_default_key').digest();
   }
   return crypto.createHash('sha256').update(secret).digest();
 };

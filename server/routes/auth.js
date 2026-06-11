@@ -28,6 +28,13 @@ router.post('/register', async (req, res) => {
   const user = db.prepare('SELECT id, name, email, role, company, market, plan, onboarding_complete, created_at FROM users WHERE id = ?').get(result.lastInsertRowid);
   user.onboarding_complete = !!user.onboarding_complete;
 
+  // Designated admin account — auto-promote so there is always one admin login.
+  const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  if (adminEmail && user.email.toLowerCase() === adminEmail && user.role !== 'admin') {
+    db.prepare('UPDATE users SET role = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run('admin', user.id);
+    user.role = 'admin';
+  }
+
   const token = jwt.sign(
     { id: user.id, email: user.email, role: user.role },
     process.env.JWT_SECRET,
@@ -36,7 +43,7 @@ router.post('/register', async (req, res) => {
 
   try {
     db.prepare('INSERT INTO activities (type, description, entity_type, entity_id, user_id) VALUES (?, ?, ?, ?, ?)').run(
-      'user_registered', `${name} joined TalentLens`, 'user', user.id, user.id
+      'user_registered', `${name} joined TalentLenses`, 'user', user.id, user.id
     );
   } catch (_) {}
 
@@ -55,6 +62,14 @@ router.post('/login', async (req, res) => {
 
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) return res.status(401).json({ error: 'Invalid credentials.' });
+
+  // Designated admin account — auto-promote so there is always one admin login.
+  // Set ADMIN_EMAIL in server/.env (e.g. ADMIN_EMAIL=admin@yourcompany.com).
+  const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  if (adminEmail && user.email.toLowerCase() === adminEmail && user.role !== 'admin') {
+    db.prepare('UPDATE users SET role = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run('admin', user.id);
+    user.role = 'admin';
+  }
 
   const token = jwt.sign(
     { id: user.id, email: user.email, role: user.role },

@@ -100,6 +100,52 @@ const upload = multer({
 
 router.use(authMiddleware);
 
+// ── Resilience helpers ────────────────────────────────────────────────────────
+// Mark any rows still 'pending' in a batch as 'failed'. The background worker
+// runs in-memory and is fire-and-forget, so without this a crashed/restarted
+// worker would leave rows 'pending' forever and the UI poller would spin
+// indefinitely. This guarantees every batch reaches a terminal state.
+function failPendingInBatch(batchId, message) {
+  try {
+    db.prepare(`
+      UPDATE screenings
+      SET status = 'failed', error_message = ?, summary = ?
+      WHERE batch_id = ? AND status = 'pending'
+    `).run(message, `Screening failed: ${message}`, batchId);
+  } catch (e) {
+    console.error('[screen] failPendingInBatch error:', e.message);
+  }
+}
+
+// On startup, recover screenings orphaned by a previous crash/restart/deploy.
+// Their in-memory workers no longer exist, so they would never complete and
+// their batches would spin forever in the UI. Resolve them immediately.
+try {
+  const recovered = db.prepare(`
+    UPDATE screenings
+    SET status = 'failed',
+        error_message = 'Screening was interrupted by a server restart. Please run it again.',
+        summary       = 'Screening was interrupted by a server restart. Please run it again.'
+    WHERE status = 'pending'
+  `).run();
+  if (recovered.changes > 0) {
+    console.log(`[screen] recovered ${recovered.changes} orphaned pending screening(s) from a previous restart`);
+  }
+} catch (e) {
+  console.error('[screen] orphan recovery error:', e.message);
+}
+
+// Reject a promise if it does not settle within `ms`, so a single stuck file
+// (e.g. a malformed PDF that makes the parser hang) fails that one file instead
+// of freezing the whole batch.
+function withTimeout(promise, ms, label = 'operation') {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 // ── Background Async Screener Worker ──────────────────────────────────────────
 async function processScreeningsBackground({ batchId, mode, apiKey, jobDescription, inserted, userId }) {
   const updateStmt = db.prepare(`
@@ -124,7 +170,11 @@ async function processScreeningsBackground({ batchId, mode, apiKey, jobDescripti
     try {
       // Local mode always needs text extraction. AI mode sends PDFs natively.
       if (mode === 'local' || ext !== '.pdf') {
-        plainText = await parseCV(file.path, file.originalname);
+        plainText = await withTimeout(
+          Promise.resolve().then(() => parseCV(file.path, file.originalname)),
+          60_000,
+          `Parsing ${file.originalname}`
+        );
         if (!plainText || plainText.trim().length < 20) {
           throw new Error('Could not extract readable text from file.');
         }
@@ -244,7 +294,10 @@ router.post('/resume', limitScreenings, upload.array('files', 25), async (req, r
     });
   }
 
-  // Trigger background process (unhandled promise is fine; it runs independently)
+  // Trigger background process. It runs independently, but if it rejects before
+  // the per-file handlers run (e.g. a process-level error), mark any rows still
+  // 'pending' as failed so the UI poller always reaches a terminal state instead
+  // of spinning forever.
   processScreeningsBackground({
     batchId,
     mode,
@@ -252,6 +305,9 @@ router.post('/resume', limitScreenings, upload.array('files', 25), async (req, r
     jobDescription,
     inserted,
     userId: req.user.id
+  }).catch((err) => {
+    console.error('[screen] background batch crashed:', err?.message || err);
+    failPendingInBatch(batchId, `Screening worker error: ${err?.message || 'unknown error'}`);
   });
 
   // Respond immediately with 202 Accepted and the batch information

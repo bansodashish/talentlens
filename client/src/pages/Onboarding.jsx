@@ -3,8 +3,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 
-const STEPS = ['Region', 'Apify key', 'Claude key', 'Test search'];
-
 const REGIONS = [
   { key: 'Global',       label: 'Global',        icon: '🌍' },
   { key: 'Americas',     label: 'Americas',      icon: '🌎' },
@@ -18,6 +16,13 @@ export default function Onboarding() {
   const { user, updateUser } = useAuth();
   const navigate = useNavigate();
 
+  // Recruiters never manage API keys — they use the shared workspace keys.
+  // Admins get the full setup including the Apify + Claude key steps.
+  const isAdmin = user?.role === 'admin';
+  const STEP_DEFS = isAdmin
+    ? [{ key: 'region', label: 'Region' }, { key: 'apify', label: 'Apify key' }, { key: 'claude', label: 'Claude key' }, { key: 'test', label: 'Test search' }]
+    : [{ key: 'region', label: 'Region' }, { key: 'test', label: 'Test search' }];
+
   const [step, setStep]   = useState(0);
   const [market, setMarket]       = useState(user?.market || 'Global');
   const [apifyKey, setApifyKey]   = useState('');
@@ -28,8 +33,9 @@ export default function Onboarding() {
   const [error, setError] = useState('');
   const [busy, setBusy]   = useState(false);
 
-  const next = () => setStep(s => Math.min(s + 1, STEPS.length - 1));
+  const next = () => setStep(s => Math.min(s + 1, STEP_DEFS.length - 1));
   const prev = () => setStep(s => Math.max(s - 1, 0));
+  const current = STEP_DEFS[step]?.key;
 
   const saveMarket = async () => {
     setBusy(true); setError('');
@@ -92,7 +98,7 @@ export default function Onboarding() {
 
         {/* Progress */}
         <div className="flex items-center mb-8">
-          {STEPS.map((label, i) => (
+          {STEP_DEFS.map(({ label }, i) => (
             <React.Fragment key={label}>
               <div className="flex flex-col items-center flex-1">
                 <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${i < step ? 'bg-emerald-500 text-white' : i === step ? 'bg-brand-gradient text-white shadow-glow' : 'bg-slate-200 text-slate-500'}`}>
@@ -100,7 +106,7 @@ export default function Onboarding() {
                 </div>
                 <span className={`text-[11px] mt-1.5 ${i === step ? 'text-slate-800 font-semibold' : 'text-slate-400'}`}>{label}</span>
               </div>
-              {i < STEPS.length - 1 && (
+              {i < STEP_DEFS.length - 1 && (
                 <div className={`h-0.5 flex-1 ${i < step ? 'bg-emerald-500' : 'bg-slate-200'}`} style={{ marginTop: -18 }} />
               )}
             </React.Fragment>
@@ -111,7 +117,7 @@ export default function Onboarding() {
         <div className="card p-7">
           {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl">{error}</div>}
 
-          {step === 0 && (
+          {current === 'region' && (
             <div>
               <h2 className="font-display font-bold text-xl text-slate-800 mb-1">Which region do you primarily recruit for?</h2>
               <p className="text-sm text-slate-500 mb-5">This sets the default for searches and candidate filters \u2014 you can change it anytime.</p>
@@ -130,7 +136,7 @@ export default function Onboarding() {
             </div>
           )}
 
-          {step === 1 && (
+          {current === 'apify' && (
             <div>
               <h2 className="font-display font-bold text-xl text-slate-800 mb-1">Add your Apify API key</h2>
               <p className="text-sm text-slate-500 mb-2">
@@ -150,7 +156,7 @@ export default function Onboarding() {
             </div>
           )}
 
-          {step === 2 && (
+          {current === 'claude' && (
             <div>
               <h2 className="font-display font-bold text-xl text-slate-800 mb-1">Add your Claude API key</h2>
               <p className="text-sm text-slate-500 mb-2">
@@ -170,7 +176,7 @@ export default function Onboarding() {
             </div>
           )}
 
-          {step === 3 && (
+          {current === 'test' && (
             <div>
               <h2 className="font-display font-bold text-xl text-slate-800 mb-1">Run a test search</h2>
               <p className="text-sm text-slate-500 mb-5">Let's make sure your Apify connection works. We'll pull just 5 profiles.</p>
