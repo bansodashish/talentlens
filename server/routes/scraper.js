@@ -4,7 +4,6 @@ const db      = require('../db');
 const { authMiddleware } = require('../middleware/auth');
 
 const apify   = require('../services/apifyService');
-const reed    = require('../services/reedService');
 
 // All routes require auth
 router.use(authMiddleware);
@@ -12,8 +11,6 @@ router.use(authMiddleware);
 // ── Platform status helper ────────────────────────────────────────────────────
 const platformStatus = () => ({
   linkedin:   { configured: apify.isLinkedInConfigured(),  label: 'LinkedIn',   via: 'Apify' },
-  cvlibrary:  { configured: apify.isCVLibraryConfigured(), label: 'CV-Library', via: 'Apify' },
-  reed:       { configured: reed.isConfigured(),           label: 'Reed.co.uk', via: 'Reed API' },
 });
 
 // GET /api/scraper/platforms — which platforms are configured
@@ -27,7 +24,6 @@ router.get('/test-connection', async (req, res) => {
 
   const actors = {
     linkedin:  process.env.APIFY_LINKEDIN_ACTOR_ID  || null,
-    cvlibrary: process.env.APIFY_CVLIBRARY_ACTOR_ID || null,
   };
 
   const axios = require('axios');
@@ -64,7 +60,7 @@ router.post('/search', async (req, res) => {
 
   if (!query) return res.status(400).json({ error: 'Search query is required.' });
 
-  const validPlatforms = ['linkedin', 'cvlibrary', 'reed'];
+  const validPlatforms = ['linkedin'];
   if (!validPlatforms.includes(platform))
     return res.status(400).json({ error: `Invalid platform. Choose: ${validPlatforms.join(', ')}` });
 
@@ -80,10 +76,6 @@ router.post('/search', async (req, res) => {
 
     if (platform === 'linkedin') {
       candidates = await apify.searchLinkedIn({ query, location, maxItems });
-    } else if (platform === 'cvlibrary') {
-      candidates = await apify.searchCVLibrary({ query, location, maxItems });
-    } else if (platform === 'reed') {
-      candidates = await reed.searchCandidates({ query, location, maxResults: maxItems });
     }
 
     // Update session

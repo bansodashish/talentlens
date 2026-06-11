@@ -26,7 +26,7 @@ function ConnectionTestResult({ data }) {
         <div key={key} className={`p-2.5 rounded-lg flex items-center gap-2 ${info.exists ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
           <span>{info.exists ? '✅' : '❌'}</span>
           <span>
-            <strong>{key === 'linkedin' ? 'LinkedIn' : 'CV-Library'}</strong>{' '}
+            <strong>LinkedIn</strong>{' '}
             {info.exists
               ? `actor found: "${info.title || info.name}"`
               : `actor "${info.id}" — ${info.reason}`}
@@ -51,20 +51,6 @@ const PLATFORMS = [
     icon: '💼',
     description: 'Search public LinkedIn profiles via Apify',
     color: 'blue',
-  },
-  {
-    id: 'cvlibrary',
-    label: 'CV-Library',
-    icon: '📄',
-    description: 'Search 14M+ UK CVs via Apify scraper',
-    color: 'green',
-  },
-  {
-    id: 'reed',
-    label: 'Reed.co.uk',
-    icon: '🔴',
-    description: 'Official Reed Recruiter API — real CV data',
-    color: 'red',
   },
 ];
 
@@ -210,7 +196,7 @@ export default function CandidateSearch() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-800">Candidate Search</h1>
-        <p className="text-sm text-slate-500 mt-1">Search Apollo.io, LinkedIn, CV-Library and Reed.co.uk for talent.</p>
+        <p className="text-sm text-slate-500 mt-1">Search Apollo.io and LinkedIn for talent.</p>
       </div>
 
       {/* Tabs */}
@@ -264,9 +250,7 @@ export default function CandidateSearch() {
             {status && !status.configured && (
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
                 <strong>{currentPlatform?.label}</strong> is not configured.{' '}
-                {platform === 'reed'
-                  ? 'Add REED_API_KEY to server/.env'
-                  : `Add APIFY_TOKEN and APIFY_${platform.toUpperCase()}_ACTOR_ID to server/.env`}
+                Add APIFY_TOKEN and APIFY_LINKEDIN_ACTOR_ID to server/.env
               </div>
             )}
 
@@ -477,7 +461,7 @@ export default function CandidateSearch() {
                   <ul className="list-disc list-inside space-y-1">
                     <li>Use broader keywords — e.g. <em>"logistics"</em> instead of <em>"supply chain coordinator"</em></li>
                     <li>Leave the location blank to search nationally</li>
-                    <li>Try a different platform (LinkedIn, CV-Library, Reed)</li>
+                    <li>Try a different platform (Apollo.io or LinkedIn)</li>
                     <li>Check that the Apify actor is working via Test Connection</li>
                   </ul>
                 </div>

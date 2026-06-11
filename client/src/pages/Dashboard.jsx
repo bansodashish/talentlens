@@ -313,7 +313,7 @@ export default function Dashboard() {
             <div className="py-6 text-center">
               <div className="text-3xl mb-2">🔍</div>
               <p className="text-sm font-medium text-slate-600">No searches yet</p>
-              <p className="text-xs text-slate-400 mt-1 mb-3">Search LinkedIn, CV-Library or Reed to find top talent</p>
+              <p className="text-xs text-slate-400 mt-1 mb-3">Search Apollo.io or LinkedIn to find top talent</p>
               <Link to="/candidate-search" className="btn-primary text-xs px-3 py-1.5 inline-flex">
                 Start Searching
               </Link>
