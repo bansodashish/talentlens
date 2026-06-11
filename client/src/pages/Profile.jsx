@@ -144,7 +144,8 @@ export default function Profile() {
         </form>
       </Section>
 
-      {/* API Keys */}
+      {/* API Keys — admins only. Recruiters use the shared workspace keys. */}
+      {user?.role === 'admin' && (
       <Section title="🔑 API Keys">
         <p className="text-sm text-slate-500 mb-4">
           Keys are encrypted with AES-256 before being stored. They're used server-side for candidate sourcing and AI scoring.
@@ -206,6 +207,7 @@ export default function Profile() {
           </div>
         </form>
       </Section>
+      )}
 
       {/* Change password */}
       <Section title="🔒 Change Password">

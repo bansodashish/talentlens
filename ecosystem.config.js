@@ -1,9 +1,9 @@
 module.exports = {
   apps: [
     {
-      name: 'talentlens',
+      name: 'talentlenses',
       script: './server/index.js',
-      cwd: '/var/www/talentlens/talentlens',
+      cwd: '/var/www/talentlenses/talentlenses',
       instances: 1,
       autorestart: true,
       watch: false,

@@ -1,10 +1,10 @@
 #!/bin/bash
-# ── TalentLens — Hostinger VPS Deploy Script ─────────────────────────────────
+# ── TalentLenses — Hostinger VPS Deploy Script ─────────────────────────────────
 # Run this ON YOUR VPS after first-time setup.
 # Usage: bash deploy.sh
 
 set -e
-APP_DIR="/var/www/talentlens/talentlens"
+APP_DIR="/var/www/talentlenses/talentlenses"
 
 echo "📦 Pulling latest code..."
 cd $APP_DIR

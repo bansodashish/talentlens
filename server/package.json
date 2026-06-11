@@ -1,7 +1,7 @@
 {
-  "name": "talentlens-server",
+  "name": "talentlenses-server",
   "version": "2.0.0",
-  "description": "TalentLens API — recruitment + CV matching + candidate sourcing",
+  "description": "TalentLenses API — recruitment + CV matching + candidate sourcing",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

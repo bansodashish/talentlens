@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
 
-const dbPath = path.resolve(__dirname, process.env.DB_PATH || '../db/talentlens.db');
+const dbPath = path.resolve(__dirname, process.env.DB_PATH || '../db/talentlenses.db');
 const dbDir = path.dirname(dbPath);
 if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
 

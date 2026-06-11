@@ -1,9 +1,9 @@
 node_modules/
 client/node_modules/
 server/node_modules/
-db/talentlens.db
-db/talentlens.db-shm
-db/talentlens.db-wal
+db/talentlenses.db
+db/talentlenses.db-shm
+db/talentlenses.db-wal
 db/uploads/
 
 # Python (job_hunt)
