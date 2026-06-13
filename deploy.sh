@@ -16,7 +16,7 @@ npm install --omit=dev
 
 echo "🏗  Building React frontend..."
 cd $APP_DIR/client
-npm install
+npm install --legacy-peer-deps
 npm run build
 
 echo "♻️  Restarting app with PM2..."
