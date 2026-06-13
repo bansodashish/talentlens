@@ -106,7 +106,6 @@ function ResultCard({ rank, c }) {
 
 export default function Screen() {
   const [jobDescription, setJobDescription] = useState('');
-  const [mode, setMode]       = useState('ai'); // 'ai' | 'local'
   const [files, setFiles] = useState([]);
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -145,7 +144,7 @@ export default function Screen() {
 
     const form = new FormData();
     form.append('job_description', jobDescription);
-    form.append('mode', mode);
+    form.append('mode', 'local');
     files.forEach(f => form.append('files', f));
 
     try {
@@ -246,29 +245,9 @@ export default function Screen() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Resume Screener</h1>
-          <p className="text-slate-500 text-sm mt-0.5">
-            {mode === 'ai'
-              ? 'Claude scores each CV against your JD across skills, experience, domain fit & tools'
-              : 'Local JD matching across skills, experience, location and role fit'}
-          </p>
+          <p className="text-slate-500 text-sm mt-0.5">Local JD matching across skills, experience, location and role fit</p>
         </div>
         <Link to="/history" className="btn-secondary text-sm">📋 History</Link>
-      </div>
-
-      {/* Scan mode toggle */}
-      <div className="card p-2 flex gap-1 w-fit">
-        <button
-          type="button"
-          onClick={() => setMode('ai')}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mode === 'ai' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
-          🤖 AI Scan <span className="text-[10px] opacity-80 ml-1">(Claude)</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode('local')}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mode === 'local' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
-          ⚡ Local Scan
-        </button>
       </div>
 
       {/* Form */}
@@ -340,8 +319,6 @@ export default function Screen() {
                   ? `Analysing resumes: ${progress}% complete…`
                   : progress === 100
                   ? 'Compiling final scores…'
-                  : mode === 'ai'
-                  ? 'Uploading and processing with Claude…'
                   : 'Extracting text and scoring locally…'}
               </span>
               <span>{progress > 0 ? `${progress}%` : 'Processing…'}</span>
@@ -368,7 +345,7 @@ export default function Screen() {
                 <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
                 Screening…
               </span>
-            ) : `${mode === 'ai' ? '🤖' : '⚡'} Screen ${files.length || ''} CV${files.length === 1 ? '' : 's'}`}
+            ) : `⚡ Screen ${files.length || ''} CV${files.length === 1 ? '' : 's'}`}
           </button>
         </div>
       </form>
@@ -405,10 +382,8 @@ export default function Screen() {
 
       {!loading && results.length === 0 && !error && (
         <div className="card text-center py-16 text-slate-400">
-          <div className="text-4xl mb-3">{mode === 'ai' ? '🤖' : '⚡'}</div>
-          <p className="font-medium text-slate-600 mb-1">
-            {mode === 'ai' ? 'Screen CVs with Claude' : 'Screen CVs locally — no API key needed'}
-          </p>
+          <div className="text-4xl mb-3">⚡</div>
+          <p className="font-medium text-slate-600 mb-1">Screen CVs locally - no API key needed</p>
           <p className="text-sm">Paste a JD, upload CVs, and get ranked results in seconds.</p>
         </div>
       )}

@@ -7,8 +7,8 @@
 const db = require('../db');
 
 const PLAN_LIMITS = {
-  starter:    { searches: 100,      screenings: 50 },
-  growth:     { searches: 500,      screenings: 200 },
+  starter:    { searches: 1000,      screenings: 1000 },
+  growth:     { searches: 2000,      screenings: 5000 },
   enterprise: { searches: Infinity, screenings: Infinity },
 };
 
