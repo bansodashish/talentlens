@@ -6,6 +6,13 @@ const { scoreCandidate, detectRole } = require('../services/scorer');
 
 router.use(authMiddleware);
 
+const PIPELINE_STAGES = ['application', 'phone_screen', 'technical', 'final', 'offer'];
+
+function statusForStage(stage) {
+  if (stage === 'offer') return 'offer';
+  return stage === 'application' ? 'applied' : 'screening';
+}
+
 // GET /api/applications
 router.get('/', (req, res) => {
   const { job_id, candidate_id, status, stage } = req.query;
@@ -31,6 +38,9 @@ router.get('/', (req, res) => {
 router.post('/', async (req, res) => {
   const { job_id, candidate_id, notes } = req.body;
   if (!job_id || !candidate_id) return res.status(400).json({ error: 'job_id and candidate_id are required.' });
+
+  const stage = PIPELINE_STAGES.includes(req.body.stage) ? req.body.stage : 'application';
+  const status = req.body.status || statusForStage(stage);
 
   const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(job_id);
   const candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(candidate_id);
@@ -72,9 +82,9 @@ router.post('/', async (req, res) => {
   }
 
   const result = db.prepare(`
-    INSERT INTO applications (job_id, candidate_id, ai_match_score, ai_match_summary, ai_match_details, ai_provider, notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(job_id, candidate_id, aiMatchScore, aiMatchSummary, aiMatchDetails, aiProvider, notes || null);
+    INSERT INTO applications (job_id, candidate_id, status, stage, ai_match_score, ai_match_summary, ai_match_details, ai_provider, notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(job_id, candidate_id, status, stage, aiMatchScore, aiMatchSummary, aiMatchDetails, aiProvider, notes || null);
 
   const application = db.prepare('SELECT * FROM applications WHERE id = ?').get(result.lastInsertRowid);
 
