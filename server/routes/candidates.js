@@ -4,7 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const db = require('../db');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const { parseCV } = require('../services/cvParser');
 const { scoreCandidate, detectRole } = require('../services/scorer');
 
@@ -29,7 +29,7 @@ const upload = multer({
   },
 });
 
-router.use(authMiddleware);
+router.use(authMiddleware, adminMiddleware);
 
 // GET /api/candidates
 router.get('/', (req, res) => {

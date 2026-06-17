@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
-router.use(authMiddleware);
+router.use(authMiddleware, adminMiddleware);
 
 // GET /api/dashboard/stats
 router.get('/stats', (req, res) => {

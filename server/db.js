@@ -102,5 +102,29 @@ migrate('ALTER TABLE screenings RENAME COLUMN procurement_score TO nice_to_have_
 migrate('ALTER TABLE screenings RENAME COLUMN logistics_score TO title_match_score');
 migrate('ALTER TABLE screenings RENAME COLUMN technology_score TO experience_score');
 
+// ── Seed the designated admin account if it doesn't exist yet ────────────────
+// Creates a fallback admin only on a fresh database. It NEVER overwrites an
+// existing user's password on restart — use `npm run admin` to change it live.
+// Configure via env vars: ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME.
+try {
+  const bcrypt = require('bcryptjs');
+  const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'bansod.ashish@gmail.com').trim();
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Anty!!@2#3';
+  const ADMIN_NAME = process.env.ADMIN_NAME || 'Ashish Bansod';
+  const existing = db.prepare('SELECT id, role FROM users WHERE lower(email) = lower(?)').get(ADMIN_EMAIL);
+  if (!existing) {
+    const hashed = bcrypt.hashSync(ADMIN_PASSWORD, 12);
+    db.prepare(
+      "INSERT INTO users (name, email, password, role, market, plan, onboarding_complete) VALUES (?, ?, ?, 'admin', 'Global', 'pro', 1)"
+    ).run(ADMIN_NAME, ADMIN_EMAIL, hashed);
+    console.log('✅ Admin account created:', ADMIN_EMAIL);
+  } else if (existing.role !== 'admin') {
+    db.prepare("UPDATE users SET role = 'admin', onboarding_complete = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(existing.id);
+    console.log('✅ Existing user promoted to admin:', ADMIN_EMAIL);
+  }
+} catch (err) {
+  console.error('⚠️  Failed to seed admin account:', err.message);
+}
+
 console.log(`✅ SQLite database ready: ${dbPath}`);
 module.exports = db;
