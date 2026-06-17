@@ -14,17 +14,16 @@ const PIPELINE_STAGE_LABELS = {
 
 function statusForStage(stage) {
   if (stage === 'offer') return 'offer';
-  return stage === 'application' ? 'applied' : 'screening';
+  if (!stage) return 'new';
+  return stage === 'application' ? 'screening' : 'interview';
 }
 
 export default function Candidates() {
   const [candidates, setCandidates] = useState([]);
-  const [jobs, setJobs] = useState([]);
-  const [applicationsByCandidate, setApplicationsByCandidate] = useState({});
   const [loading, setLoading] = useState(true);
-  const [pipelineJobId, setPipelineJobId] = useState('');
   const [pipelineUpdatingId, setPipelineUpdatingId] = useState(null);
   const [pipelineError, setPipelineError] = useState('');
+  const [pipelineSuccess, setPipelineSuccess] = useState('');
   const [filters, setFilters] = useState({ market: '', status: '', search: '' });
   const navigate = useNavigate();
 
@@ -43,62 +42,29 @@ export default function Candidates() {
 
   useEffect(() => { fetchCandidates(); }, [filters]);
 
-  useEffect(() => {
-    api.get('/jobs', { params: { status: 'active' } })
-      .then(res => setJobs(res.data.jobs || []))
-      .catch(err => console.error(err));
-  }, []);
-
-  useEffect(() => {
-    if (!pipelineJobId) {
-      setApplicationsByCandidate({});
-      return;
-    }
-
-    api.get('/applications', { params: { job_id: pipelineJobId } })
-      .then(res => {
-        const next = {};
-        (res.data.applications || []).forEach(app => {
-          next[app.candidate_id] = app;
-        });
-        setApplicationsByCandidate(next);
-      })
-      .catch(err => console.error(err));
-  }, [pipelineJobId]);
-
   const moveCandidateToStage = async (candidate, stage) => {
-    if (!pipelineJobId || !stage) return;
-
-    const existing = applicationsByCandidate[candidate.id];
-    const status = statusForStage(stage);
+    const newStage = stage || null;
     setPipelineUpdatingId(candidate.id);
     setPipelineError('');
+    setPipelineSuccess('');
+
+    // optimistic update
+    setCandidates(prev => prev.map(c => c.id === candidate.id ? { ...c, pipeline_stage: newStage } : c));
 
     try {
-      let application;
-      if (existing) {
-        const res = await api.put(`/applications/${existing.id}`, { stage, status });
-        application = res.data.application;
-      } else {
-        const res = await api.post('/applications', {
-          job_id: Number(pipelineJobId),
-          candidate_id: candidate.id,
-          stage,
-          status,
-        });
-        application = res.data.application;
-      }
-
-      setApplicationsByCandidate(prev => ({ ...prev, [candidate.id]: application }));
-      if (stage === 'offer') {
-        await api.patch(`/candidates/${candidate.id}`, { status: 'offer' });
-        setCandidates(prev => prev.map(c => c.id === candidate.id ? { ...c, status: 'offer' } : c));
-      } else if (candidate.status === 'new') {
-        await api.patch(`/candidates/${candidate.id}`, { status: 'screening' });
-        setCandidates(prev => prev.map(c => c.id === candidate.id ? { ...c, status: 'screening' } : c));
-      }
+      const status = statusForStage(newStage);
+      const res = await api.patch(`/candidates/${candidate.id}`, { pipeline_stage: newStage, status });
+      const updated = res.data.candidate;
+      setCandidates(prev => prev.map(c => c.id === candidate.id ? { ...c, ...updated } : c));
+      setPipelineSuccess(
+        newStage
+          ? `${candidate.name} moved to ${PIPELINE_STAGE_LABELS[newStage]}.`
+          : `${candidate.name} removed from the pipeline.`
+      );
     } catch (err) {
-      setPipelineError(err.response?.data?.error || 'Could not move candidate to pipeline.');
+      // revert on failure
+      setCandidates(prev => prev.map(c => c.id === candidate.id ? { ...c, pipeline_stage: candidate.pipeline_stage } : c));
+      setPipelineError(err.response?.data?.error || 'Could not update pipeline stage.');
     } finally {
       setPipelineUpdatingId(null);
     }
@@ -136,17 +102,13 @@ export default function Candidates() {
             <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
           ))}
         </select>
-        <select className="input w-56" value={pipelineJobId} onChange={e => setPipelineJobId(e.target.value)}>
-          <option value="">Select job for pipeline…</option>
-          {jobs.map(job => (
-            <option key={job.id} value={job.id}>{job.title} ({job.market})</option>
-          ))}
-        </select>
         {(filters.market || filters.status || filters.search) && (
           <button className="btn-secondary text-sm" onClick={() => setFilters({ market: '', status: '', search: '' })}>Clear filters</button>
         )}
       </div>
+
       {pipelineError && <p className="text-sm text-red-600">{pipelineError}</p>}
+      {pipelineSuccess && <p className="text-sm text-green-600">✓ {pipelineSuccess}</p>}
 
       {/* Table */}
       <div className="card overflow-hidden">
@@ -178,7 +140,6 @@ export default function Candidates() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {candidates.map(c => {
-                  const application = applicationsByCandidate[c.id];
                   return (
                   <tr key={c.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => navigate(`/candidates/${c.id}`)}>
                     <td className="px-4 py-3">
@@ -219,12 +180,12 @@ export default function Candidates() {
                     <td className="px-4 py-3">
                       <select
                         className="text-xs border border-slate-200 rounded px-2 py-1 bg-white text-slate-600 cursor-pointer min-w-[150px] disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
-                        value={application?.stage || ''}
-                        disabled={!pipelineJobId || pipelineUpdatingId === c.id}
+                        value={c.pipeline_stage || ''}
+                        disabled={pipelineUpdatingId === c.id}
                         onClick={e => e.stopPropagation()}
                         onChange={e => moveCandidateToStage(c, e.target.value)}
                       >
-                        <option value="">{pipelineJobId ? 'Add to pipeline…' : 'Select job first'}</option>
+                        <option value="">Not in pipeline</option>
                         {PIPELINE_STAGES.map(stage => (
                           <option key={stage} value={stage}>{PIPELINE_STAGE_LABELS[stage]}</option>
                         ))}

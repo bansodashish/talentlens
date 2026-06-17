@@ -26,35 +26,37 @@ const STAGE_DROP_BG = {
 };
 
 export default function Pipeline() {
-  const [applications, setApplications] = useState([]);
+  const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [marketFilter, setMarketFilter] = useState('');
   const [draggedId, setDraggedId] = useState(null);
   const [dragOverStage, setDragOverStage] = useState(null);
 
-  const fetchApplications = async () => {
+  const fetchCandidates = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/applications');
-      setApplications(res.data.applications);
+      const res = await api.get('/candidates');
+      setCandidates(res.data.candidates || []);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchApplications(); }, []);
+  useEffect(() => { fetchCandidates(); }, []);
 
-  const updateStage = async (appId, newStage) => {
+  const updateStage = async (candidateId, newStage) => {
+    const status = newStage === 'offer' ? 'offer' : (newStage === 'application' ? 'screening' : 'interview');
+    // optimistic update
+    setCandidates(prev => prev.map(c => c.id === candidateId ? { ...c, pipeline_stage: newStage, status } : c));
     try {
-      await api.put(`/applications/${appId}`, {
-        stage: newStage,
-        status: newStage === 'offer' ? 'offer' : 'screening',
-      });
-      setApplications(prev => prev.map(a => a.id === appId ? { ...a, stage: newStage } : a));
-    } catch (err) { console.error(err); }
+      await api.patch(`/candidates/${candidateId}`, { pipeline_stage: newStage, status });
+    } catch (err) {
+      console.error(err);
+      fetchCandidates();
+    }
   };
 
-  const handleDragStart = (e, appId) => {
-    setDraggedId(appId);
+  const handleDragStart = (e, candidateId) => {
+    setDraggedId(candidateId);
     e.dataTransfer.effectAllowed = 'move';
   };
 
@@ -84,8 +86,9 @@ export default function Pipeline() {
     setDragOverStage(null);
   };
 
-  const filtered = marketFilter ? applications.filter(a => a.job_market === marketFilter) : applications;
-  const byStage = STAGES.reduce((acc, s) => ({ ...acc, [s]: filtered.filter(a => a.stage === s) }), {});
+  const inPipeline = candidates.filter(c => STAGES.includes(c.pipeline_stage));
+  const filtered = marketFilter ? inPipeline.filter(c => c.market === marketFilter) : inPipeline;
+  const byStage = STAGES.reduce((acc, s) => ({ ...acc, [s]: filtered.filter(c => c.pipeline_stage === s) }), {});
 
   return (
     <div className="space-y-5">
@@ -142,13 +145,13 @@ export default function Pipeline() {
                       </div>
                     )}
 
-                    {byStage[stage].map(app => {
-                      const isDragging = draggedId === app.id;
+                    {byStage[stage].map(cand => {
+                      const isDragging = draggedId === cand.id;
                       return (
                         <div
-                          key={app.id}
+                          key={cand.id}
                           draggable={!isOffer}
-                          onDragStart={!isOffer ? e => handleDragStart(e, app.id) : undefined}
+                          onDragStart={!isOffer ? e => handleDragStart(e, cand.id) : undefined}
                           onDragEnd={!isOffer ? handleDragEnd : undefined}
                           className={`bg-white border rounded-lg p-3 transition-all duration-150 select-none ${
                             isOffer
@@ -165,32 +168,32 @@ export default function Pipeline() {
                                 : <span className="text-slate-300 text-xs flex-shrink-0">⠿</span>
                               }
                               <Link
-                                to={`/candidates/${app.candidate_id}`}
+                                to={`/candidates/${cand.id}`}
                                 className="font-medium text-sm text-slate-800 hover:text-blue-600 leading-tight truncate"
                                 onClick={e => e.stopPropagation()}
                               >
-                                {app.candidate_name}
+                                {cand.name}
                               </Link>
                             </div>
-                            {app.ai_match_score && (
+                            {cand.ai_score != null && (
                               <span className="text-xs font-medium text-green-700 bg-green-100 px-1.5 py-0.5 rounded-full ml-1 flex-shrink-0">
-                                {app.ai_match_score}%
+                                {cand.ai_score}%
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-slate-500 truncate mb-2">{app.current_title || 'Candidate'}</p>
-                          <p className="text-xs text-slate-400 truncate mb-2">{app.job_title}</p>
+                          <p className="text-xs text-slate-500 truncate mb-2">{cand.current_title || 'Candidate'}</p>
+                          <p className="text-xs text-slate-400 truncate mb-2">{cand.current_company || cand.email}</p>
                           <div className="flex items-center justify-between">
                             <span className="text-xs px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                              🌍 {app.job_market}
+                              🌍 {cand.market}
                             </span>
                             {isOffer ? (
                               <span className="text-xs text-green-600 font-semibold">✓ Offered</span>
                             ) : (
                               <select
                                 className="text-xs border border-slate-200 rounded px-1 py-0.5 bg-white text-slate-600 cursor-pointer"
-                                value={app.stage}
-                                onChange={e => updateStage(app.id, e.target.value)}
+                                value={cand.pipeline_stage}
+                                onChange={e => updateStage(cand.id, e.target.value)}
                                 onClick={e => e.stopPropagation()}
                               >
                                 {STAGES.filter(s => s !== 'offer').map(s => (
@@ -214,7 +217,7 @@ export default function Pipeline() {
         <div className="text-center py-12 text-slate-400">
           <div className="text-4xl mb-3">🔄</div>
           <p className="font-medium text-slate-600 mb-1">Pipeline is empty</p>
-          <p className="text-sm mb-4">Add candidates to jobs to see them in the pipeline</p>
+          <p className="text-sm mb-4">Set a candidate's pipeline stage on the Candidates page to see them here</p>
           <Link to="/candidates" className="btn-primary text-sm">View Candidates</Link>
         </div>
       )}

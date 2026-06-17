@@ -21,6 +21,7 @@ migrate('ALTER TABLE candidates ADD COLUMN cv_text TEXT');
 migrate('ALTER TABLE candidates ADD COLUMN cv_parsed_at DATETIME');
 migrate('ALTER TABLE candidates ADD COLUMN source TEXT DEFAULT "manual"');
 migrate('ALTER TABLE candidates ADD COLUMN source_url TEXT');
+migrate('ALTER TABLE candidates ADD COLUMN pipeline_stage TEXT');
 migrate('ALTER TABLE applications ADD COLUMN ai_match_details TEXT');
 migrate('ALTER TABLE applications ADD COLUMN ai_provider TEXT DEFAULT "local"');
 
