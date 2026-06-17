@@ -24,7 +24,7 @@ import Landing from './pages/Landing';
 import Onboarding from './pages/Onboarding';
 
 // Recruiters may only access these feature paths; everything else is frozen.
-const RECRUITER_PATHS = ['/candidate-search', '/cv-match', '/profile', '/onboarding'];
+const RECRUITER_PATHS = ['/dashboard', '/candidate-search', '/cv-match', '/profile', '/onboarding'];
 
 function homePathFor(user) {
   return user?.role === 'admin' ? '/dashboard' : '/candidate-search';
