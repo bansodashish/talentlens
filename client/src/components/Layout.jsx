@@ -16,9 +16,19 @@ const aiNav = [
   { path: '/history',          label: 'History' },
 ];
 
-function NavLink({ path, label, onClick, navText, navActiveBg }) {
+function NavLink({ path, label, onClick, navText, navActiveBg, disabled }) {
   const location = useLocation();
   const active = location.pathname.startsWith(path);
+  if (disabled) {
+    return (
+      <span
+        title="Not available for your role"
+        style={{ color: navText, opacity: 0.4 }}
+        className="px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap cursor-not-allowed select-none inline-flex items-center gap-1">
+        <span aria-hidden="true">🔒</span>{label}
+      </span>
+    );
+  }
   return (
     <Link to={path} onClick={onClick}
       style={active ? { background: navActiveBg, color: '#fff' } : { color: navText }}
@@ -51,6 +61,11 @@ export default function Layout({ children }) {
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
+  // Role-based nav access: recruiters may only use Candidate Search + Screen.
+  const isAdmin = user?.role === 'admin';
+  const RECRUITER_ALLOWED = ['/candidate-search', '/cv-match'];
+  const navDisabled = (path) => !isAdmin && !RECRUITER_ALLOWED.includes(path);
+
   const marketBadge = { UK: '🇬🇧', Dubai: '🇦🇪', Both: '🌍' }[user?.market] || '';
   const navBg      = 'var(--tl-nav-bg)';
   const navBorder  = 'var(--tl-nav-border)';
@@ -75,7 +90,7 @@ export default function Layout({ children }) {
 
           {/* Primary nav */}
           <nav className="hidden md:flex items-center gap-0.5">
-            {mainNav.map(n => <NavLink key={n.path} {...n} navText={navText} navActiveBg={navActive} />)}
+            {mainNav.map(n => <NavLink key={n.path} {...n} disabled={navDisabled(n.path)} navText={navText} navActiveBg={navActive} />)}
           </nav>
 
           <div className="hidden md:block h-5 w-px mx-1" style={{ background: navBorder }} />
@@ -83,7 +98,7 @@ export default function Layout({ children }) {
           {/* AI nav */}
           <nav className="hidden md:flex items-center gap-0.5">
             <span className="text-xs font-semibold uppercase tracking-wider px-1 select-none" style={{ color: navText, opacity: 0.5 }}>AI</span>
-            {aiNav.map(n => <NavLink key={n.path} {...n} navText={navText} navActiveBg={navActive} />)}
+            {aiNav.map(n => <NavLink key={n.path} {...n} disabled={navDisabled(n.path)} navText={navText} navActiveBg={navActive} />)}
           </nav>
 
           <div className="flex-1" />
@@ -243,9 +258,9 @@ export default function Layout({ children }) {
         {mobileOpen && (
           <div className="md:hidden px-4 py-3 space-y-1" style={{ borderTop: `1px solid ${navBorder}`, background: navBg }}>
             <p className="text-xs font-semibold uppercase tracking-wider px-2 mb-2" style={{ color: navText, opacity: 0.5 }}>Navigation</p>
-            {mainNav.map(n => <NavLink key={n.path} {...n} onClick={() => setMobileOpen(false)} navText={navText} navActiveBg={navActive} />)}
+            {mainNav.map(n => <NavLink key={n.path} {...n} disabled={navDisabled(n.path)} onClick={() => setMobileOpen(false)} navText={navText} navActiveBg={navActive} />)}
             <p className="text-xs font-semibold uppercase tracking-wider px-2 mt-3 mb-2" style={{ color: navText, opacity: 0.5 }}>AI Tools</p>
-            {aiNav.map(n => <NavLink key={n.path} {...n} onClick={() => setMobileOpen(false)} navText={navText} navActiveBg={navActive} />)}
+            {aiNav.map(n => <NavLink key={n.path} {...n} disabled={navDisabled(n.path)} onClick={() => setMobileOpen(false)} navText={navText} navActiveBg={navActive} />)}
             <div style={{ borderTop: `1px solid ${navBorder}`, paddingTop: '8px', marginTop: '8px' }}>
               <NavLink path="/profile" label="Profile & Settings" onClick={() => setMobileOpen(false)} navText={navText} navActiveBg={navActive} />
               {user?.role === 'admin' && <NavLink path="/admin" label="Admin Panel" onClick={() => setMobileOpen(false)} navText={navText} navActiveBg={navActive} />}

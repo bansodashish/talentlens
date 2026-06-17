@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const { scoreCandidate, detectRole } = require('../services/scorer');
 
-router.use(authMiddleware);
+router.use(authMiddleware, adminMiddleware);
 
 const PIPELINE_STAGES = ['application', 'phone_screen', 'technical', 'final', 'offer'];
 

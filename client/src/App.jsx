@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Layout from './components/Layout';
@@ -23,17 +23,30 @@ import History from './pages/History';
 import Landing from './pages/Landing';
 import Onboarding from './pages/Onboarding';
 
+// Recruiters may only access these feature paths; everything else is frozen.
+const RECRUITER_PATHS = ['/candidate-search', '/cv-match', '/profile', '/onboarding'];
+
+function homePathFor(user) {
+  return user?.role === 'admin' ? '/dashboard' : '/candidate-search';
+}
+
 function PrivateRoute({ children, adminOnly = false }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-600 border-t-transparent"></div>
     </div>
   );
   if (!user) return <Navigate to="/login" replace />;
-  if (adminOnly && user.role !== 'admin') return <Navigate to="/dashboard" replace />;
   // First-time users → onboarding
   if (user.onboarding_complete === false) return <Navigate to="/onboarding" replace />;
+  if (adminOnly && user.role !== 'admin') return <Navigate to={homePathFor(user)} replace />;
+  // Recruiters are restricted to their allowed feature pages
+  if (user.role !== 'admin') {
+    const allowed = RECRUITER_PATHS.some(p => location.pathname.startsWith(p));
+    if (!allowed) return <Navigate to={homePathFor(user)} replace />;
+  }
   return <Layout>{children}</Layout>;
 }
 
@@ -41,22 +54,27 @@ function PublicRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return null;
   if (user && user.onboarding_complete === false) return <Navigate to="/onboarding" replace />;
-  return user ? <Navigate to="/dashboard" replace /> : children;
+  return user ? <Navigate to={homePathFor(user)} replace /> : children;
 }
 
 function LandingRoute() {
   const { user, loading } = useAuth();
   if (loading) return null;
   if (user && user.onboarding_complete === false) return <Navigate to="/onboarding" replace />;
-  return user ? <Navigate to="/dashboard" replace /> : <Landing />;
+  return user ? <Navigate to={homePathFor(user)} replace /> : <Landing />;
 }
 
 function OnboardingRoute() {
   const { user, loading } = useAuth();
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
-  if (user.onboarding_complete) return <Navigate to="/dashboard" replace />;
+  if (user.onboarding_complete) return <Navigate to={homePathFor(user)} replace />;
   return <Onboarding />;
+}
+
+function HomeRedirect() {
+  const { user } = useAuth();
+  return <Navigate to={homePathFor(user)} replace />;
 }
 
 export default function App() {
@@ -96,7 +114,7 @@ export default function App() {
           <Route path="/admin"     element={<PrivateRoute adminOnly><Admin /></PrivateRoute>} />
 
           {/* Fallbacks */}
-          <Route path="*"  element={<Navigate to="/dashboard" replace />} />
+          <Route path="*"  element={<HomeRedirect />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
