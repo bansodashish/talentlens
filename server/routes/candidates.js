@@ -205,7 +205,7 @@ router.patch('/:id', (req, res) => {
 
   const ALLOWED = [
     'name', 'email', 'phone', 'location', 'market', 'current_title', 'current_company',
-    'experience_years', 'skills', 'linkedin_url', 'status', 'notes',
+    'experience_years', 'skills', 'linkedin_url', 'status', 'notes', 'pipeline_stage',
   ];
   const sets = [];
   const params = [];
