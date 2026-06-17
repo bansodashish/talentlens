@@ -30,8 +30,44 @@ if [ ! -x "node_modules/.bin/react-scripts" ]; then
 fi
 npm run build
 
+echo "🔎 Validating server code (syntax check)..."
+cd "$APP_DIR/server"
+# Fail the deploy BEFORE touching the running app if any .js file has a syntax error.
+SYNTAX_OK=1
+while IFS= read -r -d '' f; do
+	if ! node --check "$f"; then
+		echo "❌ Syntax error in: $f"
+		SYNTAX_OK=0
+	fi
+done < <(find . -path ./node_modules -prune -o -name '*.js' -print0)
+if [ "$SYNTAX_OK" -ne 1 ]; then
+	echo "🛑 Aborting deploy — fix the syntax error(s) above. The running app was left untouched."
+	exit 1
+fi
+echo "✅ Server code passed syntax check."
+
 echo "♻️  Restarting app with PM2..."
 cd "$APP_DIR"
-pm2 reload ecosystem.config.js --env production
+# startOrReload starts the app if it isn't running, or zero-downtime reloads it if it is.
+pm2 startOrReload ecosystem.config.js --env production
+pm2 save
 
-echo "✅ Deploy complete! App running at http://$(hostname -I | awk '{print $1}')"
+echo "🩺 Health check..."
+PORT="${PORT:-5001}"
+HEALTHY=0
+for i in $(seq 1 15); do
+	if curl -fsS "http://localhost:${PORT}/api/health" >/dev/null 2>&1; then
+		HEALTHY=1
+		break
+	fi
+	sleep 1
+done
+if [ "$HEALTHY" -ne 1 ]; then
+	echo "❌ App did NOT pass health check on port ${PORT}. Recent logs:"
+	pm2 logs --lines 30 --nostream || true
+	echo "🛑 Deploy finished but the app is unhealthy — check the logs above."
+	exit 1
+fi
+
+echo "✅ Deploy complete! App healthy at http://$(hostname -I | awk '{print $1}')"
+
