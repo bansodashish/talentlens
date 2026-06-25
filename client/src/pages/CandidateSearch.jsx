@@ -125,7 +125,7 @@ export default function CandidateSearch() {
     }
   };
 
-  const handleTestConnection = () => {};
+  const handleTestConnection = () => {}; // eslint-disable-line
 
   const toggleSelect = (i) => {
     const s = new Set(selected);
@@ -275,7 +275,7 @@ export default function CandidateSearch() {
                   <div className="relative w-16 h-16">
                     <div className="animate-spin rounded-full h-16 w-16 border-4 border-slate-200 border-t-blue-500"></div>
                     <div className="absolute inset-0 flex items-center justify-center text-2xl">
-                      {currentPlatform?.icon}
+                      🔍
                     </div>
                   </div>
                   <div>
@@ -415,36 +415,10 @@ export default function CandidateSearch() {
             )}
 
                 {!searching && !searched && (
-                <div className="space-y-3">
                 <div className="card p-12 text-center text-slate-400">
                   <div className="text-5xl mb-3">🔍</div>
                   <p className="font-medium text-slate-600">Search for candidates</p>
-                  <p className="text-sm mt-1">Choose a platform and enter keywords to get started.</p>
-                </div>
-
-                {/* Quick connection test — Apify only */}
-                {platform !== 'apollo' && (
-                <div className="card p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-700">🔌 Connection Diagnostics</p>
-                      <p className="text-xs text-slate-400 mt-0.5">Verify your Apify token and actor IDs are valid</p>
-                    </div>
-                    <button onClick={handleTestConnection} disabled={testLoading}
-                      className="btn-secondary text-xs">
-                      {testLoading ? '🔄 Testing…' : 'Run Test'}
-                    </button>
-                  </div>
-                  {connTest && <ConnectionTestResult data={connTest} />}
-                </div>
-                )}
-
-                {platform === 'apollo' && (
-                <div className="card p-4 bg-purple-50 border border-purple-200">
-                  <p className="text-sm font-semibold text-purple-800 mb-1">🚀 Apollo.io Search</p>
-                  <p className="text-xs text-purple-700">Make sure your Apollo API key is saved under <a href="/profile" className="underline">Profile → API Keys</a>. Apollo returns people with business emails and LinkedIn profiles.</p>
-                </div>
-                )}
+                  <p className="text-sm mt-1">Select a source above and enter keywords to get started.</p>
                 </div>
                 )}
           </div>
@@ -469,7 +443,7 @@ export default function CandidateSearch() {
                   return (
                     <tr key={s.id} className="hover:bg-slate-50">
                       <td className="px-4 py-3">
-                        <span className="text-sm">{p?.icon} {p?.label || s.platform}</span>
+                        <span className="text-sm">🔍 {s.source || s.platform || 'google_cse'}</span>
                       </td>
                       <td className="px-4 py-3 font-medium text-slate-800">{s.query}</td>
                       <td className="px-4 py-3 text-slate-500">{s.location || '—'}</td>
