@@ -80,19 +80,13 @@ export default function CandidateSearch() {
   const [xrayTarget, setXrayTarget]       = useState('linkedin');
   const [googleSearchId, setGoogleSearchId] = useState(null);
 
-  // Platform status
-  const [platformStatus, setPlatformStatus] = useState({});
-
   // History
   const [history, setHistory]     = useState([]);
   const [tab, setTab]             = useState('search');
 
   useEffect(() => {
-    api.get('/scraper/platforms').then(r => setPlatformStatus(r.data.platforms || {})).catch(() => {});
-    api.get('/scraper/history').then(r => setHistory(r.data.sessions || [])).catch(() => {});
+    api.get('/search/history').then(r => setHistory(r.data.sessions || [])).catch(() => {});
   }, []);
-
-  const status = platformStatus['google'];
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -114,7 +108,7 @@ export default function CandidateSearch() {
       setResults(candidates);
       setSelected(new Set(candidates.map((_, i) => i)));
       setSearched(true);
-      api.get('/scraper/history').then(r => setHistory(r.data.sessions || [])).catch(() => {});
+      api.get('/search/history').then(r => setHistory(r.data.sessions || [])).catch(() => {});
     } catch (err) {
       const msg = err.response?.data?.hint || err.response?.data?.error || err.message || 'Search failed.';
       setError(msg);
@@ -205,14 +199,6 @@ export default function CandidateSearch() {
                 </div>
                 <p className="text-xs text-slate-400 mt-2">Free: 100 queries/day · 10 results per query</p>
               </div>
-
-            {/* Not configured warning */}
-            {status && !status.configured && (
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
-                <strong>Google X-Ray</strong> is not configured.{' '}
-                Add GOOGLE_CSE_API_KEY and GOOGLE_CSE_ID to server/.env
-              </div>
-            )}
 
             {/* Search form */}
             <div className="card p-4">
