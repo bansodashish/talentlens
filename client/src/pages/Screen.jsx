@@ -273,10 +273,12 @@ export default function Screen() {
             disabled={loading}
           >
             <option value="local">⚡ Local keyword scan (free, instant)</option>
+            <option value="openclaw-local">🦅 OpenClaw local model (private VPS inference)</option>
             <option value="ai">🤖 Claude AI (cloud — requires API key)</option>
           </select>
           <p className="text-xs text-slate-400 mt-1">
             {scanMode === 'local' && 'Fast keyword scoring — no API key needed, results in seconds.'}
+            {scanMode === 'openclaw-local' && 'Runs inference on your VPS via Ollama — private, no cloud billing.'}
             {scanMode === 'ai' && 'Claude AI scoring — requires a Claude API key saved in Profile → API Keys.'}
           </p>
         </div>
