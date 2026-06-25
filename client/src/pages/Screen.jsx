@@ -58,9 +58,10 @@ function ResultCard({ rank, c }) {
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-semibold text-slate-800 truncate">{c.name || c.fileName}</h3>
-              <span className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${REC_STYLE[c.recommendation] || 'bg-slate-100 text-slate-700'}`}>
-                {c.recommendation}
-              </span>
+              {c.status === 'pending'
+                ? <span className="text-[11px] px-2 py-0.5 rounded-full border font-medium bg-slate-100 text-slate-400 border-slate-200">Analysing…</span>
+                : <span className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${REC_STYLE[c.recommendation] || 'bg-slate-100 text-slate-700'}`}>{c.recommendation}</span>
+              }
             </div>
             <p className="text-xs text-slate-500 mt-0.5 truncate">
               {c.currentRole || '—'} · {Number(c.yearsExperience) || 0} yrs experience
@@ -73,13 +74,21 @@ function ResultCard({ rank, c }) {
           </div>
         </div>
         <div className="text-right flex-shrink-0">
-          <div className={`text-3xl font-bold ${overallColor}`}>{overall}</div>
-          <div className="text-[10px] text-slate-400 uppercase tracking-wide">Overall</div>
+          {c.status === 'pending'
+            ? <div className="text-sm text-slate-400 italic">Processing…</div>
+            : <>
+                <div className={`text-3xl font-bold ${overallColor}`}>{overall}</div>
+                <div className="text-[10px] text-slate-400 uppercase tracking-wide">Overall</div>
+              </>
+          }
         </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-        {SCORE_BARS.map(b => <Bar key={b.key} label={b.label} value={c[b.key]} color={b.color} />)}
+        {c.status === 'pending'
+          ? <div className="col-span-4 text-xs text-slate-400 italic">Waiting for model response…</div>
+          : SCORE_BARS.map(b => <Bar key={b.key} label={b.label} value={c[b.key]} color={b.color} />)
+        }
       </div>
 
       {c.summary && (
