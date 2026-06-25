@@ -39,19 +39,18 @@ function ConnectionTestResult({ data }) {
 
 const PLATFORMS = [
   {
-    id: 'apollo',
-    label: 'Apollo.io',
-    icon: '🚀',
-    description: 'Search by job title, company & location with contact enrichment',
-    color: 'purple',
+    id: 'google',
+    label: 'Google X-Ray',
+    icon: '🔍',
+    description: 'Find LinkedIn, GitHub & Wellfound profiles via Google',
+    color: 'green',
   },
-  {
-    id: 'linkedin',
-    label: 'LinkedIn',
-    icon: '💼',
-    description: 'Search public LinkedIn profiles via Apify',
-    color: 'blue',
-  },
+];
+
+const XRAY_TARGETS = [
+  { id: 'linkedin',  label: 'LinkedIn',  icon: '💼', desc: 'Professional profiles' },
+  { id: 'github',    label: 'GitHub',    icon: '🐙', desc: 'Developer profiles' },
+  { id: 'wellfound', label: 'Wellfound', icon: '🌟', desc: 'Startup & tech talent' },
 ];
 
 const UK_LOCATIONS  = ['London', 'Manchester', 'Birmingham', 'Leeds', 'Bristol', 'Edinburgh', 'Glasgow', 'Liverpool', 'Sheffield', 'Nottingham', 'Remote (UK)'];
@@ -61,34 +60,28 @@ export default function CandidateSearch() {
   const navigate = useNavigate();
 
   // Form state
-  const [platform, setPlatform]   = useState('linkedin');
+  const [platform, setPlatform]   = useState('google');
   const [query, setQuery]         = useState('');
   const [location, setLocation]   = useState('');
-  const [maxItems, setMaxItems]   = useState(25);
-  const [toSheets, setToSheets]   = useState(false);
+  const [maxItems, setMaxItems]   = useState(10);
 
   // Results state
   const [results, setResults]       = useState([]);
   const [selected, setSelected]     = useState(new Set());
   const [searching, setSearching]   = useState(false);
   const [importing, setImporting]   = useState(false);
-  const [sessionId, setSessionId]   = useState(null);
   const [error, setError]           = useState('');
   const [importMsg, setImportMsg]   = useState('');
   const [searched, setSearched]     = useState(false);
   const [elapsed, setElapsed]       = useState(0);
   const timerRef                    = useRef(null);
 
-  // Apollo-specific
-  const [experienceLevel, setExperienceLevel] = useState('Mid');
-  const [apolloSearchId, setApolloSearchId]   = useState(null);
+  // Google X-Ray specific
+  const [xrayTarget, setXrayTarget]       = useState('linkedin');
+  const [googleSearchId, setGoogleSearchId] = useState(null);
 
   // Platform status
   const [platformStatus, setPlatformStatus] = useState({});
-
-  // Connection test
-  const [connTest, setConnTest]     = useState(null);
-  const [testLoading, setTestLoading] = useState(false);
 
   // History
   const [history, setHistory]     = useState([]);
@@ -99,8 +92,7 @@ export default function CandidateSearch() {
     api.get('/scraper/history').then(r => setHistory(r.data.sessions || [])).catch(() => {});
   }, []);
 
-  const currentPlatform = PLATFORMS.find(p => p.id === platform);
-  const status = platformStatus[platform];
+  const status = platformStatus['google'];
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -114,17 +106,11 @@ export default function CandidateSearch() {
 
     try {
       let candidates;
-      if (platform === 'apollo') {
-        const res = await api.post('/search/apollo', {
-          jobTitle: query, location, experienceLevel, maxResults: maxItems,
-        });
-        candidates = res.data.candidates || [];
-        setApolloSearchId(res.data.searchId);
-      } else {
-        const res = await api.post('/scraper/search', { query, location, maxItems, platform, appendToSheet: toSheets });
-        candidates = res.data.candidates || [];
-        setSessionId(res.data.sessionId);
-      }
+      const res = await api.post('/search/google', {
+        jobTitle: query, location, maxResults: maxItems, xrayTarget,
+      });
+      candidates = res.data.candidates || [];
+      setGoogleSearchId(res.data.searchId);
       setResults(candidates);
       setSelected(new Set(candidates.map((_, i) => i)));
       setSearched(true);
@@ -139,17 +125,7 @@ export default function CandidateSearch() {
     }
   };
 
-  const handleTestConnection = async () => {
-    setTestLoading(true); setConnTest(null);
-    try {
-      const res = await api.get('/scraper/test-connection');
-      setConnTest(res.data);
-    } catch (err) {
-      setConnTest({ error: err.response?.data?.error || err.message });
-    } finally {
-      setTestLoading(false);
-    }
-  };
+  const handleTestConnection = () => {};
 
   const toggleSelect = (i) => {
     const s = new Set(selected);
@@ -166,13 +142,8 @@ export default function CandidateSearch() {
     if (toImport.length === 0) return;
     setImporting(true); setImportMsg('');
     try {
-      if (platform === 'apollo') {
-        const res = await api.post('/search/save', { searchId: apolloSearchId, candidates: toImport });
-        setImportMsg(`✅ Imported ${res.data.inserted} candidates${res.data.skipped > 0 ? ` (${res.data.skipped} duplicates skipped)` : ''}.`);
-      } else {
-        const res = await api.post('/scraper/import', { candidates: toImport, sessionId });
-        setImportMsg(`✅ Imported ${res.data.imported} candidates${res.data.skipped > 0 ? ` (${res.data.skipped} duplicates skipped)` : ''}.`);
-      }
+      const res = await api.post('/search/save', { searchId: googleSearchId, candidates: toImport });
+      setImportMsg(`✅ Imported ${res.data.inserted} candidates${res.data.skipped > 0 ? ` (${res.data.skipped} duplicates skipped)` : ''}.`);
     } catch (err) {
       setImportMsg('❌ Import failed: ' + (err.response?.data?.error || err.message));
     } finally {
@@ -196,7 +167,7 @@ export default function CandidateSearch() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-800">Candidate Search</h1>
-        <p className="text-sm text-slate-500 mt-1">Search Apollo.io and LinkedIn for talent.</p>
+        <p className="text-sm text-slate-500 mt-1">Find candidates on LinkedIn, GitHub & Wellfound via Google X-Ray.</p>
       </div>
 
       {/* Tabs */}
@@ -214,43 +185,32 @@ export default function CandidateSearch() {
           {/* Left — form */}
           <div className="space-y-4">
 
-            {/* Platform picker */}
+
+
+            {/* Google X-Ray source picker */}
             <div className="card p-4">
-              <h3 className="font-semibold text-slate-700 mb-3 text-sm uppercase tracking-wide">Platform</h3>
-              <div className="space-y-2">
-                {PLATFORMS.map(p => {
-                  const s = platformStatus[p.id];
-                  const isActive = platform === p.id;
-                  return (
-                    <button key={p.id} onClick={() => setPlatform(p.id)}
-                      className={`w-full flex items-start gap-3 p-3 rounded-lg border-2 text-left transition-all ${
-                        isActive ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-slate-300 bg-white'
+              <h3 className="font-semibold text-slate-700 mb-3 text-sm uppercase tracking-wide">Search Source</h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {XRAY_TARGETS.map(t => (
+                    <button key={t.id} type="button" onClick={() => setXrayTarget(t.id)}
+                      className={`flex flex-col items-center gap-1 p-2.5 rounded-lg border text-center transition-all ${
+                        xrayTarget === t.id
+                          ? 'border-green-500 bg-green-50 text-green-800'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                       }`}>
-                      <span className="text-xl mt-0.5">{p.icon}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-slate-800 text-sm">{p.label}</span>
-                          {s && (
-                            <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
-                              s.configured ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
-                            }`}>
-                              {s.configured ? '✓ Ready' : '○ Not set up'}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-slate-400 mt-0.5">{p.description}</p>
-                      </div>
+                      <span className="text-lg">{t.icon}</span>
+                      <span className="text-xs font-medium">{t.label}</span>
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
+                <p className="text-xs text-slate-400 mt-2">Free: 100 queries/day · 10 results per query</p>
               </div>
-            </div>
 
             {/* Not configured warning */}
             {status && !status.configured && (
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
-                <strong>{currentPlatform?.label}</strong> is not configured.{' '}
-                Add APIFY_TOKEN and APIFY_LINKEDIN_ACTOR_ID to server/.env
+                <strong>Google X-Ray</strong> is not configured.{' '}
+                Add GOOGLE_CSE_API_KEY and GOOGLE_CSE_ID to server/.env
               </div>
             )}
 
@@ -279,27 +239,15 @@ export default function CandidateSearch() {
                 <div>
                   <label className="block text-xs font-medium text-slate-600 mb-1">Max results</label>
                   <select className="input text-sm" value={maxItems} onChange={e => setMaxItems(Number(e.target.value))}>
-                    {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n}</option>)}
+                    {[10, 20, 30].map(n => (
+                      <option key={n} value={n}>
+                        {n}{n > 10 ? ` (~${Math.ceil(n / 10)} API calls)` : ''}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
-                {platform === 'apollo' && (
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Experience level</label>
-                    <select className="input text-sm" value={experienceLevel} onChange={e => setExperienceLevel(e.target.value)}>
-                      <option value="Entry">Entry level</option>
-                      <option value="Mid">Mid level</option>
-                      <option value="Senior">Senior / Director+</option>
-                    </select>
-                  </div>
-                )}
 
-                {process.env.REACT_APP_SHEETS !== 'false' && platform !== 'apollo' && (
-                  <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
-                    <input type="checkbox" checked={toSheets} onChange={e => setToSheets(e.target.checked)} />
-                    Also export to Google Sheets
-                  </label>
-                )}
 
                 {error && (
                   <div className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">{error}</div>
@@ -309,9 +257,9 @@ export default function CandidateSearch() {
                   {searching ? (
                     <span className="flex items-center justify-center gap-2">
                       <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
-                      Searching {currentPlatform?.label}…
+                      Searching…
                     </span>
-                  ) : `🔍 Search ${currentPlatform?.label}`}
+                  ) : '🔍 Search'}
                 </button>
               </form>
             </div>
@@ -331,8 +279,10 @@ export default function CandidateSearch() {
                     </div>
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-700">Searching {currentPlatform?.label}…</p>
-                    <p className="text-sm text-slate-400 mt-1">This can take 30–120 seconds via Apify</p>
+                    <p className="font-semibold text-slate-700">Searching Google X-Ray…</p>
+                    <p className="text-sm text-slate-400 mt-1">
+                      Searching Google for {XRAY_TARGETS.find(t => t.id === xrayTarget)?.label || ''} profiles…
+                    </p>
                     <p className="text-xs text-slate-400 mt-0.5 font-mono">{elapsed}s elapsed</p>
                   </div>
                   <div className="w-48 bg-slate-100 rounded-full h-1.5 overflow-hidden">
@@ -386,9 +336,11 @@ export default function CandidateSearch() {
                             <div className="font-semibold text-slate-800 text-sm">{c.name}</div>
                             <div className="text-xs text-slate-500">{c.current_title}{c.current_company ? ` · ${c.current_company}` : ''}</div>
                           </div>
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${c.market === 'Dubai' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                            {c.market === 'Dubai' ? '🇦🇪' : '🇬🇧'} {c.market}
-                          </span>
+                          {c.market && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${c.market === 'Dubai' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                              {c.market === 'Dubai' ? '🇦🇪' : '🇬🇧'} {c.market}
+                            </span>
+                          )}
                         </div>
                         <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-xs text-slate-400">
                           {c.location && <span>📍 {c.location}</span>}
@@ -397,7 +349,9 @@ export default function CandidateSearch() {
                           {c.phone && <span>📞 {c.phone}</span>}
                           {(c.linkedin_url || c.profileUrl) && (
                             <a href={c.linkedin_url || c.profileUrl} target="_blank" rel="noopener noreferrer"
-                              onClick={e => e.stopPropagation()} className="text-blue-500 hover:underline">LinkedIn ↗</a>
+                              onClick={e => e.stopPropagation()} className="text-blue-500 hover:underline">
+                              {c.source === 'google_cse_github' ? 'GitHub ↗' : c.source === 'google_cse_wellfound' ? 'Wellfound ↗' : 'LinkedIn ↗'}
+                            </a>
                           )}
                         </div>
                         {c.skills && (
@@ -411,7 +365,7 @@ export default function CandidateSearch() {
                             )}
                           </div>
                         )}
-                        {c.summary && <p className="text-xs text-slate-400 mt-1.5 line-clamp-2">{c.summary}</p>}
+                        {(c.summary || c.snippet) && <p className="text-xs text-slate-400 mt-1.5 line-clamp-2">{c.summary || c.snippet}</p>}
                       </div>
                     </div>
                   ))}
@@ -432,17 +386,11 @@ export default function CandidateSearch() {
                 <div className="bg-slate-50 rounded-xl p-4 space-y-2 text-xs text-slate-600">
                   <p className="font-semibold text-slate-700">Troubleshooting steps:</p>
                   <ol className="list-decimal list-inside space-y-1.5">
-                    <li>Click <strong>"Test Connection"</strong> below to verify your Apify credentials</li>
-                    <li>Check that the actor ID in <code className="bg-slate-200 px-1 rounded">server/.env</code> is correct</li>
-                    <li>Visit <a href="https://console.apify.com" target="_blank" rel="noreferrer" className="text-blue-600 underline">console.apify.com</a> to confirm your token is active</li>
-                    <li>Make sure the Apify actor is published and accessible</li>
+                    <li>Check <code className="bg-slate-200 px-1 rounded">GOOGLE_CSE_API_KEY</code> and <code className="bg-slate-200 px-1 rounded">GOOGLE_CSE_ID</code> in server/.env</li>
+                    <li>Verify your Google CSE engine is configured to search <strong>linkedin.com/in/*</strong></li>
+                    <li>Check your daily quota at <a href="https://console.cloud.google.com" target="_blank" rel="noreferrer" className="text-blue-600 underline">console.cloud.google.com</a></li>
                   </ol>
                 </div>
-                <button onClick={handleTestConnection} disabled={testLoading}
-                  className="btn-secondary text-xs w-full">
-                  {testLoading ? '🔄 Testing…' : '🔌 Test Apify Connection'}
-                </button>
-                {connTest && <ConnectionTestResult data={connTest} />}
               </div>
             )}
 
@@ -452,24 +400,17 @@ export default function CandidateSearch() {
                 <div className="text-center py-4">
                   <div className="text-4xl mb-3">🕵️</div>
                   <p className="font-semibold text-slate-700">No candidates found</p>
-                  <p className="text-sm text-slate-400 mt-1">
-                    The search completed but returned 0 results from {currentPlatform?.label}.
-                  </p>
+                  <p className="text-sm text-slate-400 mt-1">The search completed but returned 0 results.</p>
                 </div>
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-700 space-y-1.5">
                   <p className="font-semibold">Things to try:</p>
                   <ul className="list-disc list-inside space-y-1">
                     <li>Use broader keywords — e.g. <em>"logistics"</em> instead of <em>"supply chain coordinator"</em></li>
-                    <li>Leave the location blank to search nationally</li>
-                    <li>Try a different platform (Apollo.io or LinkedIn)</li>
-                    <li>Check that the Apify actor is working via Test Connection</li>
+                    <li>Leave the location blank to search globally</li>
+                    <li>Try a different source (LinkedIn / GitHub / Wellfound)</li>
+                    <li>Check your Google CSE daily quota at console.cloud.google.com</li>
                   </ul>
                 </div>
-                <button onClick={handleTestConnection} disabled={testLoading}
-                  className="btn-secondary text-xs w-full">
-                  {testLoading ? '🔄 Testing…' : '🔌 Test Apify Connection'}
-                </button>
-                {connTest && <ConnectionTestResult data={connTest} />}
               </div>
             )}
 

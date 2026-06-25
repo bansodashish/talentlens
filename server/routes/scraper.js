@@ -4,13 +4,15 @@ const db      = require('../db');
 const { authMiddleware } = require('../middleware/auth');
 
 const apify   = require('../services/apifyService');
+const googleCse = require('../services/googleCseService');
 
 // All routes require auth
 router.use(authMiddleware);
 
 // ── Platform status helper ────────────────────────────────────────────────────
 const platformStatus = () => ({
-  linkedin:   { configured: apify.isLinkedInConfigured(),  label: 'LinkedIn',   via: 'Apify' },
+  linkedin: { configured: apify.isLinkedInConfigured(),   label: 'LinkedIn',     via: 'Apify' },
+  google:   { configured: googleCse.isConfigured(),        label: 'Google X-Ray', via: 'Google CSE' },
 });
 
 // GET /api/scraper/platforms — which platforms are configured
