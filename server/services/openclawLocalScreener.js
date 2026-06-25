@@ -24,7 +24,7 @@ ${resumeText}
 ${jobDescription}
 
 === TASK ===
-Evaluate the candidate against the job description above. Return ONLY a single JSON object with this exact schema (no markdown, no commentary):
+Read the job description above carefully. Identify the 4 most important requirement areas it asks for (e.g. technical skills, domain experience, soft skills, qualifications — whatever the JD emphasises). Score the candidate on each of those 4 areas. Then return ONLY a single JSON object with this exact schema (no markdown, no commentary):
 
 {
   "name": string,
@@ -42,12 +42,19 @@ Evaluate the candidate against the job description above. Return ONLY a single J
   "summary": string
 }
 
+Score mapping — map the 4 JD requirement areas you identified onto the 4 score fields in order:
+- supplyChainScore = score for JD requirement area 1
+- procurementScore = score for JD requirement area 2
+- logisticsScore   = score for JD requirement area 3
+- technologyScore  = score for JD requirement area 4
+
 Scoring rules:
 - All scores are integers from 0 to 100.
-- overallScore = your holistic fit assessment (not necessarily the average).
-- recommendation should align with overallScore: >=75 -> "Strong Hire", 55-74 -> "Consider", <55 -> "Reject".
-- summary: 2-3 sentences covering strengths, gaps, and overall fit.
-- Use "" for unknown strings and 0 for unknown numbers - never invent data.`;
+- Base ALL scores solely on how well the candidate matches the job description — ignore any domain not mentioned in the JD.
+- overallScore = holistic fit against the JD (not necessarily the average of the 4 scores).
+- recommendation: >=75 -> "Strong Hire", 55-74 -> "Consider", <55 -> "Reject".
+- summary: 2-3 sentences — what makes the candidate a good or poor fit for THIS specific role.
+- Use "" for unknown strings and 0 for unknown numbers — never invent data.`;
 }
 
 function extractJson(text) {
