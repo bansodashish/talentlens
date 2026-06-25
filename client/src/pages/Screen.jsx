@@ -106,6 +106,7 @@ function ResultCard({ rank, c }) {
 
 export default function Screen() {
   const [jobDescription, setJobDescription] = useState('');
+  const [scanMode, setScanMode] = useState('local');
   const [files, setFiles] = useState([]);
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -144,7 +145,7 @@ export default function Screen() {
 
     const form = new FormData();
     form.append('job_description', jobDescription);
-    form.append('mode', 'local');
+    form.append('mode', scanMode);
     files.forEach(f => form.append('files', f));
 
     try {
@@ -264,6 +265,25 @@ export default function Screen() {
         </div>
 
         <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Screening Mode</label>
+          <select
+            className="input"
+            value={scanMode}
+            onChange={e => setScanMode(e.target.value)}
+            disabled={loading}
+          >
+            <option value="local">Local keyword scan (no model, no API cost)</option>
+            <option value="openclaw-local">OpenClaw local model (private VPS inference)</option>
+            <option value="ai">Claude cloud model</option>
+          </select>
+          <p className="text-xs text-slate-400 mt-1">
+            {scanMode === 'local' && 'Fast, deterministic local scoring with no AI API calls.'}
+            {scanMode === 'openclaw-local' && 'Runs inference on your local OpenClaw endpoint; no cloud token billing.'}
+            {scanMode === 'ai' && 'Uses Claude API key from Profile or server environment.'}
+          </p>
+        </div>
+
+        <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
             CV Files <span className="text-slate-400 font-normal">(PDF, DOCX, TXT — up to 25)</span>
           </label>
@@ -319,6 +339,10 @@ export default function Screen() {
                   ? `Analysing resumes: ${progress}% complete…`
                   : progress === 100
                   ? 'Compiling final scores…'
+                  : scanMode === 'openclaw-local'
+                  ? 'Extracting text and scoring with OpenClaw local model…'
+                  : scanMode === 'ai'
+                  ? 'Uploading CVs and scoring with Claude…'
                   : 'Extracting text and scoring locally…'}
               </span>
               <span>{progress > 0 ? `${progress}%` : 'Processing…'}</span>
@@ -383,7 +407,7 @@ export default function Screen() {
       {!loading && results.length === 0 && !error && (
         <div className="card text-center py-16 text-slate-400">
           <div className="text-4xl mb-3">⚡</div>
-          <p className="font-medium text-slate-600 mb-1">Screen CVs locally - no API key needed</p>
+          <p className="font-medium text-slate-600 mb-1">Choose Local, OpenClaw Local, or Claude mode</p>
           <p className="text-sm">Paste a JD, upload CVs, and get ranked results in seconds.</p>
         </div>
       )}

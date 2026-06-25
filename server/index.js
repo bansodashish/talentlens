@@ -62,6 +62,7 @@ app.get('/api/health', (req, res) => {
       apolloSearch: Boolean(process.env.APOLLO_API_KEY),
       googleSheets: Boolean(process.env.GOOGLE_SHEET_ID),
       openai: Boolean(process.env.OPENAI_API_KEY),
+      openclawLocal: Boolean(process.env.OPENCLAW_LOCAL_BASE_URL && process.env.OPENCLAW_LOCAL_MODEL),
     },
     timestamp: new Date().toISOString(),
   });

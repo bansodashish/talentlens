@@ -6,6 +6,7 @@ TalentLens is a self-hosted recruitment SaaS that combines:
 
 - 🔎 **LinkedIn search** via Apify's `harvestapi/linkedin-profile-search` actor
 - 🤖 **AI resume screening** powered by Claude Sonnet 4 (`claude-sonnet-4-20250514`)
+- 🔒 **OpenClaw local model mode** (privacy-first, runs on your VPS)
 - ⚡ **Local keyword scoring** — free offline alternative with zero API costs
 - 👥 **Candidate CRM** with statuses, HR notes, filters and side-panel profiles
 - ⬇️ **CSV / Excel export** for shortlists and hand-offs
@@ -119,6 +120,14 @@ DB_PATH=../db/talentlens.db
 # ── Workspace fallbacks (optional) ───────────────────────────
 APIFY_TOKEN=
 CLAUDE_API_KEY=
+
+# ── Local model mode (optional) ──────────────────────────────
+# OpenAI-compatible local endpoint (OpenClaw/Ollama/vLLM)
+OPENCLAW_LOCAL_BASE_URL=http://127.0.0.1:11434/v1
+OPENCLAW_LOCAL_MODEL=qwen2.5:7b-instruct
+OPENCLAW_LOCAL_API_KEY=local-dev-key
+OPENCLAW_LOCAL_TIMEOUT_MS=180000
+OPENCLAW_LOCAL_MAX_TOKENS=2048
 ```
 
 ---
