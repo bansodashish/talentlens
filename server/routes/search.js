@@ -14,6 +14,7 @@ const { decrypt }        = require('../utils/encryption');
 const { limitSearches }  = require('../middleware/planLimits');
 const { runLinkedInSearch, inferMarket } = require('../services/linkedinSearchService');
 const { runApolloSearch } = require('../services/apolloService');
+const { runGoogleCseSearch } = require('../services/googleCseService');
 
 router.use(authMiddleware);
 
@@ -193,6 +194,89 @@ router.post('/apollo', limitSearches, async (req, res) => {
     db.prepare(`UPDATE searches SET status='failed', error_message=? WHERE id=?`)
       .run(friendly, searchId);
     res.status(code === 401 || code === 403 ? 401 : code === 429 ? 429 : 500).json({ error: friendly, hint });
+  }
+});
+
+// ── POST /api/search/google ─────────────────────────────────────────────────
+// Google Custom Search Engine X-Ray search.
+// One shared server API key; no per-user key support for now.
+// Supports platform (xrayTarget): linkedin | github | wellfound
+router.post('/google', limitSearches, async (req, res) => {
+  const { jobTitle, location, maxResults, xrayTarget = 'linkedin' } = req.body || {};
+
+  if (!jobTitle) return res.status(400).json({ error: 'jobTitle is required.' });
+  const max = Math.min(30, Math.max(1, parseInt(maxResults) || 10));
+
+  const apiKey = process.env.GOOGLE_CSE_API_KEY;
+  const cseId  = process.env.GOOGLE_CSE_ID;
+  if (!apiKey || !cseId) {
+    return res.status(503).json({
+      error: 'Google X-Ray search is not configured.',
+      hint: 'Add GOOGLE_CSE_API_KEY and GOOGLE_CSE_ID to server/.env. Create a free engine at programmablesearchengine.google.com.',
+    });
+  }
+
+  const session = db.prepare(`
+    INSERT INTO searches
+      (job_title, location, market, experience_level, max_results, status, source, created_by)
+    VALUES (?, ?, ?, ?, ?, 'running', 'google_cse', ?)
+  `).run(
+    jobTitle,
+    location || null,
+    null,
+    xrayTarget,
+    max,
+    req.user.id,
+  );
+  const searchId = session.lastInsertRowid;
+
+  try {
+    const raw = await runGoogleCseSearch({
+      apiKey,
+      cseId,
+      jobTitle,
+      location,
+      maxResults: max,
+      platform: xrayTarget,
+    });
+
+    const candidates = dedupeCandidates(raw);
+
+    db.prepare(`
+      UPDATE searches
+      SET status='completed', results_count=?, results=?
+      WHERE id=?
+    `).run(candidates.length, JSON.stringify(candidates), searchId);
+
+    db.prepare(`
+      INSERT INTO activities (type, description, entity_type, entity_id, user_id)
+      VALUES ('google_cse_search', ?, 'search', ?, ?)
+    `).run(
+      `Google X-Ray (${xrayTarget}) "${jobTitle}" → ${candidates.length} profiles`,
+      searchId,
+      req.user.id,
+    );
+
+    res.json({ searchId, count: candidates.length, candidates });
+  } catch (err) {
+    console.error('Google CSE search failed:', err.response?.data || err.message);
+    const code = err.response?.status;
+    const raw  = err.response?.data?.error?.message || err.message || 'Unknown error';
+
+    let friendly = raw;
+    let hint;
+    if (code === 400 || code === 403 || /api.?key|invalid.?key|bad.?request/i.test(raw)) {
+      friendly = 'Invalid Google CSE API key or Search Engine ID.';
+      hint = 'Check GOOGLE_CSE_API_KEY and GOOGLE_CSE_ID in server/.env.';
+    } else if (code === 429 || /quota|rate.?limit|exceeded/i.test(raw)) {
+      friendly = 'Google CSE daily quota exceeded (100 free queries/day).';
+      hint = 'Wait until midnight UTC for quota reset, or enable billing at console.cloud.google.com ($5/1000 queries).';
+    }
+
+    db.prepare(`UPDATE searches SET status='failed', error_message=? WHERE id=?`)
+      .run(friendly, searchId);
+    res.status(code === 401 || code === 403 ? 401 : code === 429 ? 429 : 500)
+      .json({ error: friendly, hint });
   }
 });
 
