@@ -265,7 +265,10 @@ router.post('/google', limitSearches, async (req, res) => {
 
     let friendly = raw;
     let hint;
-    if (code === 400 || code === 403 || /api.?key|invalid.?key|bad.?request/i.test(raw)) {
+    if (code === 401 || /unauthenticated|api.?keys.?are.?not.?supported|oauth/i.test(raw)) {
+      friendly = 'Invalid Google CSE API key — the key may be for the wrong Google API or missing the Custom Search API.';
+      hint = 'Go to console.cloud.google.com → APIs & Services → enable "Custom Search JSON API", then create a new API key under Credentials and update GOOGLE_CSE_API_KEY in server/.env.';
+    } else if (code === 400 || code === 403 || /api.?key|invalid.?key|bad.?request/i.test(raw)) {
       friendly = 'Invalid Google CSE API key or Search Engine ID.';
       hint = 'Check GOOGLE_CSE_API_KEY and GOOGLE_CSE_ID in server/.env.';
     } else if (code === 429 || /quota|rate.?limit|exceeded/i.test(raw)) {
@@ -275,7 +278,9 @@ router.post('/google', limitSearches, async (req, res) => {
 
     db.prepare(`UPDATE searches SET status='failed', error_message=? WHERE id=?`)
       .run(friendly, searchId);
-    res.status(code === 401 || code === 403 ? 401 : code === 429 ? 429 : 500)
+    // Never return 401/403 to the client — those trigger the frontend auth interceptor.
+    // A bad Google API key is a server config error (400), not an auth failure.
+    res.status(code === 429 ? 429 : 400)
       .json({ error: friendly, hint });
   }
 });
