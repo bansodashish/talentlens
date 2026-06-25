@@ -21,6 +21,7 @@ const { decrypt }        = require('../utils/encryption');
 const { limitScreenings } = require('../middleware/planLimits');
 const { parseCV }        = require('../services/cvParser');
 const { screenResume, MODEL } = require('../services/claudeScreener');
+const { screenResume: screenOpenClawLocal, MODEL: OPENCLAW_LOCAL_MODEL } = require('../services/openclawLocalScreener');
 const { scoreCandidate, detectRole, ALL_ROLES } = require('../services/scorer');
 
 // Quick regex-based extraction for local mode (Claude does this natively).
@@ -187,6 +188,15 @@ async function processScreeningsBackground({ batchId, mode, apiKey, jobDescripti
         const contact = extractContact(plainText);
         result = toScreeningShape(local, contact, detectedRole, plainText);
         raw = { mode: 'local', detectedRole, ...local };
+      } else if (mode === 'openclaw-local') {
+        const out = await screenOpenClawLocal({
+          jobDescription,
+          filePath: file.path,
+          plainText,
+          fileName: file.originalname,
+        });
+        result = out.result;
+        raw = { provider: 'openclaw-local', model: OPENCLAW_LOCAL_MODEL, ...out.raw };
       } else {
         const out = await screenResume({
           apiKey,
@@ -213,12 +223,18 @@ async function processScreeningsBackground({ batchId, mode, apiKey, jobDescripti
       const code   = err.response?.status;
 
       let error = rawMsg;
-      if (code === 401 || /invalid.*api.?key|authentication/i.test(rawMsg)) {
-        error = 'Invalid Claude API key. Save one under Profile → API Keys.';
-      } else if (code === 429 || /rate.?limit/i.test(rawMsg)) {
-        error = 'Claude rate-limit reached — please retry in a minute.';
-      } else if (code === 402 || /credit|quota|insufficient/i.test(rawMsg)) {
-        error = 'Your Anthropic account is out of credits. Top up at https://console.anthropic.com/settings/billing.';
+      if (mode === 'openclaw-local') {
+        if (/ECONNREFUSED|connect ECONNREFUSED|timed out|timeout/i.test(rawMsg)) {
+          error = 'Local OpenClaw service is unavailable. Check OPENCLAW_LOCAL_BASE_URL and ensure the model server is running.';
+        }
+      } else {
+        if (code === 401 || /invalid.*api.?key|authentication/i.test(rawMsg)) {
+          error = 'Invalid Claude API key. Save one under Profile → API Keys.';
+        } else if (code === 429 || /rate.?limit/i.test(rawMsg)) {
+          error = 'Claude rate-limit reached — please retry in a minute.';
+        } else if (code === 402 || /credit|quota|insufficient/i.test(rawMsg)) {
+          error = 'Your Anthropic account is out of credits. Top up at https://console.anthropic.com/settings/billing.';
+        }
       }
 
       failStmt.run(error, `Screening failed: ${error}`, file.id);
@@ -232,14 +248,15 @@ async function processScreeningsBackground({ batchId, mode, apiKey, jobDescripti
     db.prepare(`
       INSERT INTO activities (type, description, entity_type, entity_id, user_id)
       VALUES ('resume_screened', ?, 'screening_batch', NULL, ?)
-    `).run(`Screened ${inserted.length} resume(s) (${mode === 'local' ? 'local scan' : 'Claude'})`, userId);
+    `).run(`Screened ${inserted.length} resume(s) (${mode === 'local' ? 'local scan' : mode === 'openclaw-local' ? 'OpenClaw local' : 'Claude'})`, userId);
   } catch (_) {}
 }
 
 // ── POST /api/screen/resume ──────────────────────────────────────────────────
 router.post('/resume', limitScreenings, upload.array('files', 25), async (req, res) => {
   const jobDescription = req.body.job_description || req.body.jobDescription || '';
-  const mode  = (req.body.mode || 'ai').toLowerCase() === 'local' ? 'local' : 'ai';
+  const requestedMode = String(req.body.mode || 'local').toLowerCase();
+  const mode = ['local', 'ai', 'openclaw-local'].includes(requestedMode) ? requestedMode : 'local';
   const files = req.files || [];
 
   if (!jobDescription.trim()) {
@@ -262,6 +279,14 @@ router.post('/resume', limitScreenings, upload.array('files', 25), async (req, r
       return res.status(503).json({
         error: 'Claude API is not configured.',
         hint:  'Add CLAUDE_API_KEY to server/.env, save a personal key under Profile → Settings, or use Local Scan.',
+      });
+    }
+  } else if (mode === 'openclaw-local') {
+    if (!process.env.OPENCLAW_LOCAL_BASE_URL || !process.env.OPENCLAW_LOCAL_MODEL) {
+      files.forEach(f => { try { fs.unlinkSync(f.path); } catch (_) {} });
+      return res.status(503).json({
+        error: 'Local OpenClaw mode is not configured.',
+        hint: 'Set OPENCLAW_LOCAL_BASE_URL and OPENCLAW_LOCAL_MODEL in server/.env and restart the API.',
       });
     }
   }
@@ -314,7 +339,7 @@ router.post('/resume', limitScreenings, upload.array('files', 25), async (req, r
   res.status(202).json({
     batchId,
     mode,
-    model: mode === 'ai' ? MODEL : 'local-scorer',
+    model: mode === 'ai' ? MODEL : mode === 'openclaw-local' ? OPENCLAW_LOCAL_MODEL : 'local-scorer',
     count: files.length,
     status: 'processing',
     results: []
