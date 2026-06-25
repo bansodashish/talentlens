@@ -272,14 +272,12 @@ export default function Screen() {
             onChange={e => setScanMode(e.target.value)}
             disabled={loading}
           >
-            <option value="local">Local keyword scan (no model, no API cost)</option>
-            <option value="openclaw-local">OpenClaw local model (private VPS inference)</option>
-            <option value="ai">Claude cloud model</option>
+            <option value="local">⚡ Local keyword scan (free, instant)</option>
+            <option value="ai">🤖 Claude AI (cloud — requires API key)</option>
           </select>
           <p className="text-xs text-slate-400 mt-1">
-            {scanMode === 'local' && 'Fast, deterministic local scoring with no AI API calls.'}
-            {scanMode === 'openclaw-local' && 'Runs inference on your local OpenClaw endpoint; no cloud token billing.'}
-            {scanMode === 'ai' && 'Uses Claude API key from Profile or server environment.'}
+            {scanMode === 'local' && 'Fast keyword scoring — no API key needed, results in seconds.'}
+            {scanMode === 'ai' && 'Claude AI scoring — requires a Claude API key saved in Profile → API Keys.'}
           </p>
         </div>
 
