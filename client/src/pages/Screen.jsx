@@ -126,9 +126,10 @@ export default function Screen() {
   const fileInputRef = useRef(null);
 
   const stats = useMemo(() => {
-    const hires    = results.filter(r => r.recommendation === 'Strong Hire').length;
-    const consider = results.filter(r => r.recommendation === 'Consider').length;
-    const rejects  = results.filter(r => r.recommendation === 'Reject').length;
+    const done     = results.filter(r => r.status !== 'pending');
+    const hires    = done.filter(r => r.recommendation === 'Strong Hire').length;
+    const consider = done.filter(r => r.recommendation === 'Consider').length;
+    const rejects  = done.filter(r => r.recommendation === 'Reject').length;
     return { hires, consider, rejects };
   }, [results]);
 
@@ -388,7 +389,7 @@ export default function Screen() {
         <>
           <div className="card p-4 flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-4 text-sm">
-              <span className="text-slate-500">{results.length} candidate{results.length === 1 ? '' : 's'} screened</span>
+              <span className="text-slate-500">{results.filter(r => r.status !== 'pending').length} of {results.length} screened</span>
               <span className="text-green-700">✓ {stats.hires} Strong Hire</span>
               <span className="text-amber-700">~ {stats.consider} Consider</span>
               <span className="text-red-600">✗ {stats.rejects} Reject</span>
