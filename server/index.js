@@ -60,7 +60,6 @@ app.get('/api/health', (req, res) => {
       candidateScraper: Boolean(process.env.APIFY_TOKEN),
       linkedinSearch: Boolean(process.env.APIFY_TOKEN),
       apolloSearch: Boolean(process.env.APOLLO_API_KEY),
-      reedJobPosting: Boolean((process.env.REED_JOB_POSTING_API_KEY || process.env.REED_API_KEY) && process.env.REED_JOB_POSTING_URL),
       googleSheets: Boolean(process.env.GOOGLE_SHEET_ID),
       openai: Boolean(process.env.OPENAI_API_KEY),
       openclawLocal: Boolean(process.env.OPENCLAW_LOCAL_BASE_URL && process.env.OPENCLAW_LOCAL_MODEL),
