@@ -1,21 +1,41 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../utils/api';
 
 const statusColors = { applied: 'badge-blue', screening: 'badge-yellow', interview: 'badge-purple', offer: 'badge-green', hired: 'badge-green', rejected: 'badge-red' };
+
+const distributionBadgeClass = (status) => {
+  if (status === 'posted') return 'badge-green';
+  if (status === 'pending') return 'badge-yellow';
+  if (status === 'failed') return 'badge-red';
+  return 'badge-slate';
+};
 
 export default function JobDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [retryingPortal, setRetryingPortal] = useState('');
+
+  const loadJob = useCallback(() => api.get(`/jobs/${id}`)
+    .then(res => setData(res.data))
+    .catch(() => navigate('/jobs'))
+    .finally(() => setLoading(false)), [id, navigate]);
 
   useEffect(() => {
-    api.get(`/jobs/${id}`)
-      .then(res => setData(res.data))
-      .catch(() => navigate('/jobs'))
-      .finally(() => setLoading(false));
-  }, [id, navigate]);
+    loadJob();
+  }, [loadJob]);
+
+  const retryReedPublish = async () => {
+    setRetryingPortal('reed_uk');
+    try {
+      await api.post(`/jobs/${id}/distributions/reed/retry`);
+      await loadJob();
+    } finally {
+      setRetryingPortal('');
+    }
+  };
 
   const handleDelete = async () => {
     if (!window.confirm('Delete this job?')) return;
@@ -30,6 +50,7 @@ export default function JobDetail() {
   );
 
   const { job, applications } = data || {};
+  const reedDistribution = (job?.distributions || []).find(d => d.portal === 'reed_uk');
 
   return (
     <div className="max-w-4xl mx-auto space-y-5">
@@ -114,6 +135,42 @@ export default function JobDetail() {
               <span className="text-slate-500">Posted by</span>
               <span className="font-medium text-slate-700">{job?.created_by_name}</span>
             </div>
+          </div>
+        </div>
+
+        <div className="card p-5 h-fit">
+          <h3 className="font-semibold text-slate-800 mb-4">Job Board Publishing</h3>
+          <div className="space-y-3 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-slate-500">Reed UK</span>
+              <span className={`badge ${distributionBadgeClass(reedDistribution?.status)}`}>
+                {reedDistribution?.status || 'not posted'}
+              </span>
+            </div>
+            {reedDistribution?.external_job_id && (
+              <div className="flex justify-between gap-3">
+                <span className="text-slate-500">Reference</span>
+                <span className="font-medium text-slate-700 text-right">{reedDistribution.external_job_id}</span>
+              </div>
+            )}
+            {reedDistribution?.external_url && (
+              <a href={reedDistribution.external_url} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:text-blue-700 block">
+                Open Reed posting →
+              </a>
+            )}
+            {reedDistribution?.error_message && (
+              <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg p-2">
+                {reedDistribution.error_message}
+              </p>
+            )}
+            <button
+              type="button"
+              className="btn-secondary text-sm w-full"
+              onClick={retryReedPublish}
+              disabled={retryingPortal === 'reed_uk'}
+            >
+              {retryingPortal === 'reed_uk' ? 'Publishing…' : reedDistribution ? 'Retry Reed publish' : 'Publish to Reed UK'}
+            </button>
           </div>
         </div>
       </div>

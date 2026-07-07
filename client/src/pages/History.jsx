@@ -136,7 +136,7 @@ function SidePanel({ candidate, onClose, onChange }) {
                 {candidate.currentRole || '—'}{candidate.company ? ` · ${candidate.company}` : ''}
               </p>
             </div>
-            <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 focus-visible:outline-2 focus-visible:outline-blue-500 focus-visible:outline-offset-2 rounded" aria-label="Close panel">✕</button>
           </div>
 
           <div className="flex items-center gap-2 mt-3 flex-wrap">

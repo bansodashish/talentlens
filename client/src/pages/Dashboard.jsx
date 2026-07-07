@@ -23,7 +23,7 @@ function StatCard({ icon, label, value, sub, accent, to }) {
         <span className="text-2xl">{icon}</span>
         {sub && <span className={`badge ${accent || 'badge-blue'}`}>{sub}</span>}
       </div>
-      <div className="text-3xl font-bold text-slate-800">{value}</div>
+      <div className="text-3xl font-bold text-slate-800 tabular-nums">{value}</div>
       <div className="text-sm text-slate-500 mt-1">{label}</div>
     </div>
   );

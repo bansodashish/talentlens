@@ -32,7 +32,7 @@ function NavLink({ path, label, onClick, navText, navActiveBg, disabled }) {
   return (
     <Link to={path} onClick={onClick}
       style={active ? { background: navActiveBg, color: '#fff' } : { color: navText }}
-      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap focus-visible:outline-2 focus-visible:outline-blue-500 focus-visible:outline-offset-2 ${
         active ? '' : 'hover:bg-black/5'
       }`}>
       {label}
@@ -77,6 +77,11 @@ export default function Layout({ children }) {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: pageBg }}>
+      {/* Skip link for keyboard users */}
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:text-blue-700 focus:rounded-lg focus:shadow-lg focus:outline-none">
+        Skip to main content
+      </a>
+
       {/* ── Top Navbar ─────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-40" style={{ background: navBg, borderBottom: `1px solid ${navBorder}` }}>
         <div className="max-w-screen-xl mx-auto px-4 h-14 flex items-center gap-4">
@@ -112,9 +117,9 @@ export default function Layout({ children }) {
           {/* 🎨 Theme picker */}
           <div className="relative" ref={themeRef}>
             <button onClick={() => setThemeOpen(o => !o)}
-              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-black/5"
-              style={{ color: navText }} title="Change theme">
-              <span>🎨</span>
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-blue-500 focus-visible:outline-offset-2"
+              style={{ color: navText }} aria-label="Change theme" aria-expanded={themeOpen}>
+              <span aria-hidden="true">🎨</span>
               <span className="hidden sm:block">Themes</span>
             </button>
 
@@ -193,7 +198,8 @@ export default function Layout({ children }) {
           {/* User avatar + dropdown */}
           <div className="relative" ref={dropdownRef}>
             <button onClick={() => setDropdownOpen(o => !o)}
-              className="flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors hover:bg-black/5">
+              className="flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-blue-500 focus-visible:outline-offset-2"
+              aria-label={`User menu for ${user?.name}`} aria-expanded={dropdownOpen}>
               <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
                 style={{ background: logoBg, color: logoText }}>
                 {user?.name?.charAt(0).toUpperCase()}
@@ -220,24 +226,24 @@ export default function Layout({ children }) {
                 </div>
 
                 <Link to="/profile" onClick={() => setDropdownOpen(false)}
-                  className="flex items-center gap-2 px-4 py-2 text-sm transition-colors hover:bg-black/5"
+                  className="flex items-center gap-2 px-4 py-2 text-sm transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-blue-500 focus-visible:outline-offset-2"
                   style={{ color: navText }}>
-                  <span>⚙️</span> Profile & Settings
+                  <span aria-hidden="true">⚙️</span> Profile &amp; Settings
                 </Link>
 
                 {user?.role === 'admin' && (
                   <Link to="/admin" onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2 text-sm transition-colors hover:bg-black/5"
+                    className="flex items-center gap-2 px-4 py-2 text-sm transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-blue-500 focus-visible:outline-offset-2"
                     style={{ color: navText }}>
-                    <span>🛡️</span> Admin Panel
+                    <span aria-hidden="true">🛡️</span> Admin Panel
                   </Link>
                 )}
 
                 <div style={{ borderTop: `1px solid ${navBorder}`, marginTop: '4px', paddingTop: '4px' }}>
                   <button onClick={handleLogout}
-                    className="flex items-center gap-2 w-full px-4 py-2 text-sm transition-colors hover:bg-red-50"
+                    className="flex items-center gap-2 w-full px-4 py-2 text-sm transition-colors hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-red-500 focus-visible:outline-offset-2"
                     style={{ color: '#ef4444' }}>
-                    <span>⏻</span> Sign out
+                    <span aria-hidden="true">⏻</span> Sign out
                   </button>
                 </div>
               </div>
@@ -245,8 +251,8 @@ export default function Layout({ children }) {
           </div>
 
           {/* Mobile hamburger */}
-          <button onClick={() => setMobileOpen(o => !o)} className="md:hidden p-2 rounded-lg hover:bg-black/5"
-            style={{ color: navText }}>
+          <button onClick={() => setMobileOpen(o => !o)} className="md:hidden p-2 rounded-lg hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-blue-500 focus-visible:outline-offset-2"
+            style={{ color: navText }} aria-label={mobileOpen ? 'Close menu' : 'Open menu'} aria-expanded={mobileOpen}>
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d={mobileOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
@@ -270,7 +276,7 @@ export default function Layout({ children }) {
       </header>
 
       {/* ── Main content ─────────────────────────────────────────────── */}
-      <main className="flex-1 max-w-screen-xl w-full mx-auto px-4 py-6">
+      <main id="main-content" className="flex-1 max-w-screen-xl w-full mx-auto px-4 py-6">
         {children}
       </main>
     </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../utils/api';
 
@@ -31,6 +31,8 @@ export default function CandidateDetail() {
   const [matchProvider, setMatchProvider] = useState('local');
   const [matching, setMatching] = useState(false);
   const [matchError, setMatchError] = useState('');
+  const [showSpinner, setShowSpinner] = useState(false);
+  const spinnerTimer = useRef(null);
 
   const fetchData = () => {
     return api.get(`/candidates/${id}`)
@@ -39,10 +41,16 @@ export default function CandidateDetail() {
   };
 
   useEffect(() => {
+    spinnerTimer.current = setTimeout(() => setShowSpinner(true), 200);
     Promise.all([
       fetchData(),
       api.get('/jobs', { params: { status: 'active' } }).then(r => setJobs(r.data.jobs || [])),
-    ]).finally(() => setLoading(false));
+    ]).finally(() => {
+      clearTimeout(spinnerTimer.current);
+      setLoading(false);
+      setShowSpinner(false);
+    });
+    return () => clearTimeout(spinnerTimer.current);
   }, [id]);
 
   const handleDelete = async () => {
@@ -63,8 +71,8 @@ export default function CandidateDetail() {
   };
 
   if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-600 border-t-transparent"></div>
+    <div className="flex items-center justify-center h-64" role="status" aria-label="Loading candidate">
+      {showSpinner && <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-600 border-t-transparent"></div>}
     </div>
   );
 
@@ -88,7 +96,7 @@ export default function CandidateDetail() {
         </div>
         <div className="flex gap-2">
           <Link to={`/candidates/${id}/edit`} className="btn-secondary text-sm">Edit</Link>
-          <button onClick={handleDelete} className="btn-danger text-sm">Delete</button>
+          <button onClick={handleDelete} className="btn-danger text-sm" aria-label={`Delete candidate ${candidate?.name}`}>Delete</button>
         </div>
       </div>
 

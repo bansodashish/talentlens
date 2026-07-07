@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../utils/api';
 
@@ -8,6 +8,7 @@ export default function CandidateForm() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const errorRef = useRef(null);
   const [form, setForm] = useState({
     name: '', email: '', phone: '', location: '', market: 'Global',
     current_title: '', current_company: '', experience_years: '',
@@ -40,6 +41,7 @@ export default function CandidateForm() {
       navigate('/candidates');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to save candidate.');
+      setTimeout(() => errorRef.current?.focus(), 0);
     } finally {
       setLoading(false);
     }
@@ -58,7 +60,7 @@ export default function CandidateForm() {
       </div>
 
       <form onSubmit={handleSubmit} className="card p-6 space-y-5">
-        {error && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>}
+        {error && <div ref={errorRef} tabIndex={-1} role="alert" className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-2">
@@ -67,7 +69,7 @@ export default function CandidateForm() {
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-            <input type="email" className="input" placeholder="john@email.com" {...f('email')} />
+            <input type="email" className="input" placeholder="john@email.com" spellCheck={false} autoComplete="email" {...f('email')} />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
@@ -129,7 +131,7 @@ export default function CandidateForm() {
           </div>
           <div className="col-span-2">
             <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
-            <textarea rows={3} className="input resize-none" placeholder="Internal notes about this candidate…" {...f('notes')} />
+            <textarea rows={3} className="input resize-none" placeholder="Internal notes about this candidate…" onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') handleSubmit(e); }} {...f('notes')} />
           </div>
         </div>
 
