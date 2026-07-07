@@ -4,6 +4,15 @@
 
 @layer base {
   * { box-sizing: border-box; }
+
+  /* Anchored section headings clear the sticky header */
+  [id] { scroll-margin-top: 5rem; }
+
+  /* Prevent iOS auto-zoom — inputs must be ≥16px on mobile */
+  @media (max-width: 768px) {
+    input, select, textarea { font-size: 16px !important; }
+  }
+
   html {
     -webkit-font-smoothing: antialiased;
     /* Bump the root size so every rem-based class (text-xs, text-sm, text-base, …)
@@ -424,6 +433,22 @@ body {
 
   .animate-fade-up {
     animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-up,
+    .animate-spin,
+    .animate-pulse,
+    .animate-bounce {
+      animation: none !important;
+      transition: none !important;
+    }
+    .btn-primary,
+    .btn-secondary,
+    .card {
+      transition: none !important;
+      transform: none !important;
+    }
   }
 
   .delay-75  { animation-delay: 75ms !important; }

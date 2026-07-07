@@ -25,6 +25,28 @@ migrate('ALTER TABLE candidates ADD COLUMN pipeline_stage TEXT');
 migrate('ALTER TABLE applications ADD COLUMN ai_match_details TEXT');
 migrate('ALTER TABLE applications ADD COLUMN ai_provider TEXT DEFAULT "local"');
 
+// Job board distribution tracking
+migrate(`
+  CREATE TABLE IF NOT EXISTS job_distributions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    job_id INTEGER NOT NULL,
+    portal TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    external_job_id TEXT,
+    external_url TEXT,
+    error_message TEXT,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    last_attempt_at DATETIME,
+    posted_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
+    UNIQUE(job_id, portal)
+  )
+`);
+migrate('CREATE INDEX IF NOT EXISTS idx_job_distributions_job_id ON job_distributions(job_id)');
+migrate('CREATE INDEX IF NOT EXISTS idx_job_distributions_portal_status ON job_distributions(portal, status)');
+
 // Candidate Search — platform column on scraper_sessions
 migrate('ALTER TABLE scraper_sessions ADD COLUMN platform TEXT DEFAULT "linkedin"');
 

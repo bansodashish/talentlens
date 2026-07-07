@@ -4,6 +4,15 @@ import api from '../utils/api';
 
 const statusBadge = { active: 'badge-green', paused: 'badge-yellow', closed: 'badge-red' };
 
+const reedDistribution = (job) => (job.distributions || []).find(d => d.portal === 'reed_uk');
+
+const distributionBadge = (distribution) => {
+  if (!distribution) return <span className="badge badge-slate">Reed UK: Not posted</span>;
+  if (distribution.status === 'posted') return <span className="badge badge-green">Reed UK: Posted</span>;
+  if (distribution.status === 'pending') return <span className="badge badge-yellow">Reed UK: Pending</span>;
+  return <span className="badge badge-red">Reed UK: Failed</span>;
+};
+
 export default function Jobs() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -81,6 +90,7 @@ export default function Jobs() {
                   🌍 {job.market}
                 </span>
                 <span className="badge badge-slate">{job.employment_type}</span>
+                {distributionBadge(reedDistribution(job))}
                 {job.salary_min && (
                   <span className="badge badge-green">
                     {job.salary_currency} {job.salary_min.toLocaleString()}{job.salary_max ? `–${job.salary_max.toLocaleString()}` : '+'}
