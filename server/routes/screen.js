@@ -377,6 +377,8 @@ router.get('/batch/:batchId', (req, res) => {
   const results = rows.map(r => {
     let strengths = [];
     let gaps = [];
+    const keySkillsParsed = r.key_skills ? JSON.parse(r.key_skills) : [];
+
     if (r.raw_json) {
       try {
         const raw = JSON.parse(r.raw_json);
@@ -384,6 +386,20 @@ router.get('/batch/:batchId', (req, res) => {
         gaps = (raw.gaps || []).map(g => g.replace(/^Missing:\s*/i, ''));
       } catch (_) {}
     }
+
+    // Fallback for openclaw-local / AI records: derive strengths from key_skills
+    if (strengths.length === 0 && keySkillsParsed.length > 0) {
+      strengths = keySkillsParsed;
+    }
+
+    // Fallback: parse gaps from summary text ("Key gaps: X, Y, Z")
+    if (gaps.length === 0 && r.summary) {
+      const gapMatch = r.summary.match(/Key gaps?:\s*([^.]+)/i);
+      if (gapMatch) {
+        gaps = gapMatch[1].split(',').map(g => g.trim()).filter(Boolean);
+      }
+    }
+
     return {
       id: r.id,
       fileName: r.file_name,
@@ -392,7 +408,7 @@ router.get('/batch/:batchId', (req, res) => {
       phone: r.phone,
       currentRole: r.current_role,
       yearsExperience: r.years_experience,
-      keySkills: r.key_skills ? JSON.parse(r.key_skills) : [],
+      keySkills: keySkillsParsed,
       supplyChainScore: r.must_have_score,
       procurementScore: r.nice_to_have_score,
       logisticsScore:   r.title_match_score,
