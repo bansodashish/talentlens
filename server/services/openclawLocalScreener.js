@@ -33,6 +33,8 @@ Read the job description above carefully. Identify the 4 most important requirem
   "currentRole": string,
   "yearsExperience": number,
   "keySkills": string[],
+  "strengths": string[],
+  "gaps": string[],
   "supplyChainScore": number,
   "procurementScore": number,
   "logisticsScore": number,
@@ -54,6 +56,8 @@ Scoring rules:
 - overallScore = holistic fit against the JD (not necessarily the average of the 4 scores).
 - recommendation: >=75 -> "Strong Hire", 55-74 -> "Consider", <55 -> "Reject".
 - summary: 2-3 sentences — what makes the candidate a good or poor fit for THIS specific role.
+- strengths: list of 3-6 specific skills or qualities the candidate HAS that match the JD requirements (short phrases, e.g. "5 years Terraform", "AWS certified").
+- gaps: list of 2-5 specific skills or requirements the JD asks for that the candidate is MISSING or weak on (short phrases, e.g. "No Kubernetes experience", "Missing GCP certification").
 - Use "" for unknown strings and 0 for unknown numbers — never invent data.`;
 }
 
@@ -89,6 +93,8 @@ function normalise(raw) {
     currentRole: String(raw.currentRole || '').trim(),
     yearsExperience: Number(raw.yearsExperience) || 0,
     keySkills: Array.isArray(raw.keySkills) ? raw.keySkills.map(String) : [],
+    strengths: Array.isArray(raw.strengths) ? raw.strengths.map(String) : [],
+    gaps: Array.isArray(raw.gaps) ? raw.gaps.map(String) : [],
     supplyChainScore: clip(raw.supplyChainScore),
     procurementScore: clip(raw.procurementScore),
     logisticsScore: clip(raw.logisticsScore),
