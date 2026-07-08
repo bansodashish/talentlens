@@ -374,26 +374,39 @@ router.get('/batch/:batchId', (req, res) => {
   `).all(req.params.batchId, req.user.id);
   if (!rows.length) return res.status(404).json({ error: 'Batch not found.' });
 
-  const results = rows.map(r => ({
-    id: r.id,
-    fileName: r.file_name,
-    name: r.candidate_name,
-    email: r.email,
-    phone: r.phone,
-    currentRole: r.current_role,
-    yearsExperience: r.years_experience,
-    keySkills: r.key_skills ? JSON.parse(r.key_skills) : [],
-    supplyChainScore: r.must_have_score,
-    procurementScore: r.nice_to_have_score,
-    logisticsScore:   r.title_match_score,
-    technologyScore:  r.experience_score,
-    overallScore:     r.overall_score,
-    recommendation:   r.recommendation,
-    summary:          r.summary,
-    status:           r.status,
-    error:            r.error_message,
-    createdAt:        r.created_at,
-  }));
+  const results = rows.map(r => {
+    let strengths = [];
+    let gaps = [];
+    if (r.raw_json) {
+      try {
+        const raw = JSON.parse(r.raw_json);
+        strengths = (raw.strengths || []).map(s => s.replace(/^Matched:\s*/i, ''));
+        gaps = (raw.gaps || []).map(g => g.replace(/^Missing:\s*/i, ''));
+      } catch (_) {}
+    }
+    return {
+      id: r.id,
+      fileName: r.file_name,
+      name: r.candidate_name,
+      email: r.email,
+      phone: r.phone,
+      currentRole: r.current_role,
+      yearsExperience: r.years_experience,
+      keySkills: r.key_skills ? JSON.parse(r.key_skills) : [],
+      supplyChainScore: r.must_have_score,
+      procurementScore: r.nice_to_have_score,
+      logisticsScore:   r.title_match_score,
+      technologyScore:  r.experience_score,
+      overallScore:     r.overall_score,
+      recommendation:   r.recommendation,
+      summary:          r.summary,
+      strengths,
+      gaps,
+      status:           r.status,
+      error:            r.error_message,
+      createdAt:        r.created_at,
+    };
+  });
 
   const total = results.length;
   const completed = results.filter(r => r.status === 'completed').length;

@@ -95,6 +95,36 @@ function ResultCard({ rank, c }) {
         <p className="text-sm text-slate-600 mt-4 leading-relaxed">{c.summary}</p>
       )}
 
+      {(c.strengths || []).length > 0 && (
+        <div className="mt-4">
+          <p className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wide mb-2">✅ Reasons for Selection</p>
+          <div className="space-y-1.5">
+            {c.strengths.map((s, i) => (
+              <div key={i} className="flex gap-2 text-[12px]">
+                <span className="font-semibold text-emerald-700 whitespace-nowrap">{s}</span>
+                <span className="text-slate-400">→</span>
+                <span className="text-slate-600">Matched job requirement — candidate demonstrates this skill</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {(c.gaps || []).length > 0 && (
+        <div className="mt-3">
+          <p className="text-[11px] font-semibold text-rose-600 uppercase tracking-wide mb-2">⚠️ Lacking Points</p>
+          <div className="space-y-1.5">
+            {c.gaps.map((g, i) => (
+              <div key={i} className="flex gap-2 text-[12px]">
+                <span className="font-semibold text-rose-600 whitespace-nowrap">{g}</span>
+                <span className="text-slate-400">→</span>
+                <span className="text-slate-600">Required by the JD but not found in the candidate's CV</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {(c.keySkills || []).length > 0 && (
         <div className="flex flex-wrap gap-1 mt-3">
           {c.keySkills.slice(0, 12).map((s, i) => (
