@@ -158,6 +158,7 @@ function ResultCard({ rank, c }) {
 
 export default function Screen() {
   const [jobDescription, setJobDescription] = useState(() => loadPersistedScreenState()?.jobDescription || '');
+  const [jobTitle, setJobTitle] = useState(() => loadPersistedScreenState()?.jobTitle || '');
   const [scanMode, setScanMode] = useState(() => loadPersistedScreenState()?.scanMode || 'local');
   const [files, setFiles] = useState([]);
   const [progress, setProgress] = useState(0);
@@ -172,9 +173,9 @@ export default function Screen() {
   // restores the last job description + results instead of losing them.
   useEffect(() => {
     try {
-      sessionStorage.setItem(SCREEN_STATE_KEY, JSON.stringify({ jobDescription, scanMode, results, batchId }));
+      sessionStorage.setItem(SCREEN_STATE_KEY, JSON.stringify({ jobDescription, jobTitle, scanMode, results, batchId }));
     } catch (_) { /* ignore quota/serialization errors */ }
-  }, [jobDescription, scanMode, results, batchId]);
+  }, [jobDescription, jobTitle, scanMode, results, batchId]);
 
   const stats = useMemo(() => {
     const done     = results.filter(r => r.status !== 'pending');
@@ -198,6 +199,7 @@ export default function Screen() {
 
   const runScreening = async (e) => {
     e.preventDefault();
+    if (!jobTitle.trim())       { setError('Please enter the job title being hired for.'); return; }
     if (!jobDescription.trim()) { setError('Please paste a job description.'); return; }
     if (!files.length)          { setError('Please upload at least one CV.');  return; }
 
@@ -205,6 +207,7 @@ export default function Screen() {
     setLoading(true); setProgress(0);
 
     const form = new FormData();
+    form.append('job_title', jobTitle);
     form.append('job_description', jobDescription);
     form.append('mode', scanMode);
     files.forEach(f => form.append('files', f));
@@ -314,6 +317,19 @@ export default function Screen() {
 
       {/* Form */}
       <form onSubmit={runScreening} className="card p-5 space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Job Title *</label>
+          <input
+            type="text"
+            className="input"
+            placeholder="e.g. Senior DevOps Engineer"
+            value={jobTitle}
+            onChange={e => setJobTitle(e.target.value)}
+            autoComplete="off"
+            required
+          />
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Job Description *</label>
           <textarea
