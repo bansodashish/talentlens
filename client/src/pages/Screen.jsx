@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../utils/api';
 
@@ -143,51 +143,6 @@ function ResultCard({ rank, c }) {
   );
 }
 
-// Every completed screening is kept forever in the `screenings` table, grouped
-// here by the day it ran on — this is the persistent "candidate list used in
-// JD matching" for that day. Reuses ResultCard since the API returns rows in
-// the exact shape it expects.
-function DailyListPanel({ date }) {
-  const [candidates, setCandidates] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError('');
-    api.get(`/screen/daily-lists/${date}`)
-      .then(r => { if (active) setCandidates(r.data.candidates || []); })
-      .catch(err => { if (active) setError(err.response?.data?.error || "Failed to load this day's candidates."); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [date]);
-
-  if (loading) return <div className="p-10 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div></div>;
-  if (error) return <div className="card p-4 bg-red-50 border-red-200 text-red-700 text-sm">{error}</div>;
-  if (!candidates.length) {
-    return (
-      <div className="card text-center py-16 text-slate-400">
-        <div className="text-4xl mb-3">🗂️</div>
-        <p className="font-medium text-slate-600 mb-1">No candidates screened on {date}</p>
-        <p className="text-sm">Run a screening to build this day's list.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      {candidates.map((c, i) => <ResultCard key={c.id || i} rank={i + 1} c={c} />)}
-    </div>
-  );
-}
-
-const TABS = [
-  ['screen', '⚡ New Screening'],
-  ['today', '📅 Today'],
-  ['history', '🕓 History'],
-];
-
 export default function Screen() {
   const [jobDescription, setJobDescription] = useState('');
   const [scanMode, setScanMode] = useState('local');
@@ -199,22 +154,6 @@ export default function Screen() {
   const [batchId, setBatchId] = useState(null);
   const [savedMsg, setSavedMsg] = useState('');
   const fileInputRef = useRef(null);
-
-  const [tab, setTab] = useState('screen');
-  const [dailyLists, setDailyLists] = useState([]);
-  const [dailyLoaded, setDailyLoaded] = useState(false);
-  const [historyDate, setHistoryDate] = useState(null);
-  const todayStr = new Date().toISOString().slice(0, 10);
-
-  const loadDailyLists = useCallback(() => {
-    api.get('/screen/daily-lists')
-      .then(r => setDailyLists(r.data.lists || []))
-      .finally(() => setDailyLoaded(true));
-  }, []);
-
-  useEffect(() => {
-    if (tab === 'history' && !dailyLoaded) loadDailyLists();
-  }, [tab, dailyLoaded, loadDailyLists]);
 
   const stats = useMemo(() => {
     const done     = results.filter(r => r.status !== 'pending');
@@ -265,7 +204,6 @@ export default function Screen() {
         setResults(data.results || []);
         setLoading(false);
         setProgress(0);
-        setDailyLoaded(false);
         return;
       }
 
@@ -291,7 +229,6 @@ export default function Screen() {
             clearInterval(interval);
             setLoading(false);
             setProgress(0);
-            setDailyLoaded(false);
           }
         } catch (pollErr) {
           clearInterval(interval);
@@ -346,81 +283,14 @@ export default function Screen() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Resume Screener</h1>
           <p className="text-slate-500 text-sm mt-0.5">Local JD matching across skills, experience, location and role fit</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-slate-200 p-1 bg-slate-50" role="tablist" aria-label="Resume screener views">
-            {TABS.map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                aria-selected={tab === key}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors focus-visible:outline-2 focus-visible:outline-blue-500 focus-visible:outline-offset-2 ${
-                  tab === key ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                }`}
-                onClick={() => { setTab(key); if (key === 'history') setHistoryDate(null); }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <Link to="/history" className="btn-secondary text-sm">📋 CRM</Link>
-        </div>
+        <Link to="/history" className="btn-secondary text-sm">📋 History</Link>
       </div>
 
-      {tab === 'today' && <DailyListPanel key={todayStr} date={todayStr} />}
-
-      {tab === 'history' && (
-        historyDate ? (
-          <div className="space-y-3">
-            <button type="button" className="text-sm text-blue-600 hover:underline" onClick={() => setHistoryDate(null)}>
-              ← All days
-            </button>
-            <DailyListPanel key={historyDate} date={historyDate} />
-          </div>
-        ) : (
-          <div className="card overflow-hidden">
-            {dailyLists.length === 0 ? (
-              <div className="text-center py-16 text-slate-400">
-                <div className="text-4xl mb-3">🕓</div>
-                <p className="font-medium text-slate-600 mb-1">No screening history yet</p>
-                <p className="text-sm">Days appear here once you run a screening.</p>
-              </div>
-            ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    {['Date', 'Candidates', 'Batches', ''].map(h => (
-                      <th key={h} className="text-left px-4 py-2 font-semibold text-slate-600 text-xs uppercase">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {dailyLists.map(d => (
-                    <tr key={d.listDate} className="hover:bg-slate-50">
-                      <td className="px-4 py-2 font-medium text-slate-800">{d.listDate}</td>
-                      <td className="px-4 py-2 text-slate-600">{d.candidateCount}</td>
-                      <td className="px-4 py-2 text-slate-600">{d.batchCount}</td>
-                      <td className="px-4 py-2 text-right">
-                        <button type="button" className="text-blue-600 hover:underline font-medium text-xs" onClick={() => setHistoryDate(d.listDate)}>
-                          View list →
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        )
-      )}
-
-      {tab === 'screen' && (
-      <>
       {/* Form */}
       <form onSubmit={runScreening} className="card p-5 space-y-4">
         <div>
@@ -580,8 +450,6 @@ export default function Screen() {
           <p className="font-medium text-slate-600 mb-1">Choose Local, OpenClaw Local, or Claude mode</p>
           <p className="text-sm">Paste a JD, upload CVs, and get ranked results in seconds.</p>
         </div>
-      )}
-      </>
       )}
     </div>
   );

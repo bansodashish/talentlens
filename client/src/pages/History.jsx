@@ -487,17 +487,95 @@ function SearchesTab() {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-function ScreeningsTab() {
-  const [rows, setRows] = useState([]);
+// Every completed screening is kept forever in the `screenings` table, grouped
+// here by the day it ran on — this is the persistent "candidate list used in
+// JD matching" for that day.
+const SCREEN_REC_STYLE = {
+  'Strong Hire': 'bg-green-100 text-green-700',
+  'Consider':    'bg-amber-100 text-amber-700',
+  'Reject':      'bg-red-100 text-red-700',
+};
+
+function ScreeningDayDetail({ date, onBack }) {
+  const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
   useEffect(() => {
-    api.get('/history/screenings')
-      .then(r => setRows(r.data.batches || []))
+    let active = true;
+    setLoading(true);
+    setError('');
+    api.get(`/screen/daily-lists/${date}`)
+      .then(r => { if (active) setCandidates(r.data.candidates || []); })
+      .catch(err => { if (active) setError(err.response?.data?.error || "Failed to load this day's candidates."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [date]);
+
+  return (
+    <div className="space-y-3">
+      <button type="button" className="text-sm text-blue-600 hover:underline" onClick={onBack}>
+        ← All screening days
+      </button>
+
+      {loading ? (
+        <div className="p-10 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div></div>
+      ) : error ? (
+        <div className="card p-4 bg-red-50 border-red-200 text-red-700 text-sm">{error}</div>
+      ) : !candidates.length ? (
+        <div className="card p-10 text-center text-slate-400">
+          <p className="text-4xl mb-2">🗂️</p>
+          <p>No candidates screened on {date}.</p>
+        </div>
+      ) : (
+        <div className="card overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                {['Name', 'Role', 'Email', 'Score', 'Recommendation'].map(h => (
+                  <th key={h} className="text-left px-4 py-2 font-semibold text-slate-600 text-xs uppercase">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {candidates.map((c, i) => (
+                <tr key={c.id || i} className="hover:bg-slate-50">
+                  <td className="px-4 py-2 font-medium text-slate-800">{c.name || c.fileName || '—'}</td>
+                  <td className="px-4 py-2 text-slate-600">{c.currentRole || '—'}</td>
+                  <td className="px-4 py-2 text-slate-600">{c.email || '—'}</td>
+                  <td className="px-4 py-2 font-medium text-slate-700">{c.overallScore ?? 0}</td>
+                  <td className="px-4 py-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${SCREEN_REC_STYLE[c.recommendation] || 'bg-slate-100 text-slate-700'}`}>
+                      {c.recommendation || '—'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ScreeningsTab() {
+  const [days, setDays] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeDate, setActiveDate] = useState(null);
+
+  useEffect(() => {
+    api.get('/screen/daily-lists')
+      .then(r => setDays(r.data.lists || []))
       .finally(() => setLoading(false));
   }, []);
 
+  if (activeDate) {
+    return <ScreeningDayDetail date={activeDate} onBack={() => setActiveDate(null)} />;
+  }
+
   if (loading) return <div className="p-10 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div></div>;
-  if (!rows.length) return (
+  if (!days.length) return (
     <div className="card p-10 text-center text-slate-400">
       <p className="text-4xl mb-2">🤖</p>
       <p>No screening batches yet. Go to <Link to="/screen" className="text-blue-600 hover:underline">AI Resume Screener</Link>.</p>
@@ -509,25 +587,22 @@ function ScreeningsTab() {
       <table className="w-full text-sm">
         <thead className="bg-slate-50 border-b border-slate-200">
           <tr>
-            {['Candidate', 'CVs', 'Strong Hire', 'Consider', 'Reject', 'Top Score', 'Avg', 'Date'].map(h => (
+            {['Date', 'Candidates', 'Batches', ''].map(h => (
               <th key={h} className="text-left px-4 py-2 font-semibold text-slate-600 text-xs uppercase">{h}</th>
             ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
-          {rows.map(b => (
-            <tr key={b.batch_id} className="hover:bg-slate-50">
-              <td className="px-4 py-2 font-medium text-slate-800">
-                {b.top_candidate_name || <span className="text-slate-400 italic">Unnamed candidate</span>}
-                {b.total > 1 && <span className="text-slate-400 font-normal"> +{b.total - 1} more</span>}
+          {days.map(d => (
+            <tr key={d.listDate} className="hover:bg-slate-50">
+              <td className="px-4 py-2 font-medium text-slate-800">{d.listDate}</td>
+              <td className="px-4 py-2 text-slate-600">{d.candidateCount}</td>
+              <td className="px-4 py-2 text-slate-600">{d.batchCount}</td>
+              <td className="px-4 py-2 text-right">
+                <button type="button" className="text-blue-600 hover:underline font-medium text-xs" onClick={() => setActiveDate(d.listDate)}>
+                  View list →
+                </button>
               </td>
-              <td className="px-4 py-2 font-medium text-slate-800">{b.total}</td>
-              <td className="px-4 py-2 text-green-700">{b.strong_hire}</td>
-              <td className="px-4 py-2 text-amber-700">{b.consider}</td>
-              <td className="px-4 py-2 text-red-600">{b.reject}</td>
-              <td className="px-4 py-2 font-medium text-slate-700">{b.top_score || 0}</td>
-              <td className="px-4 py-2 text-slate-600">{Math.round(b.avg_score || 0)}</td>
-              <td className="px-4 py-2 text-xs text-slate-400">{new Date(b.created_at).toLocaleString()}</td>
             </tr>
           ))}
         </tbody>
