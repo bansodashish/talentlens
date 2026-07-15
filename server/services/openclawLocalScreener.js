@@ -31,6 +31,7 @@ Read the job description above carefully. Identify the 4 most important requirem
   "email": string,
   "phone": string,
   "currentRole": string,
+  "jobTitle": string,
   "yearsExperience": number,
   "keySkills": string[],
   "strengths": string[],
@@ -43,6 +44,9 @@ Read the job description above carefully. Identify the 4 most important requirem
   "recommendation": "Strong Hire" | "Consider" | "Reject",
   "summary": string
 }
+
+- currentRole = the candidate's OWN current/most-recent job title, taken from their résumé.
+- jobTitle = the position title being hired for, taken from the JOB DESCRIPTION above (e.g. "Principal DevOps Engineer") — NOT the candidate's résumé.
 
 Score mapping — map the 4 JD requirement areas you identified onto the 4 score fields in order:
 - supplyChainScore = score for JD requirement area 1
@@ -91,6 +95,7 @@ function normalise(raw) {
     email: String(raw.email || '').trim(),
     phone: String(raw.phone || '').trim(),
     currentRole: String(raw.currentRole || '').trim(),
+    jobTitle: String(raw.jobTitle || '').trim(),
     yearsExperience: Number(raw.yearsExperience) || 0,
     keySkills: Array.isArray(raw.keySkills) ? raw.keySkills.map(String) : [],
     strengths: Array.isArray(raw.strengths) ? raw.strengths.map(String) : [],

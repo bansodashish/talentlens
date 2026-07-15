@@ -102,6 +102,11 @@ migrate('ALTER TABLE screenings RENAME COLUMN procurement_score TO nice_to_have_
 migrate('ALTER TABLE screenings RENAME COLUMN logistics_score TO title_match_score');
 migrate('ALTER TABLE screenings RENAME COLUMN technology_score TO experience_score');
 
+// job_title = the position being screened for, extracted from the JD — shown
+// as "Role" in the History tab. Distinct from current_role, which is the
+// candidate's OWN current/most-recent job title from their résumé.
+migrate('ALTER TABLE screenings ADD COLUMN job_title TEXT');
+
 // ── Seed the designated admin account if it doesn't exist yet ────────────────
 // Creates a fallback admin only on a fresh database. It NEVER overwrites an
 // existing user's password on restart — use `npm run admin` to change it live.
