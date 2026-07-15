@@ -24,14 +24,15 @@ export default function Candidates() {
   const [pipelineUpdatingId, setPipelineUpdatingId] = useState(null);
   const [pipelineError, setPipelineError] = useState('');
   const [pipelineSuccess, setPipelineSuccess] = useState('');
-  const [filters, setFilters] = useState({ market: '', status: '', search: '' });
+  const [filters, setFilters] = useState({ role: '', status: '', search: '' });
+  const [roleOptions, setRoleOptions] = useState([]);
   const navigate = useNavigate();
 
   const fetchCandidates = async () => {
     setLoading(true);
     try {
       const params = {};
-      if (filters.market) params.market = filters.market;
+      if (filters.role) params.role = filters.role;
       if (filters.status) params.status = filters.status;
       if (filters.search) params.search = filters.search;
       const res = await api.get('/candidates', { params });
@@ -41,6 +42,18 @@ export default function Candidates() {
   };
 
   useEffect(() => { fetchCandidates(); }, [filters]);
+
+  // Populate the Role filter's options from every distinct role on record,
+  // independent of the current filters, so options don't disappear as the
+  // user filters the table.
+  useEffect(() => {
+    api.get('/candidates').then(res => {
+      const roles = [...new Set(
+        res.data.candidates.map(c => (c.current_title || '').trim()).filter(Boolean)
+      )].sort((a, b) => a.localeCompare(b));
+      setRoleOptions(roles);
+    }).catch(err => console.error(err));
+  }, []);
 
   const moveCandidateToStage = async (candidate, stage) => {
     const newStage = stage || null;
@@ -87,14 +100,11 @@ export default function Candidates() {
           type="text" placeholder="Search name, title, skills…" className="input max-w-xs"
           value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })}
         />
-        <select className="input w-40" value={filters.market} onChange={e => setFilters({ ...filters, market: e.target.value })}>
-          <option value="">All Markets</option>
-          <option value="Global">🌍 Global</option>
-          <option value="Americas">🌎 Americas</option>
-          <option value="Europe">🌍 Europe</option>
-          <option value="Asia Pacific">🌏 Asia Pacific</option>
-          <option value="MENA">🕌 MENA</option>
-          <option value="Africa">🌍 Africa</option>
+        <select className="input w-40" value={filters.role} onChange={e => setFilters({ ...filters, role: e.target.value })}>
+          <option value="">Roles</option>
+          {roleOptions.map(r => (
+            <option key={r} value={r}>{r}</option>
+          ))}
         </select>
         <select className="input w-40" value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}>
           <option value="">All Statuses</option>
@@ -102,8 +112,8 @@ export default function Candidates() {
             <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
           ))}
         </select>
-        {(filters.market || filters.status || filters.search) && (
-          <button className="btn-secondary text-sm" onClick={() => setFilters({ market: '', status: '', search: '' })}>Clear filters</button>
+        {(filters.role || filters.status || filters.search) && (
+          <button className="btn-secondary text-sm" onClick={() => setFilters({ role: '', status: '', search: '' })}>Clear filters</button>
         )}
       </div>
 
