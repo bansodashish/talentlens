@@ -23,6 +23,7 @@ const { parseCV }        = require('../services/cvParser');
 const { screenResume, MODEL } = require('../services/claudeScreener');
 const { screenResume: screenOpenClawLocal, MODEL: OPENCLAW_LOCAL_MODEL } = require('../services/openclawLocalScreener');
 const { scoreCandidate, detectRole, ALL_ROLES } = require('../services/scorer');
+const { extractJobTitle } = require('../utils/extractJobTitle');
 
 // Quick regex-based extraction for local mode (Claude does this natively).
 function extractContact(text) {
@@ -43,31 +44,6 @@ function extractContact(text) {
 function extractYears(text) {
   const m = text.match(/(\d{1,2})\+?\s*years?(?:\s+of)?\s+experience/i);
   return m ? Number(m[1]) : 0;
-}
-
-// Best-effort extraction of the job title/position being hired for from a
-// free-text JD — shown as "Role" in the History tab (what this batch was
-// screened for), as opposed to a candidate's own current_role from their CV.
-function extractJobTitle(jobDescription) {
-  if (!jobDescription) return '';
-  const text = jobDescription.trim();
-
-  // Explicit "Job Title:" / "Position:" / "Role:" label anywhere in the JD.
-  const labelMatch = text.match(/(?:job\s*title|position|role)\s*[:\-]\s*([^\n]{2,80})/i);
-  if (labelMatch) return labelMatch[1].trim();
-
-  // "hiring a/an X" or "seeking a/an X to join"
-  const hiringMatch = text.match(/(?:hiring|seeking|looking for)\s+(?:an?\s+)?([A-Z][A-Za-z0-9/&,\-\s]{2,60}?)(?:\s+to\s+join|\s+who|[.,\n])/);
-  if (hiringMatch) return hiringMatch[1].trim();
-
-  // Fall back to the first non-empty line if it reads like a title (short,
-  // no trailing sentence punctuation).
-  const firstLine = text.split('\n').map(l => l.trim()).find(Boolean) || '';
-  if (firstLine && firstLine.length <= 80 && !/[.!?]$/.test(firstLine)) {
-    return firstLine.replace(/^(job title|position|role)\s*[:\-]\s*/i, '').trim();
-  }
-
-  return '';
 }
 
 // Convert local-scorer output into the same shape the UI / DB expects.
@@ -180,7 +156,7 @@ async function processScreeningsBackground({ batchId, mode, apiKey, jobDescripti
     SET candidate_name = ?, email = ?, phone = ?, current_role = ?, years_experience = ?,
         key_skills = ?, must_have_score = ?, nice_to_have_score = ?, title_match_score = ?, experience_score = ?,
         overall_score = ?, recommendation = ?, summary = ?, resume_text = ?, raw_json = ?,
-        job_title = COALESCE(?, job_title),
+        job_title = COALESCE(job_title, ?),
         status = 'completed', error_message = NULL
     WHERE id = ?
   `);
@@ -283,6 +259,7 @@ async function processScreeningsBackground({ batchId, mode, apiKey, jobDescripti
 // ── POST /api/screen/resume ──────────────────────────────────────────────────
 router.post('/resume', limitScreenings, upload.array('files', 25), async (req, res) => {
   const jobDescription = req.body.job_description || req.body.jobDescription || '';
+  const jobTitleInput = String(req.body.job_title || req.body.jobTitle || '').trim();
   const requestedMode = String(req.body.mode || 'local').toLowerCase();
   const mode = ['local', 'ai', 'openclaw-local'].includes(requestedMode) ? requestedMode : 'local';
   const files = req.files || [];
@@ -290,6 +267,10 @@ router.post('/resume', limitScreenings, upload.array('files', 25), async (req, r
   if (!jobDescription.trim()) {
     files.forEach(f => { try { fs.unlinkSync(f.path); } catch (_) {} });
     return res.status(400).json({ error: 'job_description is required.' });
+  }
+  if (!jobTitleInput) {
+    files.forEach(f => { try { fs.unlinkSync(f.path); } catch (_) {} });
+    return res.status(400).json({ error: 'job_title is required.' });
   }
   if (!files.length) {
     return res.status(400).json({ error: 'At least one resume file is required.' });
@@ -331,9 +312,11 @@ router.post('/resume', limitScreenings, upload.array('files', 25), async (req, r
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  // Every candidate in this batch is screened against the same JD, so extract
-  // the target job title once up front as the default "Role" for the batch.
-  const batchJobTitle = extractJobTitle(jobDescription);
+  // Every candidate in this batch is screened against the same JD. The
+  // recruiter-entered job title is the guaranteed-accurate source of truth;
+  // heuristic extraction from the JD text is only a defensive fallback (it
+  // should never trigger now that job_title is a required field).
+  const batchJobTitle = jobTitleInput || extractJobTitle(jobDescription);
 
   // Pre-insert all records with status = 'pending'
   for (const file of files) {
