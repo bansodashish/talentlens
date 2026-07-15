@@ -28,6 +28,15 @@ export default function Candidates() {
   const [roleOptions, setRoleOptions] = useState([]);
   const navigate = useNavigate();
 
+  // Merge newly-seen roles into the Role filter's options without ever
+  // dropping ones we've already seen (a filtered fetchCandidates() result
+  // only reflects a subset of candidates, so we union rather than replace).
+  const mergeRoleOptions = (candidateList) => {
+    const seen = candidateList.map(c => (c.current_title || '').trim()).filter(Boolean);
+    if (!seen.length) return;
+    setRoleOptions(prev => [...new Set([...prev, ...seen])].sort((a, b) => a.localeCompare(b)));
+  };
+
   const fetchCandidates = async () => {
     setLoading(true);
     try {
@@ -37,6 +46,7 @@ export default function Candidates() {
       if (filters.search) params.search = filters.search;
       const res = await api.get('/candidates', { params });
       setCandidates(res.data.candidates);
+      mergeRoleOptions(res.data.candidates);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -48,10 +58,7 @@ export default function Candidates() {
   // user filters the table.
   useEffect(() => {
     api.get('/candidates').then(res => {
-      const roles = [...new Set(
-        res.data.candidates.map(c => (c.current_title || '').trim()).filter(Boolean)
-      )].sort((a, b) => a.localeCompare(b));
-      setRoleOptions(roles);
+      mergeRoleOptions(res.data.candidates);
     }).catch(err => console.error(err));
   }, []);
 
