@@ -509,7 +509,7 @@ function ScreeningsTab() {
       <table className="w-full text-sm">
         <thead className="bg-slate-50 border-b border-slate-200">
           <tr>
-            {['Batch', 'CVs', 'Strong Hire', 'Consider', 'Reject', 'Top Score', 'Avg', 'Date'].map(h => (
+            {['Candidate', 'CVs', 'Strong Hire', 'Consider', 'Reject', 'Top Score', 'Avg', 'Date'].map(h => (
               <th key={h} className="text-left px-4 py-2 font-semibold text-slate-600 text-xs uppercase">{h}</th>
             ))}
           </tr>
@@ -517,7 +517,10 @@ function ScreeningsTab() {
         <tbody className="divide-y divide-slate-100">
           {rows.map(b => (
             <tr key={b.batch_id} className="hover:bg-slate-50">
-              <td className="px-4 py-2"><code className="text-xs bg-slate-100 px-1.5 py-0.5 rounded">{b.batch_id.slice(0, 8)}</code></td>
+              <td className="px-4 py-2 font-medium text-slate-800">
+                {b.top_candidate_name || <span className="text-slate-400 italic">Unnamed candidate</span>}
+                {b.total > 1 && <span className="text-slate-400 font-normal"> +{b.total - 1} more</span>}
+              </td>
               <td className="px-4 py-2 font-medium text-slate-800">{b.total}</td>
               <td className="px-4 py-2 text-green-700">{b.strong_hire}</td>
               <td className="px-4 py-2 text-amber-700">{b.consider}</td>
