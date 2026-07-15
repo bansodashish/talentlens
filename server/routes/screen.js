@@ -45,8 +45,33 @@ function extractYears(text) {
   return m ? Number(m[1]) : 0;
 }
 
+// Best-effort extraction of the job title/position being hired for from a
+// free-text JD — shown as "Role" in the History tab (what this batch was
+// screened for), as opposed to a candidate's own current_role from their CV.
+function extractJobTitle(jobDescription) {
+  if (!jobDescription) return '';
+  const text = jobDescription.trim();
+
+  // Explicit "Job Title:" / "Position:" / "Role:" label anywhere in the JD.
+  const labelMatch = text.match(/(?:job\s*title|position|role)\s*[:\-]\s*([^\n]{2,80})/i);
+  if (labelMatch) return labelMatch[1].trim();
+
+  // "hiring a/an X" or "seeking a/an X to join"
+  const hiringMatch = text.match(/(?:hiring|seeking|looking for)\s+(?:an?\s+)?([A-Z][A-Za-z0-9/&,\-\s]{2,60}?)(?:\s+to\s+join|\s+who|[.,\n])/);
+  if (hiringMatch) return hiringMatch[1].trim();
+
+  // Fall back to the first non-empty line if it reads like a title (short,
+  // no trailing sentence punctuation).
+  const firstLine = text.split('\n').map(l => l.trim()).find(Boolean) || '';
+  if (firstLine && firstLine.length <= 80 && !/[.!?]$/.test(firstLine)) {
+    return firstLine.replace(/^(job title|position|role)\s*[:\-]\s*/i, '').trim();
+  }
+
+  return '';
+}
+
 // Convert local-scorer output into the same shape the UI / DB expects.
-function toScreeningShape(scored, contact, role, text) {
+function toScreeningShape(scored, contact, role, text, jobDescription) {
   const recMap = { 5: 'Strong Hire', 4: 'Strong Hire', 3: 'Consider', 2: 'Reject', 1: 'Reject' };
   const overall = scored.score_pct;
   const skills  = Math.round((scored.details.skills || 0) * 100);
@@ -72,6 +97,7 @@ function toScreeningShape(scored, contact, role, text) {
     email: contact.email,
     phone: contact.phone,
     currentRole: roleTitle,
+    jobTitle: extractJobTitle(jobDescription),
     yearsExperience: extractYears(text),
     keySkills,
     supplyChainScore: skills,
@@ -154,6 +180,7 @@ async function processScreeningsBackground({ batchId, mode, apiKey, jobDescripti
     SET candidate_name = ?, email = ?, phone = ?, current_role = ?, years_experience = ?,
         key_skills = ?, must_have_score = ?, nice_to_have_score = ?, title_match_score = ?, experience_score = ?,
         overall_score = ?, recommendation = ?, summary = ?, resume_text = ?, raw_json = ?,
+        job_title = COALESCE(?, job_title),
         status = 'completed', error_message = NULL
     WHERE id = ?
   `);
@@ -186,7 +213,7 @@ async function processScreeningsBackground({ batchId, mode, apiKey, jobDescripti
         const detectedRole = detectRole(plainText);
         const local = scoreCandidate(plainText, jobDescription, detectedRole);
         const contact = extractContact(plainText);
-        result = toScreeningShape(local, contact, detectedRole, plainText);
+        result = toScreeningShape(local, contact, detectedRole, plainText, jobDescription);
         raw = { mode: 'local', detectedRole, ...local };
       } else if (mode === 'openclaw-local') {
         const out = await screenOpenClawLocal({
@@ -215,6 +242,7 @@ async function processScreeningsBackground({ batchId, mode, apiKey, jobDescripti
         JSON.stringify(result.keySkills),
         result.supplyChainScore, result.procurementScore, result.logisticsScore, result.technologyScore,
         result.overallScore, result.recommendation, result.summary, plainText || null, JSON.stringify(raw),
+        result.jobTitle || null,
         file.id
       );
     } catch (err) {
@@ -299,9 +327,13 @@ router.post('/resume', limitScreenings, upload.array('files', 25), async (req, r
       (batch_id, file_name, candidate_name, email, phone, current_role, years_experience,
        key_skills, must_have_score, nice_to_have_score, title_match_score, experience_score,
        overall_score, recommendation, summary, job_description, resume_text, raw_json,
-       status, error_message, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       status, error_message, created_by, job_title)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
+
+  // Every candidate in this batch is screened against the same JD, so extract
+  // the target job title once up front as the default "Role" for the batch.
+  const batchJobTitle = extractJobTitle(jobDescription);
 
   // Pre-insert all records with status = 'pending'
   for (const file of files) {
@@ -309,7 +341,7 @@ router.post('/resume', limitScreenings, upload.array('files', 25), async (req, r
       batchId, file.originalname,
       '', '', '', '', 0, '[]', 0, 0, 0, 0, 0,
       'Reject', 'Pending screening...', jobDescription, null, null,
-      'pending', null, req.user.id
+      'pending', null, req.user.id, batchJobTitle || null
     );
     inserted.push({
       id: r.lastInsertRowid,
@@ -402,6 +434,7 @@ function shapeScreeningRow(r) {
     email: r.email,
     phone: r.phone,
     currentRole: r.current_role,
+    jobTitle: r.job_title,
     yearsExperience: r.years_experience,
     keySkills: keySkillsParsed,
     supplyChainScore: r.must_have_score,

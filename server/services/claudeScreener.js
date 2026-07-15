@@ -54,6 +54,7 @@ Evaluate the candidate against the job description above. Return ONLY a single J
   "email": string,
   "phone": string,
   "currentRole": string,
+  "jobTitle": string,
   "yearsExperience": number,
   "keySkills": string[],
   "supplyChainScore": number,   // Skills Match (how well core skills match the JD, 0–100)
@@ -64,6 +65,9 @@ Evaluate the candidate against the job description above. Return ONLY a single J
   "recommendation": "Strong Hire" | "Consider" | "Reject",
   "summary": string
 }
+
+- currentRole = the candidate's OWN current/most-recent job title, taken from their résumé.
+- jobTitle = the position title being hired for, taken from the JOB DESCRIPTION above (e.g. "Principal DevOps Engineer") — NOT the candidate's résumé.
 
 Scoring rules:
 - All scores are integers from 0 to 100.
@@ -108,6 +112,7 @@ function normalise(raw) {
     email:           String(raw.email || '').trim(),
     phone:           String(raw.phone || '').trim(),
     currentRole:     String(raw.currentRole || '').trim(),
+    jobTitle:        String(raw.jobTitle || '').trim(),
     yearsExperience: Number(raw.yearsExperience) || 0,
     keySkills:       Array.isArray(raw.keySkills) ? raw.keySkills.map(String) : [],
     supplyChainScore: clip(raw.supplyChainScore),
