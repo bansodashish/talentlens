@@ -25,26 +25,33 @@ router.get('/searches', (req, res) => {
 });
 
 // ── GET /api/history/screenings ──────────────────────────────────────────────
-// Returns one row per batch with aggregate stats.
+// Returns one row per batch with aggregate stats, plus the name of the
+// top-scoring candidate in that batch (shown in the UI instead of the raw
+// batch id, which isn't meaningful to recruiters).
 router.get('/screenings', (req, res) => {
   const rows = db.prepare(`
-    SELECT batch_id,
+    SELECT s.batch_id,
            COUNT(*) as total,
-           SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) as completed,
-           SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) as failed,
-           SUM(CASE WHEN recommendation='Strong Hire' THEN 1 ELSE 0 END) as strong_hire,
-           SUM(CASE WHEN recommendation='Consider'    THEN 1 ELSE 0 END) as consider,
-           SUM(CASE WHEN recommendation='Reject'      THEN 1 ELSE 0 END) as reject,
-           MAX(overall_score) as top_score,
-           AVG(overall_score) as avg_score,
-           MAX(created_at) as created_at,
-           SUBSTR(MAX(job_description), 1, 200) as job_description_preview
-    FROM screenings
-    WHERE created_by = ?
-    GROUP BY batch_id
+           SUM(CASE WHEN s.status='completed' THEN 1 ELSE 0 END) as completed,
+           SUM(CASE WHEN s.status='failed' THEN 1 ELSE 0 END) as failed,
+           SUM(CASE WHEN s.recommendation='Strong Hire' THEN 1 ELSE 0 END) as strong_hire,
+           SUM(CASE WHEN s.recommendation='Consider'    THEN 1 ELSE 0 END) as consider,
+           SUM(CASE WHEN s.recommendation='Reject'      THEN 1 ELSE 0 END) as reject,
+           MAX(s.overall_score) as top_score,
+           AVG(s.overall_score) as avg_score,
+           MAX(s.created_at) as created_at,
+           SUBSTR(MAX(s.job_description), 1, 200) as job_description_preview,
+           (
+             SELECT s2.candidate_name FROM screenings s2
+             WHERE s2.batch_id = s.batch_id AND s2.created_by = ?
+             ORDER BY s2.overall_score DESC, s2.id ASC LIMIT 1
+           ) as top_candidate_name
+    FROM screenings s
+    WHERE s.created_by = ?
+    GROUP BY s.batch_id
     ORDER BY created_at DESC
     LIMIT 200
-  `).all(req.user.id);
+  `).all(req.user.id, req.user.id);
   res.json({ batches: rows });
 });
 

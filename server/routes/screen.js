@@ -366,6 +366,60 @@ router.get('/history', (req, res) => {
 });
 
 // ── GET /api/screen/batch/:batchId ───────────────────────────────────────────
+// Shapes a raw `screenings` row into the object the UI expects, parsing the
+// stored key_skills/raw_json fields and deriving strengths/gaps fallbacks.
+// Shared by the single-batch view and the day-grouped Today/History views.
+function shapeScreeningRow(r) {
+  let strengths = [];
+  let gaps = [];
+  const keySkillsParsed = r.key_skills ? JSON.parse(r.key_skills) : [];
+
+  if (r.raw_json) {
+    try {
+      const raw = JSON.parse(r.raw_json);
+      strengths = (raw.strengths || []).map(s => s.replace(/^Matched:\s*/i, ''));
+      gaps = (raw.gaps || []).map(g => g.replace(/^Missing:\s*/i, ''));
+    } catch (_) {}
+  }
+
+  // Fallback for openclaw-local / AI records: derive strengths from key_skills
+  if (strengths.length === 0 && keySkillsParsed.length > 0) {
+    strengths = keySkillsParsed;
+  }
+
+  // Fallback: parse gaps from summary text ("Key gaps: X, Y, Z")
+  if (gaps.length === 0 && r.summary) {
+    const gapMatch = r.summary.match(/Key gaps?:\s*([^.]+)/i);
+    if (gapMatch) {
+      gaps = gapMatch[1].split(',').map(g => g.trim()).filter(Boolean);
+    }
+  }
+
+  return {
+    id: r.id,
+    fileName: r.file_name,
+    name: r.candidate_name,
+    email: r.email,
+    phone: r.phone,
+    currentRole: r.current_role,
+    yearsExperience: r.years_experience,
+    keySkills: keySkillsParsed,
+    supplyChainScore: r.must_have_score,
+    procurementScore: r.nice_to_have_score,
+    logisticsScore:   r.title_match_score,
+    technologyScore:  r.experience_score,
+    overallScore:     r.overall_score,
+    recommendation:   r.recommendation,
+    summary:          r.summary,
+    strengths,
+    gaps,
+    status:           r.status,
+    error:            r.error_message,
+    createdAt:        r.created_at,
+    jobDescription:   r.job_description,
+  };
+}
+
 router.get('/batch/:batchId', (req, res) => {
   const rows = db.prepare(`
     SELECT * FROM screenings
@@ -374,55 +428,7 @@ router.get('/batch/:batchId', (req, res) => {
   `).all(req.params.batchId, req.user.id);
   if (!rows.length) return res.status(404).json({ error: 'Batch not found.' });
 
-  const results = rows.map(r => {
-    let strengths = [];
-    let gaps = [];
-    const keySkillsParsed = r.key_skills ? JSON.parse(r.key_skills) : [];
-
-    if (r.raw_json) {
-      try {
-        const raw = JSON.parse(r.raw_json);
-        strengths = (raw.strengths || []).map(s => s.replace(/^Matched:\s*/i, ''));
-        gaps = (raw.gaps || []).map(g => g.replace(/^Missing:\s*/i, ''));
-      } catch (_) {}
-    }
-
-    // Fallback for openclaw-local / AI records: derive strengths from key_skills
-    if (strengths.length === 0 && keySkillsParsed.length > 0) {
-      strengths = keySkillsParsed;
-    }
-
-    // Fallback: parse gaps from summary text ("Key gaps: X, Y, Z")
-    if (gaps.length === 0 && r.summary) {
-      const gapMatch = r.summary.match(/Key gaps?:\s*([^.]+)/i);
-      if (gapMatch) {
-        gaps = gapMatch[1].split(',').map(g => g.trim()).filter(Boolean);
-      }
-    }
-
-    return {
-      id: r.id,
-      fileName: r.file_name,
-      name: r.candidate_name,
-      email: r.email,
-      phone: r.phone,
-      currentRole: r.current_role,
-      yearsExperience: r.years_experience,
-      keySkills: keySkillsParsed,
-      supplyChainScore: r.must_have_score,
-      procurementScore: r.nice_to_have_score,
-      logisticsScore:   r.title_match_score,
-      technologyScore:  r.experience_score,
-      overallScore:     r.overall_score,
-      recommendation:   r.recommendation,
-      summary:          r.summary,
-      strengths,
-      gaps,
-      status:           r.status,
-      error:            r.error_message,
-      createdAt:        r.created_at,
-    };
-  });
+  const results = rows.map(shapeScreeningRow);
 
   const total = results.length;
   const completed = results.filter(r => r.status === 'completed').length;
@@ -438,6 +444,47 @@ router.get('/batch/:batchId', (req, res) => {
     progress:       { total, completed, failed, pending },
     results,
   });
+});
+
+// ── GET /api/screen/daily-lists ──────────────────────────────────────────────
+// Groups every completed screening by the calendar day it ran on, giving each
+// day its own persistent candidate list. Screenings are never deleted, so
+// every day's list stays intact as new days are added.
+router.get('/daily-lists', (req, res) => {
+  const rows = db.prepare(`
+    SELECT DATE(created_at) as list_date,
+           COUNT(*) as candidate_count,
+           COUNT(DISTINCT batch_id) as batch_count
+    FROM screenings
+    WHERE created_by = ? AND status = 'completed'
+    GROUP BY DATE(created_at)
+    ORDER BY list_date DESC
+  `).all(req.user.id);
+
+  const lists = rows.map(r => ({
+    listDate: r.list_date,
+    candidateCount: r.candidate_count,
+    batchCount: r.batch_count,
+  }));
+
+  res.json({ lists });
+});
+
+// ── GET /api/screen/daily-lists/:date ────────────────────────────────────────
+// Returns every candidate screened on a specific day (YYYY-MM-DD), each with
+// the JD match scores computed at screening time.
+router.get('/daily-lists/:date', (req, res) => {
+  const { date } = req.params;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({ error: 'date must be in YYYY-MM-DD format.' });
+  }
+  const rows = db.prepare(`
+    SELECT * FROM screenings
+    WHERE created_by = ? AND status = 'completed' AND DATE(created_at) = ?
+    ORDER BY overall_score DESC
+  `).all(req.user.id, date);
+
+  res.json({ listDate: date, candidates: rows.map(shapeScreeningRow) });
 });
 
 module.exports = router;
