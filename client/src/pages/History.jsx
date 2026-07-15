@@ -562,11 +562,13 @@ function ScreeningDayDetail({ date, onBack }) {
 function ScreeningsTab() {
   const [days, setDays] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [activeDate, setActiveDate] = useState(null);
 
   useEffect(() => {
     api.get('/screen/daily-lists')
       .then(r => setDays(r.data.lists || []))
+      .catch(err => setError(err.response?.data?.error || 'Failed to load screening history.'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -575,6 +577,7 @@ function ScreeningsTab() {
   }
 
   if (loading) return <div className="p-10 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div></div>;
+  if (error) return <div className="card p-4 bg-red-50 border-red-200 text-red-700 text-sm">{error}</div>;
   if (!days.length) return (
     <div className="card p-10 text-center text-slate-400">
       <p className="text-4xl mb-2">🤖</p>

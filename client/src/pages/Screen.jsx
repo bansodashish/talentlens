@@ -1,6 +1,19 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../utils/api';
+
+// Persist in-progress/completed screening state across page navigation —
+// results and the JD are otherwise lost the moment this component unmounts.
+const SCREEN_STATE_KEY = 'tl_screen_state';
+
+function loadPersistedScreenState() {
+  try {
+    const raw = sessionStorage.getItem(SCREEN_STATE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) {
+    return null;
+  }
+}
 
 const REC_STYLE = {
   'Strong Hire': 'bg-green-100 text-green-800 border-green-300',
@@ -144,16 +157,24 @@ function ResultCard({ rank, c }) {
 }
 
 export default function Screen() {
-  const [jobDescription, setJobDescription] = useState('');
-  const [scanMode, setScanMode] = useState('local');
+  const [jobDescription, setJobDescription] = useState(() => loadPersistedScreenState()?.jobDescription || '');
+  const [scanMode, setScanMode] = useState(() => loadPersistedScreenState()?.scanMode || 'local');
   const [files, setFiles] = useState([]);
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
-  const [results, setResults] = useState([]);
-  const [batchId, setBatchId] = useState(null);
+  const [results, setResults] = useState(() => loadPersistedScreenState()?.results || []);
+  const [batchId, setBatchId] = useState(() => loadPersistedScreenState()?.batchId || null);
   const [savedMsg, setSavedMsg] = useState('');
   const fileInputRef = useRef(null);
+
+  // Keep sessionStorage in sync so switching to another page and back
+  // restores the last job description + results instead of losing them.
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SCREEN_STATE_KEY, JSON.stringify({ jobDescription, scanMode, results, batchId }));
+    } catch (_) { /* ignore quota/serialization errors */ }
+  }, [jobDescription, scanMode, results, batchId]);
 
   const stats = useMemo(() => {
     const done     = results.filter(r => r.status !== 'pending');
