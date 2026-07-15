@@ -33,11 +33,12 @@ router.use(authMiddleware, adminMiddleware);
 
 // GET /api/candidates
 router.get('/', (req, res) => {
-  const { market, status, search, min_score, max_score, source, mine } = req.query;
+  const { market, role, status, search, min_score, max_score, source, mine } = req.query;
   let query = 'SELECT c.*, u.name as added_by FROM candidates c LEFT JOIN users u ON c.created_by = u.id WHERE 1=1';
   const params = [];
   if (mine === '1' || mine === 'true') { query += ' AND c.created_by = ?'; params.push(req.user.id); }
   if (market) { query += ' AND c.market = ?'; params.push(market); }
+  if (role) { query += ' AND c.current_title = ?'; params.push(role); }
   if (status) { query += ' AND c.status = ?'; params.push(status); }
   if (source) { query += ' AND c.source = ?'; params.push(source); }
   if (min_score) { query += ' AND c.ai_score >= ?'; params.push(Number(min_score)); }
