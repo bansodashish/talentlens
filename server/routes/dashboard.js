@@ -109,6 +109,92 @@ router.get('/analytics', (req, res) => {
     GROUP BY market
   `).all(uid);
 
+  // ── Active vacancies for screening ────────────────────────────────────────
+  // Primary source: active jobs table. Enriched with screening usage counts
+  // by matching on normalized job title.
+  const activeJobs = db.prepare(`
+    SELECT
+      j.id as job_id,
+      j.title as job_title,
+      j.location,
+      j.market,
+      j.status,
+      j.created_at,
+      j.updated_at,
+      COALESCE(s.screened_candidates, 0) as screened_candidates,
+      COALESCE(s.screening_batches, 0) as screening_batches,
+      s.last_screened_at
+    FROM jobs j
+    LEFT JOIN (
+      SELECT
+        lower(trim(job_title)) as title_key,
+        COUNT(*) as screened_candidates,
+        COUNT(DISTINCT batch_id) as screening_batches,
+        MAX(created_at) as last_screened_at
+      FROM screenings
+      WHERE created_by = ?
+        AND job_title IS NOT NULL
+        AND trim(job_title) <> ''
+      GROUP BY lower(trim(job_title))
+    ) s ON lower(trim(j.title)) = s.title_key
+    WHERE j.created_by = ?
+      AND j.status = 'active'
+    ORDER BY COALESCE(s.last_screened_at, j.updated_at, j.created_at) DESC, j.id DESC
+    LIMIT 10
+  `).all(uid, uid);
+
+  // Secondary source: screening titles not yet present in active jobs.
+  const screeningOnlyVacancies = db.prepare(`
+    SELECT
+      MIN(job_title) as job_title,
+      COUNT(*) as screened_candidates,
+      COUNT(DISTINCT batch_id) as screening_batches,
+      MAX(created_at) as last_screened_at
+    FROM screenings
+    WHERE created_by = ?
+      AND job_title IS NOT NULL
+      AND trim(job_title) <> ''
+      AND lower(trim(job_title)) NOT IN (
+        SELECT lower(trim(title))
+        FROM jobs
+        WHERE created_by = ? AND status = 'active'
+      )
+    GROUP BY lower(trim(job_title))
+    ORDER BY last_screened_at DESC
+    LIMIT 10
+  `).all(uid, uid);
+
+  const activeVacancies = [
+    ...activeJobs.map((j) => ({
+      id: `job-${j.job_id}`,
+      title: j.job_title,
+      location: j.location || '—',
+      market: j.market || '—',
+      status: j.status,
+      screenedCandidates: j.screened_candidates || 0,
+      screeningBatches: j.screening_batches || 0,
+      lastScreenedAt: j.last_screened_at || null,
+      source: 'jobs',
+    })),
+    ...screeningOnlyVacancies.map((s) => ({
+      id: `screening-${String(s.job_title || '').toLowerCase().replace(/\s+/g, '-')}`,
+      title: s.job_title,
+      location: 'From Screening',
+      market: '—',
+      status: 'active',
+      screenedCandidates: s.screened_candidates || 0,
+      screeningBatches: s.screening_batches || 0,
+      lastScreenedAt: s.last_screened_at || null,
+      source: 'screening',
+    })),
+  ]
+    .sort((a, b) => {
+      const aT = a.lastScreenedAt ? Date.parse(a.lastScreenedAt) : 0;
+      const bT = b.lastScreenedAt ? Date.parse(b.lastScreenedAt) : 0;
+      return bT - aT;
+    })
+    .slice(0, 10);
+
   // ── Recommendation breakdown ──────────────────────────────────────────────
   const recRows = db.prepare(`
     SELECT recommendation, COUNT(*) as count FROM screenings
@@ -198,6 +284,7 @@ router.get('/analytics', (req, res) => {
     byMarket,
     recommendations,
     scoreTrend,
+    activeVacancies,
     recentSearches,
     recentScreenings,
     topCandidates,
