@@ -223,7 +223,7 @@ node server/index.js
 # Common causes:
 # - Missing .env file:           ls -la server/.env
 # - Native module mismatch:      cd server && npm rebuild better-sqlite3
-# - Missing dependencies:        cd server && npm install
+# - Missing dependencies:        cd server![1785222470624](image/troubleshooting/1785222470624.png)![1785222475682](image/troubleshooting/1785222475682.png)![1785222480631](image/troubleshooting/1785222480631.png)![1785222502177](image/troubleshooting/1785222502177.png) && npm install
 ```
 
 ---

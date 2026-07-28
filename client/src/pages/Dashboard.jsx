@@ -99,12 +99,10 @@ export default function Dashboard() {
 
   const {
     stats = {}, weeklySourced = [], byMarket = [], recommendations = [],
-    scoreTrend = [], recentSearches = [], recentScreenings = [], topCandidates = [],
+    scoreTrend = [], activeVacancies = [], recentSearches = [], recentScreenings = [], topCandidates = [],
   } = data || {};
 
-  const pieData        = byMarket.map(m => ({ name: m.market, value: m.count }));
-  const hasSourced     = weeklySourced.some(w => w.count > 0);
-  const hasRegionData  = pieData.length > 0;
+  const hasVacancies   = activeVacancies.length > 0;
   const hasRecs        = recommendations.some(r => r.count > 0);
   const hasScore       = scoreTrend.some(s => s.avg > 0);
 
@@ -135,6 +133,49 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* ── Getting Started banner (shown when no data at all) ────────────── */}
+      {!hasVacancies && (
+        <div className="card p-6 overflow-hidden relative animate-fade-up delay-75">
+          {/* Decorative circles */}
+          <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full opacity-5"
+            style={{ background: 'var(--tl-primary, #3b82f6)' }} />
+          <div className="absolute -right-2 top-8 w-24 h-24 rounded-full opacity-[0.07]"
+            style={{ background: 'var(--tl-primary, #3b82f6)' }} />
+
+          <div className="relative flex flex-col md:flex-row items-start md:items-center gap-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xl">🚀</span>
+                <span className="text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                  style={{ background: 'var(--tl-primary, #3b82f6)', color: '#fff' }}>
+                  Getting Started
+                </span>
+              </div>
+              <h3 className="text-lg font-bold text-slate-800 mb-1">Start Recruiting your next Candidate</h3>
+              <p className="text-sm text-slate-500">
+                Create a new job, screen CVs and identify the strongest candidates based on your requirements. Build your pipeline and manage candidates from application through to offer.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3 shrink-0">
+              {[
+                { step: '1', label: 'Create Job & Screen Candidates', icon: '📋', to: '/jobs/new' },
+                { step: '2', label: 'Build Pipeline',    icon: '📊', to: '/pipeline' },
+              ].map(s => (
+                <Link key={s.step} to={s.to}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors bg-white group">
+                  <span className="w-5 h-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0"
+                    style={{ background: 'var(--tl-primary, #3b82f6)' }}>
+                    {s.step}
+                  </span>
+                  <span className="text-xs font-medium text-slate-700">{s.icon} {s.label}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Stat cards ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-up delay-75">
         <StatCard icon="👥" label="Candidates sourced this month"
@@ -148,78 +189,55 @@ export default function Dashboard() {
           value={stats.strongHireCount ?? 0} sub="All time" accent="badge-yellow" to="/history" />
       </div>
 
-      {/* ── Charts row 1 ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-up delay-150">
-
-        {/* Sourced chart */}
-        <ChartCard title="Candidates sourced — last 4 weeks">
-          {hasSourced ? (
-            <ResponsiveContainer width="100%" height={230}>
-              <BarChart data={weeklySourced}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                <XAxis dataKey="week" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                <Tooltip />
-                <Bar dataKey="count" name="Sourced" fill="var(--tl-primary, #3b82f6)" radius={[4,4,0,0]} />
-              </BarChart>
-            </ResponsiveContainer>
+      {/* ── Active vacancies row ───────────────────────────────────────────── */}
+      <div className="animate-fade-up delay-150">
+        <ChartCard title="Active Vacancies for Screening">
+          {hasVacancies ? (
+            <div className="space-y-2 max-h-[290px] overflow-auto pr-1">
+              {activeVacancies.map((v) => (
+                <div key={v.id} className="rounded-xl border border-slate-200 p-3 bg-white">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-800 truncate">{v.title}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {v.location || '—'} · {v.market || '—'}
+                      </p>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                      style={{ background: v.source === 'screening' ? '#e0f2fe' : '#e2e8f0', color: v.source === 'screening' ? '#0369a1' : '#334155' }}>
+                      {v.source === 'screening' ? 'From Screening' : 'Active Job'}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                    <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium">
+                      {v.screenedCandidates || 0} candidates screened
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-medium">
+                      {v.screeningBatches || 0} batch{(v.screeningBatches || 0) === 1 ? '' : 'es'}
+                    </span>
+                    {v.lastScreenedAt && (
+                      <span className="text-slate-400">
+                        Last screening: {new Date(v.lastScreenedAt).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="relative overflow-hidden rounded-xl h-[230px]">
               <SparkBackground />
               <EmptyState
-                icon="📊"
-                title="No sourcing data yet"
-                description="Start searching for candidates to see your weekly sourcing trends here."
+                icon="📌"
+                title="No active vacancies yet"
+                description="Create an active job or run resume screening with a JD to auto-populate vacancies here."
                 action={
-                  <Link to="/candidate-search" className="btn-primary text-xs px-3 py-1.5">
-                    🔍 Start Searching
-                  </Link>
+                  <div className="flex gap-2">
+                    <Link to="/jobs/new" className="btn-primary text-xs px-3 py-1.5">📋 Create Job</Link>
+                    <Link to="/cv-match" className="btn-secondary text-xs px-3 py-1.5">🤖 Start Screening</Link>
+                  </div>
                 }
               />
-            </div>
-          )}
-        </ChartCard>
-
-        {/* Region chart */}
-        <ChartCard title="Candidates by region">
-          {hasRegionData ? (
-            <ResponsiveContainer width="100%" height={230}>
-              <PieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name"
-                  innerRadius={50} outerRadius={85} paddingAngle={3}
-                  label={({ name, value }) => `${name}: ${value}`}>
-                  {pieData.map(entry => (
-                    <Cell key={entry.name} fill={MARKET_COLORS[entry.name] || '#94a3b8'} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-[230px] flex flex-col items-center justify-center gap-4 px-4">
-              {/* Market flags illustration */}
-              <div className="flex items-center gap-3">
-                {[
-                  { flag: '🇬🇧', label: 'UK', color: '#3b82f6' },
-                  { flag: '🇦🇪', label: 'Dubai', color: '#f59e0b' },
-                  { flag: '🌍', label: 'Global', color: '#8b5cf6' },
-                ].map(m => (
-                  <div key={m.label} className="flex flex-col items-center gap-1">
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-2xl"
-                      style={{ background: `${m.color}18`, border: `2px dashed ${m.color}40` }}>
-                      {m.flag}
-                    </div>
-                    <span className="text-xs font-medium text-slate-500">{m.label}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="text-center">
-                <p className="text-sm font-semibold text-slate-700">No regional data yet</p>
-                <p className="text-xs text-slate-400 mt-0.5">Add candidates to see your UK vs Dubai market breakdown</p>
-              </div>
-              <Link to="/candidate-search" className="btn-secondary text-xs px-3 py-1.5">
-                ➕ Add Candidates
-              </Link>
             </div>
           )}
         </ChartCard>
@@ -426,50 +444,6 @@ export default function Dashboard() {
           )}
         </div>
       </div>
-
-      {/* ── Getting Started banner (shown when no data at all) ────────────── */}
-      {!hasSourced && !hasRegionData && (
-        <div className="card p-6 overflow-hidden relative">
-          {/* Decorative circles */}
-          <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full opacity-5"
-            style={{ background: 'var(--tl-primary, #3b82f6)' }} />
-          <div className="absolute -right-2 top-8 w-24 h-24 rounded-full opacity-[0.07]"
-            style={{ background: 'var(--tl-primary, #3b82f6)' }} />
-
-          <div className="relative flex flex-col md:flex-row items-start md:items-center gap-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xl">🚀</span>
-                <span className="text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full"
-                  style={{ background: 'var(--tl-primary, #3b82f6)', color: '#fff' }}>
-                  Getting Started
-                </span>
-              </div>
-              <h3 className="text-lg font-bold text-slate-800 mb-1">Set up your recruitment pipeline</h3>
-              <p className="text-sm text-slate-500">
-                TalentLenses is ready — connect your platforms and start sourcing top supply chain talent for UK and Dubai markets.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-3 shrink-0">
-              {[
-                { step: '1', label: 'Search Candidates', icon: '🔍', to: '/candidate-search' },
-                { step: '2', label: 'Screen Resumes',    icon: '🤖', to: '/cv-match' },
-                { step: '3', label: 'Build Pipeline',    icon: '📋', to: '/pipeline' },
-              ].map(s => (
-                <Link key={s.step} to={s.to}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors bg-white group">
-                  <span className="w-5 h-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0"
-                    style={{ background: 'var(--tl-primary, #3b82f6)' }}>
-                    {s.step}
-                  </span>
-                  <span className="text-xs font-medium text-slate-700">{s.icon} {s.label}</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   );
