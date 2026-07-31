@@ -47,6 +47,7 @@ app.use('/api/search',       require('./routes/search'));    // LinkedIn search 
 app.use('/api/screen',       require('./routes/screen'));    // AI Resume Screener (Claude)
 app.use('/api/history',      require('./routes/history'));   // CRM history (searches + screenings)
 app.use('/api/users',        require('./routes/users'));     // Admin: user management
+app.use('/api/tasks',        require('./routes/tasks'));     // Recruitment tasks
 
 // ── Health check ─────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {

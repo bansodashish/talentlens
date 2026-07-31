@@ -3,19 +3,19 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 
 const statusColors = { new: 'badge-blue', screening: 'badge-yellow', interview: 'badge-purple', offer: 'badge-green', hired: 'badge-green', rejected: 'badge-red' };
-const PIPELINE_STAGES = ['application', 'phone_screen', 'technical', 'final', 'offer'];
+const PIPELINE_STAGES = ['shortlisted', 'contacted', 'phone_screen', 'interview', 'offer'];
 const PIPELINE_STAGE_LABELS = {
-  application: '📋 Application',
+  shortlisted:  '⭐ Shortlisted',
+  contacted:    '📬 Contacted',
   phone_screen: '📞 Phone Screen',
-  technical: '🔧 Technical',
-  final: '🏁 Final Round',
-  offer: '🎉 Offer',
+  interview:    '🗓 Interview',
+  offer:        '🎉 Offer',
 };
 
 function statusForStage(stage) {
   if (stage === 'offer') return 'offer';
   if (!stage) return 'new';
-  return stage === 'application' ? 'screening' : 'interview';
+  return stage === 'shortlisted' ? 'screening' : 'interview';
 }
 
 export default function Candidates() {

@@ -129,6 +129,21 @@ migrate('ALTER TABLE screenings RENAME COLUMN technology_score TO experience_sco
 // candidate's OWN current/most-recent job title from their résumé.
 migrate('ALTER TABLE screenings ADD COLUMN job_title TEXT');
 
+// Recruitment Tasks widget
+migrate(`
+  CREATE TABLE IF NOT EXISTS recruitment_tasks (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    title        TEXT    NOT NULL,
+    due_date     TEXT,
+    completed    INTEGER NOT NULL DEFAULT 0,
+    sort_order   INTEGER NOT NULL DEFAULT 0,
+    created_by   INTEGER NOT NULL,
+    created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+  )
+`);
+
 // ── Seed the designated admin account if it doesn't exist yet ────────────────
 // Creates a fallback admin only on a fresh database. It NEVER overwrites an
 // existing user's password on restart — use `npm run admin` to change it live.
