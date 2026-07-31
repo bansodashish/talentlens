@@ -504,20 +504,17 @@ export default function Dashboard() {
               ))}
             </div>
           ) : (
-            <div className="relative overflow-hidden rounded-xl h-[230px]">
-              <SparkBackground />
-              <EmptyState
-                icon="📌"
-                title="No active vacancies yet"
-                description="Create an active job or run resume screening with a JD to auto-populate vacancies here."
-                action={
-                  <div className="flex gap-2">
-                    <Link to="/jobs/new" className="btn-primary text-xs px-3 py-1.5">📋 Create Job</Link>
-                    <Link to="/cv-match" className="btn-secondary text-xs px-3 py-1.5">🤖 Start Screening</Link>
-                  </div>
-                }
-              />
-            </div>
+            <EmptyState
+              icon="📌"
+              title="No active vacancies yet"
+              description="Create an active job or run resume screening with a JD to auto-populate vacancies here."
+              action={
+                <div className="flex gap-2">
+                  <Link to="/jobs/new" className="btn-primary text-xs px-3 py-1.5">📋 Create Job</Link>
+                  <Link to="/cv-match" className="btn-secondary text-xs px-3 py-1.5">🤖 Start Screening</Link>
+                </div>
+              }
+            />
           )}
         </ChartCard>
 
@@ -540,24 +537,16 @@ export default function Dashboard() {
 
             if (total === 0) {
               return (
-                <div className="relative overflow-hidden rounded-xl h-[230px]">
-                  {/* Ghost funnel bars */}
-                  <div className="absolute inset-0 flex items-end gap-3 px-8 pb-10 opacity-[0.07] pointer-events-none">
-                    {[80, 60, 45, 30, 15].map((h, i) => (
-                      <div key={i} className="flex-1 bg-blue-600 rounded-t-sm" style={{ height: `${h}%` }} />
-                    ))}
-                  </div>
-                  <EmptyState
-                    icon="📊"
-                    title="No candidates in pipeline yet"
-                    description="Move candidates to Shortlisted, Contacted, Phone Screen, Interview or Offer stages to track progress here."
-                    action={
-                      <Link to="/pipeline" className="btn-primary text-xs px-3 py-1.5">
-                        Open Pipeline
-                      </Link>
-                    }
-                  />
-                </div>
+                <EmptyState
+                  icon="📊"
+                  title="No candidates in pipeline yet"
+                  description="Move candidates to Shortlisted, Contacted, Phone Screen, Interview or Offer stages to track progress here."
+                  action={
+                    <Link to="/pipeline" className="btn-primary text-xs px-3 py-1.5">
+                      Open Pipeline
+                    </Link>
+                  }
+                />
               );
             }
 
