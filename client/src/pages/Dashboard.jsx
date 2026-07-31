@@ -417,8 +417,7 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Link to="/candidate-search" className="btn-primary text-sm">🔍 Candidate Search</Link>
-          <Link to="/cv-match"         className="btn-secondary text-sm">🤖 Screen Resumes</Link>
+          <Link to="/cv-match"         className="btn-primary text-sm">🤖 Screen Resumes</Link>
           <Link to="/candidates"       className="btn-secondary text-sm">👥 View All Candidates</Link>
         </div>
       </div>
