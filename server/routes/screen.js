@@ -248,14 +248,10 @@ async function processScreeningsBackground({ batchId, mode, apiKey, jobDescripti
     }
   };
 
-  // Local mode: parallel processing (no API rate limits)
-  // AI/OpenClaw modes: sequential (respect rate limits)
-  if (mode === 'local') {
-    await Promise.all(inserted.map(processFile));
-  } else {
-    for (const file of inserted) {
-      await processFile(file);
-    }
+  // Sequential processing for all modes — SQLite (better-sqlite3) does not
+  // support concurrent writes; parallel processing causes SQLITE_BUSY errors.
+  for (const file of inserted) {
+    await processFile(file);
   }
 
   // Record activity after the entire batch is completed
