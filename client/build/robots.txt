@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://talentlenses.leedscrownbridge.co.uk/sitemap.xml
