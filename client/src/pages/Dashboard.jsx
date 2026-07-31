@@ -70,13 +70,14 @@ function RecruitmentTasks() {
   const [editTitle, setEditTitle]   = useState('');
   const [editDate, setEditDate]     = useState('');
   const [saving, setSaving]         = useState(false);
+  const [error, setError]           = useState('');
   const inputRef  = useRef(null);
   const editRef   = useRef(null);
 
   useEffect(() => {
     api.get('/tasks')
       .then(r => setTasks(r.data.tasks || []))
-      .catch(console.error)
+      .catch(() => setError('Could not load tasks. Please refresh.'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -86,14 +87,16 @@ function RecruitmentTasks() {
   const addTask = async () => {
     if (!newTitle.trim()) return;
     setSaving(true);
+    setError('');
     try {
       const r = await api.post('/tasks', { title: newTitle.trim(), due_date: newDate || null });
       setTasks(prev => [...prev, r.data.task]);
       setNewTitle('');
       setNewDate('');
       setAdding(false);
-    } catch (err) { console.error(err); }
-    finally { setSaving(false); }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Could not save task. Make sure the server is running.');
+    } finally { setSaving(false); }
   };
 
   const toggleComplete = async (task) => {
@@ -276,6 +279,14 @@ function RecruitmentTasks() {
         </button>
       </div>
 
+      {/* Error banner */}
+      {error && (
+        <div className="mb-3 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-600 flex items-center justify-between gap-2">
+          <span>⚠️ {error}</span>
+          <button onClick={() => setError('')} className="text-red-400 hover:text-red-600" aria-label="Dismiss">✕</button>
+        </div>
+      )}
+
       {/* Add task form */}
       {adding && (
         <div className="mb-4 p-3 rounded-xl bg-blue-50 border border-blue-200">
@@ -385,8 +396,6 @@ export default function Dashboard() {
     stats = {}, activeVacancies = [], pipelineActivity = [],
   } = data || {};
 
-  const hasVacancies = activeVacancies.length > 0;
-
   const greeting = () => {
     const h = new Date().getHours();
     if (h < 12) return 'Good morning';
@@ -414,9 +423,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Getting Started banner (shown when no data at all) ────────────── */}
-      {!hasVacancies && (
-        <div className="card p-6 overflow-hidden relative animate-fade-up delay-75">
+      {/* ── Getting Started banner ────────────────────────────── */}
+      <div className="card p-6 overflow-hidden relative animate-fade-up delay-75">
           {/* Decorative circles */}
           <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full opacity-5"
             style={{ background: 'var(--tl-primary, #3b82f6)' }} />
@@ -455,27 +463,16 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-      )}
 
       {/* ── Stat cards ───────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-up delay-75">
-        <StatCard icon="👥" label="Candidates sourced this month"
-          value={stats.totalThisMonth ?? 0} sub="This month" accent="badge-blue" to="/candidates" />
-        <StatCard icon="📧" label="Email found rate"
-          value={`${stats.emailFoundPct ?? 0}%`}
-          sub={`${stats.emailFoundThisMonth ?? 0} this month`} accent="badge-green" />
-        <StatCard icon="🤖" label="Resumes screened this month"
-          value={stats.screenedThisMonth ?? 0} sub="This month" accent="badge-purple" to="/history" />
-        <StatCard icon="🌟" label="Strong Hire candidates"
-          value={stats.strongHireCount ?? 0} sub="All time" accent="badge-yellow" to="/history" />
-      </div>
+      {/* removed */}
 
       {/* ── Active vacancies + Pipeline Activity ──────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-up delay-150">
 
         {/* Active Vacancies */}
         <ChartCard title="Active Vacancies for Screening">
-          {hasVacancies ? (
+          {activeVacancies.length > 0 ? (
             <div className="space-y-2 max-h-[290px] overflow-auto pr-1">
               {activeVacancies.map((v) => (
                 <div key={v.id} className="rounded-xl border border-slate-200 p-3 bg-white">
