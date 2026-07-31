@@ -90,7 +90,7 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
           {c.status === 'pending'
             ? <div className="text-sm text-slate-400 italic">Processing…</div>
             : <>
-                <div className={`text-3xl font-bold tabular-nums ${overallColor}`}>{overall}</div>
+                <div className={`text-3xl font-bold ${overallColor}`}>{overall}</div>
                 <div className="text-[10px] text-slate-400 uppercase tracking-wide">Overall</div>
               </>
           }
@@ -178,9 +178,6 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
     </div>
   );
 }
-
-// ─── Screening History (embedded) ────────────────────────────────────────────
-function ScreeningDayDetail({ date, onBack }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -396,7 +393,7 @@ export default function Screen() {
           clearInterval(interval);
           setLoading(false);
           setProgress(0);
-          setError('Connection lost during screening. Try uploading the resumes again or check your internet connection. (' + (pollErr.response?.data?.error || pollErr.message) + ')');
+          setError('Lost connection to screening task: ' + (pollErr.response?.data?.error || pollErr.message));
         }
       }, 2000);
 
@@ -524,7 +521,6 @@ export default function Screen() {
             placeholder="Paste the full job description here (role, responsibilities, must-haves, location)…"
             value={jobDescription}
             onChange={e => setJobDescription(e.target.value)}
-            onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') runScreening(e); }}
             required
           />
         </div>
@@ -553,18 +549,14 @@ export default function Screen() {
             CV Files <span className="text-slate-400 font-normal">(PDF, DOCX, TXT — up to 25)</span>
           </label>
           <div
-            role="button"
-            tabIndex={0}
-            className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:bg-slate-50 cursor-pointer focus-visible:outline-2 focus-visible:outline-blue-500 focus-visible:outline-offset-2"
+            className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:bg-slate-50 cursor-pointer"
             onClick={() => fileInputRef.current?.click()}
-            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
             onDragOver={e => { e.preventDefault(); }}
             onDrop={e => {
               e.preventDefault();
               const dropped = Array.from(e.dataTransfer.files || []);
               setFiles(prev => [...prev, ...dropped]);
             }}
-            aria-label="Upload CV files — click or drag and drop"
           >
             <input
               ref={fileInputRef}
@@ -573,9 +565,8 @@ export default function Screen() {
               accept=".pdf,.txt,.docx,.doc"
               onChange={handleFilesChange}
               className="hidden"
-              aria-hidden="true"
             />
-            <div className="text-3xl mb-1" aria-hidden="true">📎</div>
+            <div className="text-3xl mb-1">📎</div>
             <p className="text-sm text-slate-600">Click or drop CV files here</p>
             <p className="text-xs text-slate-400 mt-1">Max 15 MB per file</p>
           </div>
@@ -592,10 +583,9 @@ export default function Screen() {
                 </span>
                 <button
                   type="button"
-                  className="text-red-500 hover:text-red-700 text-xs focus-visible:outline-2 focus-visible:outline-red-500 focus-visible:outline-offset-2 rounded"
+                  className="text-red-500 hover:text-red-700 text-xs"
                   onClick={() => removeFile(i)}
                   disabled={loading}
-                  aria-label={`Remove ${f.name}`}
                 >✕</button>
               </div>
             ))}
@@ -635,11 +625,12 @@ export default function Screen() {
 
         <div className="flex justify-end gap-2">
           <button type="submit" className="btn-primary" disabled={loading}>
-            <span className="flex items-center gap-2">
-              {loading && <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" aria-hidden="true"></span>}
-              <span aria-hidden="true">⚡</span>
-              {loading ? `Screening ${files.length} CV${files.length === 1 ? '' : 's'}…` : `Screen ${files.length || ''} CV${files.length === 1 ? '' : 's'}`}
-            </span>
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
+                Screening…
+              </span>
+            ) : `⚡ Screen ${files.length || ''} CV${files.length === 1 ? '' : 's'}`}
           </button>
         </div>
       </form>

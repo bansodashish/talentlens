@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../utils/api';
 
@@ -8,8 +8,6 @@ export default function JobForm() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const errorRef = useRef(null);
-  const [publishToReed, setPublishToReed] = useState(false);
   const [form, setForm] = useState({
     title: '', description: '', requirements: '',
     location: '', market: 'Global', employment_type: 'Full-time',
@@ -30,13 +28,11 @@ export default function JobForm() {
       const payload = { ...form };
       if (payload.salary_min) payload.salary_min = Number(payload.salary_min);
       if (payload.salary_max) payload.salary_max = Number(payload.salary_max);
-      if (!isEdit && publishToReed) payload.publish_targets = ['reed_uk'];
       if (isEdit) await api.put(`/jobs/${id}`, payload);
       else await api.post('/jobs', payload);
       navigate('/jobs');
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to save job. Check all required fields and try again.');
-      setTimeout(() => errorRef.current?.focus(), 0);
+      setError(err.response?.data?.error || 'Failed to save job.');
     } finally { setLoading(false); }
   };
 
@@ -50,7 +46,7 @@ export default function JobForm() {
       </div>
 
       <form onSubmit={handleSubmit} className="card p-6 space-y-5">
-        {error && <div ref={errorRef} tabIndex={-1} role="alert" className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>}
+        {error && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-2">
@@ -109,30 +105,12 @@ export default function JobForm() {
           </div>
           <div className="col-span-2">
             <label className="block text-sm font-medium text-slate-700 mb-1">Job Description</label>
-            <textarea rows={5} className="input resize-none" placeholder="Describe the role, responsibilities, and what you're looking for…" onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') handleSubmit(e); }} {...f('description')} />
+            <textarea rows={5} className="input resize-none" placeholder="Describe the role, responsibilities, and what you're looking for…" {...f('description')} />
           </div>
           <div className="col-span-2">
             <label className="block text-sm font-medium text-slate-700 mb-1">Requirements</label>
-            <textarea rows={4} className="input resize-none" placeholder="List required skills, qualifications, experience…" onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') handleSubmit(e); }} {...f('requirements')} />
+            <textarea rows={4} className="input resize-none" placeholder="List required skills, qualifications, experience…" {...f('requirements')} />
           </div>
-          {!isEdit && (
-            <div className="col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                  checked={publishToReed}
-                  onChange={e => setPublishToReed(e.target.checked)}
-                />
-                <span>
-                  <span className="block text-sm font-semibold text-slate-800">Publish to Reed UK</span>
-                  <span className="block text-xs text-slate-500 mt-1">
-                    Creates the local job first, then attempts Reed UK publishing and tracks the result on the job.
-                  </span>
-                </span>
-              </label>
-            </div>
-          )}
         </div>
 
         <div className="flex gap-3 pt-2">

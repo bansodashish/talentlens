@@ -30,26 +30,6 @@ CREATE TABLE IF NOT EXISTS jobs (
   FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
-CREATE TABLE IF NOT EXISTS job_distributions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  job_id INTEGER NOT NULL,
-  portal TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'pending',
-  external_job_id TEXT,
-  external_url TEXT,
-  error_message TEXT,
-  attempts INTEGER NOT NULL DEFAULT 0,
-  last_attempt_at DATETIME,
-  posted_at DATETIME,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
-  UNIQUE(job_id, portal)
-);
-
-CREATE INDEX IF NOT EXISTS idx_job_distributions_job_id ON job_distributions(job_id);
-CREATE INDEX IF NOT EXISTS idx_job_distributions_portal_status ON job_distributions(portal, status);
-
 CREATE TABLE IF NOT EXISTS candidates (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
