@@ -223,7 +223,7 @@ node server/index.js
 # Common causes:
 # - Missing .env file:           ls -la server/.env
 # - Native module mismatch:      cd server && npm rebuild better-sqlite3
-# - Missing dependencies:        cd server![1785222470624](image/troubleshooting/1785222470624.png)![1785222475682](image/troubleshooting/1785222475682.png)![1785222480631](image/troubleshooting/1785222480631.png)![1785222502177](image/troubleshooting/1785222502177.png) && npm install
+# - Missing dependencies:        cd server![1785222470624](image/troubleshooting/1785222470624.png)![1785222475682](image/troubleshooting/1785222475682.png)![1785222480631](image/troubleshooting/1785222480631.png)![1785222502177](image/troubleshooting/1785222502177.png)![1785478174321](image/troubleshooting/1785478174321.png)![1785478189090](image/troubleshooting/1785478189090.png)![1785478190337](image/troubleshooting/1785478190337.png)![1785478194421](image/troubleshooting/1785478194421.png)![1785478879657](image/troubleshooting/1785478879657.png)![1785478881734](image/troubleshooting/1785478881734.png)![1785478886685](image/troubleshooting/1785478886685.png)![1785478958960](image/troubleshooting/1785478958960.png)![1785479042867](image/troubleshooting/1785479042867.png)![1785479044554](image/troubleshooting/1785479044554.png)![1785479048296](image/troubleshooting/1785479048296.png)![1785479055778](image/troubleshooting/1785479055778.png)![1785479056094](image/troubleshooting/1785479056094.png)![1785479056311](image/troubleshooting/1785479056311.png)![1785479056494](image/troubleshooting/1785479056494.png) && npm install
 ```
 
 ---

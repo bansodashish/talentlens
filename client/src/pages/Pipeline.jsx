@@ -2,27 +2,27 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../utils/api';
 
-const STAGES = ['application', 'phone_screen', 'technical', 'final', 'offer'];
+const STAGES = ['shortlisted', 'contacted', 'phone_screen', 'interview', 'offer'];
 const STAGE_LABELS = {
-  application: '📋 Application',
+  shortlisted:  '⭐ Shortlisted',
+  contacted:    '📬 Contacted',
   phone_screen: '📞 Phone Screen',
-  technical: '🔧 Technical',
-  final: '🏁 Final Round',
-  offer: '🎉 Offer',
+  interview:    '🗓 Interview',
+  offer:        '🎉 Offer',
 };
 const STAGE_COLORS = {
-  application: 'border-blue-300',
+  shortlisted:  'border-blue-300',
+  contacted:    'border-cyan-300',
   phone_screen: 'border-yellow-300',
-  technical: 'border-purple-300',
-  final: 'border-orange-300',
-  offer: 'border-green-300',
+  interview:    'border-purple-300',
+  offer:        'border-green-300',
 };
 const STAGE_DROP_BG = {
-  application: 'bg-blue-50',
+  shortlisted:  'bg-blue-50',
+  contacted:    'bg-cyan-50',
   phone_screen: 'bg-yellow-50',
-  technical: 'bg-purple-50',
-  final: 'bg-orange-50',
-  offer: 'bg-green-50',
+  interview:    'bg-purple-50',
+  offer:        'bg-green-50',
 };
 
 export default function Pipeline() {
@@ -44,7 +44,7 @@ export default function Pipeline() {
   useEffect(() => { fetchCandidates(); }, []);
 
   const updateStage = async (candidateId, newStage) => {
-    const status = newStage === 'offer' ? 'offer' : (newStage === 'application' ? 'screening' : 'interview');
+    const status = newStage === 'offer' ? 'offer' : (newStage === 'shortlisted' ? 'screening' : 'interview');
     // optimistic update
     setCandidates(prev => prev.map(c => c.id === candidateId ? { ...c, pipeline_stage: newStage, status } : c));
     try {

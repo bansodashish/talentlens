@@ -250,6 +250,21 @@ router.get('/analytics', (req, res) => {
     b.top_candidate = top?.candidate_name || '—';
   }
 
+  // ── Pipeline activity — candidate counts by stage ─────────────────────────
+  const PIPELINE_STAGES = ['shortlisted', 'contacted', 'phone_screen', 'interview', 'offer'];
+  const stageRows = db.prepare(`
+    SELECT pipeline_stage as stage, COUNT(*) as count
+    FROM candidates
+    WHERE created_by = ?
+      AND pipeline_stage IN ('shortlisted','contacted','phone_screen','interview','offer')
+    GROUP BY pipeline_stage
+  `).all(uid);
+  const stageMap = Object.fromEntries(stageRows.map(r => [r.stage, r.count]));
+  const pipelineActivity = PIPELINE_STAGES.map(stage => ({
+    stage,
+    count: stageMap[stage] || 0,
+  }));
+
   // ── Top candidates widget — best across sources + screenings ──────────────
   const topCandidatesC = db.prepare(`
     SELECT id, name, current_title as role, market, email, ai_score as score,
@@ -285,6 +300,7 @@ router.get('/analytics', (req, res) => {
     recommendations,
     scoreTrend,
     activeVacancies,
+    pipelineActivity,
     recentSearches,
     recentScreenings,
     topCandidates,
