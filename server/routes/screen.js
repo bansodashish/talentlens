@@ -167,12 +167,13 @@ async function processScreeningsBackground({ batchId, mode, apiKey, jobDescripti
     WHERE id = ?
   `);
 
-  for (const file of inserted) {
+  // Process each file — local mode runs in parallel, AI modes run sequentially
+  // (AI modes have rate limits; local is CPU-bound and benefits from parallelism)
+  const processFile = async (file) => {
     const ext = path.extname(file.originalname).toLowerCase();
     let plainText = '';
 
     try {
-      // Local mode always needs text extraction. AI mode sends PDFs natively.
       if (mode === 'local' || ext !== '.pdf') {
         plainText = await withTimeout(
           Promise.resolve().then(() => parseCV(file.path, file.originalname)),
@@ -223,7 +224,7 @@ async function processScreeningsBackground({ batchId, mode, apiKey, jobDescripti
       );
     } catch (err) {
       console.error(`[background screen] ${file.originalname} failed:`, err.message);
-      const rawMsg = err.response?.data?.error?.message || err.message || 'Unknown Claude error';
+      const rawMsg = err.response?.data?.error?.message || err.message || 'Unknown error';
       const code   = err.response?.status;
 
       let error = rawMsg;
@@ -244,6 +245,16 @@ async function processScreeningsBackground({ batchId, mode, apiKey, jobDescripti
       failStmt.run(error, `Screening failed: ${error}`, file.id);
     } finally {
       try { fs.unlinkSync(file.path); } catch (_) {}
+    }
+  };
+
+  // Local mode: parallel processing (no API rate limits)
+  // AI/OpenClaw modes: sequential (respect rate limits)
+  if (mode === 'local') {
+    await Promise.all(inserted.map(processFile));
+  } else {
+    for (const file of inserted) {
+      await processFile(file);
     }
   }
 
