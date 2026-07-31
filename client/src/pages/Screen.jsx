@@ -178,6 +178,8 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
     </div>
   );
 }
+
+function ScreeningDayDetail({ date, onBack }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
