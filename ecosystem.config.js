@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'talentlenses',
       script: './server/index.js',
-      cwd: __dirname,
+      cwd: '/home/talentlens/talentlens',
       instances: 1,
       exec_mode: 'fork',
       autorestart: true,

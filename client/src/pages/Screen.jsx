@@ -90,7 +90,7 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
           {c.status === 'pending'
             ? <div className="text-sm text-slate-400 italic">Processing…</div>
             : <>
-                <div className={`text-3xl font-bold tabular-nums ${overallColor}`}>{overall}</div>
+                <div className={`text-3xl font-bold ${overallColor}`}>{overall}</div>
                 <div className="text-[10px] text-slate-400 uppercase tracking-wide">Overall</div>
               </>
           }
@@ -151,142 +151,7 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
         </div>
       )}
 
-      <p className="text-[10px] text-slate-300 mt-3"><span aria-hidden="true">📄</span> {c.fileName}</p>
-
-      {/* Add to Pipeline */}
-      {c.status !== 'pending' && !c.error && (
-        <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
-          <p className="text-xs text-slate-400">
-            Add this candidate to your recruitment pipeline
-          </p>
-          {isAdded ? (
-            <span className="flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-lg">
-              <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              Added to Pipeline
-            </span>
-          ) : (
-            <button
-              onClick={() => onAddToPipeline?.(c)}
-              className="flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded-lg transition-colors"
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-              Add to Pipeline
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Screening History (embedded) ────────────────────────────────────────────
-function ScreeningDayDetail({ date, onBack }) {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api.get(`/screen/daily-lists/${date}`)
-      .then(r => setItems(r.data.candidates || []))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [date]);
-
-  if (loading) return <div className="p-10 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div></div>;
-
-  return (
-    <div className="space-y-4">
-      <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline">
-        ← Back to history
-      </button>
-      <h3 className="font-semibold text-slate-800">{date}</h3>
-      {items.length === 0 ? (
-        <div className="card p-8 text-center text-slate-400">No candidates found for this date.</div>
-      ) : (
-        <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-200">
-              <tr>
-                {['Candidate','Role','Score','Recommendation','Batch'].map(h => (
-                  <th key={h} className="text-left px-4 py-2 font-semibold text-slate-600 text-xs uppercase">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {items.map((item, i) => (
-                <tr key={i} className="hover:bg-slate-50">
-                  <td className="px-4 py-2 font-medium text-slate-800">{item.candidate_name || '—'}</td>
-                  <td className="px-4 py-2 text-slate-500 text-xs">{item.current_role || '—'}</td>
-                  <td className="px-4 py-2">
-                    <span className={`font-bold tabular-nums ${
-                      (item.overall_score || 0) >= 75 ? 'text-green-700' :
-                      (item.overall_score || 0) >= 55 ? 'text-amber-700' : 'text-red-600'
-                    }`}>{item.overall_score ?? '—'}</span>
-                  </td>
-                  <td className="px-4 py-2">
-                    <span className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${
-                      REC_STYLE[item.recommendation] || 'bg-slate-100 text-slate-700 border-slate-200'
-                    }`}>{item.recommendation || '—'}</span>
-                  </td>
-                  <td className="px-4 py-2 text-xs text-slate-400 font-mono">{item.batch_id?.slice(0,8) || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ScreeningHistory() {
-  const [days, setDays] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [activeDate, setActiveDate] = useState(null);
-
-  useEffect(() => {
-    api.get('/screen/daily-lists')
-      .then(r => setDays(r.data.lists || []))
-      .catch(err => setError(err.response?.data?.error || 'Failed to load screening history.'))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (activeDate) return <ScreeningDayDetail date={activeDate} onBack={() => setActiveDate(null)} />;
-  if (loading) return <div className="p-10 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div></div>;
-  if (error) return <div className="card p-4 bg-red-50 border-red-200 text-red-700 text-sm">{error}</div>;
-  if (!days.length) return (
-    <div className="card p-10 text-center text-slate-400">
-      <p className="text-4xl mb-2">🤖</p>
-      <p>No screening batches yet. Use the <strong>Screen Candidates</strong> tab to get started.</p>
-    </div>
-  );
-
-  return (
-    <div className="card overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-slate-50 border-b border-slate-200">
-          <tr>
-            {['Date','Candidates','Batches',''].map(h => (
-              <th key={h} className="text-left px-4 py-2 font-semibold text-slate-600 text-xs uppercase">{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {days.map(d => (
-            <tr key={d.listDate} className="hover:bg-slate-50">
-              <td className="px-4 py-2 font-medium text-slate-800">{d.listDate}</td>
-              <td className="px-4 py-2 text-slate-600">{d.candidateCount}</td>
-              <td className="px-4 py-2 text-slate-600">{d.batchCount}</td>
-              <td className="px-4 py-2 text-right">
-                <button type="button" className="text-blue-600 hover:underline font-medium text-xs"
-                  onClick={() => setActiveDate(d.listDate)}>
-                  View list →
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <p className="text-[10px] text-slate-300 mt-3">📄 {c.fileName}</p>
     </div>
   );
 }
@@ -396,7 +261,7 @@ export default function Screen() {
           clearInterval(interval);
           setLoading(false);
           setProgress(0);
-          setError('Connection lost during screening. Try uploading the resumes again or check your internet connection. (' + (pollErr.response?.data?.error || pollErr.message) + ')');
+          setError('Lost connection to screening task: ' + (pollErr.response?.data?.error || pollErr.message));
         }
       }, 2000);
 
@@ -524,7 +389,6 @@ export default function Screen() {
             placeholder="Paste the full job description here (role, responsibilities, must-haves, location)…"
             value={jobDescription}
             onChange={e => setJobDescription(e.target.value)}
-            onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') runScreening(e); }}
             required
           />
         </div>
@@ -553,18 +417,14 @@ export default function Screen() {
             CV Files <span className="text-slate-400 font-normal">(PDF, DOCX, TXT — up to 25)</span>
           </label>
           <div
-            role="button"
-            tabIndex={0}
-            className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:bg-slate-50 cursor-pointer focus-visible:outline-2 focus-visible:outline-blue-500 focus-visible:outline-offset-2"
+            className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:bg-slate-50 cursor-pointer"
             onClick={() => fileInputRef.current?.click()}
-            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
             onDragOver={e => { e.preventDefault(); }}
             onDrop={e => {
               e.preventDefault();
               const dropped = Array.from(e.dataTransfer.files || []);
               setFiles(prev => [...prev, ...dropped]);
             }}
-            aria-label="Upload CV files — click or drag and drop"
           >
             <input
               ref={fileInputRef}
@@ -573,9 +433,8 @@ export default function Screen() {
               accept=".pdf,.txt,.docx,.doc"
               onChange={handleFilesChange}
               className="hidden"
-              aria-hidden="true"
             />
-            <div className="text-3xl mb-1" aria-hidden="true">📎</div>
+            <div className="text-3xl mb-1">📎</div>
             <p className="text-sm text-slate-600">Click or drop CV files here</p>
             <p className="text-xs text-slate-400 mt-1">Max 15 MB per file</p>
           </div>
@@ -592,10 +451,9 @@ export default function Screen() {
                 </span>
                 <button
                   type="button"
-                  className="text-red-500 hover:text-red-700 text-xs focus-visible:outline-2 focus-visible:outline-red-500 focus-visible:outline-offset-2 rounded"
+                  className="text-red-500 hover:text-red-700 text-xs"
                   onClick={() => removeFile(i)}
                   disabled={loading}
-                  aria-label={`Remove ${f.name}`}
                 >✕</button>
               </div>
             ))}
@@ -635,11 +493,12 @@ export default function Screen() {
 
         <div className="flex justify-end gap-2">
           <button type="submit" className="btn-primary" disabled={loading}>
-            <span className="flex items-center gap-2">
-              {loading && <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" aria-hidden="true"></span>}
-              <span aria-hidden="true">⚡</span>
-              {loading ? `Screening ${files.length} CV${files.length === 1 ? '' : 's'}…` : `Screen ${files.length || ''} CV${files.length === 1 ? '' : 's'}`}
-            </span>
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
+                Screening…
+              </span>
+            ) : `⚡ Screen ${files.length || ''} CV${files.length === 1 ? '' : 's'}`}
           </button>
         </div>
       </form>

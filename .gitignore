@@ -15,7 +15,7 @@ job_hunt/__pycache__/
 server/.env.bak*
 *.log
 .DS_Store
-client/build/
+
 
 # Office / local artifacts
 *.docx
