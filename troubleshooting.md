@@ -362,6 +362,54 @@ returns real JSON (`{"lists":[...]}`) instead of `index.html`.
 
 ---
 
+## Backup & Restore (added 2026-08-01)
+
+### Why
+Deploys/infra changes must never lose user data (candidates, screenings, pipeline
+stages, uploaded CVs). `deploy.sh` now automatically snapshots the database (and
+`db/uploads/`) before touching any code, and aborts the deploy without pulling if
+the backup itself fails.
+
+### Where backups live
+```
+~/backups/talentlens/<timestamp>/
+  talentlenses.db      # WAL-safe snapshot (via `sqlite3 ".backup"`, not a raw cp)
+  uploads.tar.gz        # candidate CV uploads, if any exist
+```
+Stored under the `talentlens` user's home directory — outside the git-tracked app
+folder, so a bad `git pull`/`rm -rf` inside the repo can't touch backups. The last
+20 snapshots are kept; older ones are pruned automatically.
+
+### Manual backup
+```bash
+sudo -iu talentlens
+cd ~/talentlens
+bash scripts/backup-db.sh
+```
+
+### Restore from a backup
+```bash
+sudo -iu talentlens
+cd ~/talentlens
+bash scripts/restore-db.sh --list        # see available snapshots
+bash scripts/restore-db.sh               # restore the most recent one
+bash scripts/restore-db.sh 20260801_0300 # restore a specific snapshot
+```
+This stops PM2, swaps in the backup's `.db` file (and uploads, if backed up), then
+restarts the app via `pm2 startOrReload`.
+
+### Related hardening (2026-08-01)
+- `deploy.sh` now refuses to proceed if `db/` isn't owned by the user running the
+  deploy (same class of bug as the SQLITE_READONLY incident above).
+- `server/db.js`'s migration helper now logs real migration failures to `pm2 logs`
+  instead of silently swallowing every error — only expected "already exists"
+  errors stay silent.
+- `/api/health` now runs a real `SELECT 1` against the database and returns
+  `{"db":"error"}` with a `503` if the DB isn't reachable, so `deploy.sh`'s health
+  check catches DB problems, not just "the process is up".
+
+---
+
 ## What Each User Is Responsible For
 
 | Task | User |

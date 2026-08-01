@@ -8,7 +8,22 @@ set -e
 APP_DIR="${APP_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 BRANCH="${BRANCH:-$(git -C "$APP_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo dev)}"
 
-echo "📦 Pulling latest code..."
+echo "� Checking database ownership..."
+if [ -d "$APP_DIR/db" ]; then
+	DB_OWNER=$(stat -c '%U' "$APP_DIR/db" 2>/dev/null || stat -f '%Su' "$APP_DIR/db" 2>/dev/null || echo "")
+	CURRENT_USER=$(whoami)
+	if [ -n "$DB_OWNER" ] && [ "$DB_OWNER" != "$CURRENT_USER" ]; then
+		echo "❌ db/ is owned by '$DB_OWNER', but this deploy is running as '$CURRENT_USER'."
+		echo "   Continuing would risk SQLITE_READONLY errors (see troubleshooting.md)."
+		echo "   Fix with: sudo chown -R $CURRENT_USER:$CURRENT_USER \"$APP_DIR\""
+		exit 1
+	fi
+fi
+
+echo "💾 Backing up database before deploy..."
+bash "$APP_DIR/scripts/backup-db.sh" || { echo "🛑 Backup failed — aborting deploy to avoid risking data. The running app was left untouched."; exit 1; }
+
+echo "�📦 Pulling latest code..."
 cd "$APP_DIR"
 git pull origin "$BRANCH"
 
