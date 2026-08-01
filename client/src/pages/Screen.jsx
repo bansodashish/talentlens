@@ -539,18 +539,6 @@ export default function Screen() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Screening Mode</label>
-          <button
-            type="button"
-            disabled
-            className="btn-primary cursor-default opacity-100 flex items-center gap-2"
-          >
-            ⚡ Scan
-          </button>
-          <p className="text-xs text-slate-400 mt-1">Fast keyword scoring — no API key needed, results in seconds.</p>
-        </div>
-
-        <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
             CV Files <span className="text-slate-400 font-normal">(PDF, DOCX, TXT — up to 25)</span>
           </label>
