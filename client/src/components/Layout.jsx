@@ -59,10 +59,8 @@ export default function Layout({ children }) {
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
-  // Role-based nav access: recruiters may only use Candidate Search + Screen.
-  const isAdmin = user?.role === 'admin';
-  const RECRUITER_ALLOWED = ['/dashboard', '/candidate-search', '/cv-match'];
-  const navDisabled = (path) => !isAdmin && !RECRUITER_ALLOWED.includes(path);
+  // All users now have full nav access — no role-based restrictions.
+  const navDisabled = () => false;
 
   const marketBadge = { UK: '🇬🇧', Dubai: '🇦🇪', Both: '🌍' }[user?.market] || '';
   const navBg      = 'var(--tl-nav-bg)';
