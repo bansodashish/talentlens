@@ -469,6 +469,75 @@ router.get('/batch/:batchId', (req, res) => {
   });
 });
 
+// ── GET /api/screen/jobs ──────────────────────────────────────────────────────
+// Distinct job titles that have ever been screened, for the "Select Job" filter.
+router.get('/jobs', (req, res) => {
+  const rows = db.prepare(`
+    SELECT MIN(job_title) as job_title, COUNT(*) as candidate_count
+    FROM screenings
+    WHERE created_by = ? AND status = 'completed'
+      AND job_title IS NOT NULL AND trim(job_title) <> ''
+    GROUP BY lower(trim(job_title))
+    ORDER BY MAX(created_at) DESC
+  `).all(req.user.id);
+  res.json({ jobs: rows.map(r => ({ jobTitle: r.job_title, candidateCount: r.candidate_count })) });
+});
+
+// ── GET /api/screen/candidates ────────────────────────────────────────────────
+// Flat, filterable list of every screened candidate (across all batches/days),
+// used by the Screening History tab. Supports filtering by job title, a free-text
+// search (name/email), and pipeline status (joined against the candidates table
+// by email so we can tell "In Pipeline" apart from plain "Screened").
+router.get('/candidates', (req, res) => {
+  const jobTitle = String(req.query.jobTitle || '').trim();
+  const q = String(req.query.q || '').trim();
+  const status = String(req.query.status || 'all').trim().toLowerCase();
+
+  const clauses = ["s.created_by = ?", "s.status = 'completed'"];
+  const params = [req.user.id];
+
+  if (jobTitle) {
+    clauses.push('lower(trim(s.job_title)) = lower(trim(?))');
+    params.push(jobTitle);
+  }
+  if (q) {
+    clauses.push('(s.candidate_name LIKE ? OR s.email LIKE ?)');
+    params.push(`%${q}%`, `%${q}%`);
+  }
+
+  const rows = db.prepare(`
+    SELECT
+      s.id, s.batch_id, s.candidate_name, s.email, s.job_title,
+      s.overall_score, s.recommendation, s.created_at,
+      c.pipeline_stage
+    FROM screenings s
+    LEFT JOIN candidates c
+      ON c.created_by = s.created_by AND lower(trim(c.email)) = lower(trim(s.email)) AND s.email IS NOT NULL AND trim(s.email) <> ''
+    WHERE ${clauses.join(' AND ')}
+    ORDER BY s.created_at DESC
+  `).all(...params);
+
+  let candidates = rows.map(r => ({
+    id: r.id,
+    batchId: r.batch_id,
+    name: r.candidate_name || '—',
+    email: r.email || null,
+    jobTitle: r.job_title || '—',
+    matchScore: r.overall_score ?? 0,
+    recommendation: r.recommendation || null,
+    status: r.pipeline_stage ? 'In Pipeline' : 'Screened',
+    screenedOn: r.created_at,
+  }));
+
+  if (status === 'in pipeline' || status === 'pipeline') {
+    candidates = candidates.filter(c => c.status === 'In Pipeline');
+  } else if (status === 'screened') {
+    candidates = candidates.filter(c => c.status === 'Screened');
+  }
+
+  res.json({ candidates });
+});
+
 // ── GET /api/screen/daily-lists ──────────────────────────────────────────────
 // Groups every completed screening by the calendar day it ran on, giving each
 // day its own persistent candidate list. Screenings are never deleted, so

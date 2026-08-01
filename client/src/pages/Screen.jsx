@@ -546,14 +546,12 @@ export default function Screen() {
             onChange={e => setScanMode(e.target.value)}
             disabled={loading}
           >
-            <option value="local">⚡ Local keyword scan (free, instant)</option>
-            <option value="openclaw-local">🦅 OpenClaw local model (private VPS inference)</option>
-            <option value="ai">🤖 Claude AI (cloud — requires API key)</option>
+            <option value="local">⚡ Scan Resume (free, instant)</option>
+            <option value="openclaw-local">🦅 Scan mode 2 (private VPS inference)</option>
           </select>
           <p className="text-xs text-slate-400 mt-1">
             {scanMode === 'local' && 'Fast keyword scoring — no API key needed, results in seconds.'}
             {scanMode === 'openclaw-local' && 'Runs inference on your VPS via Ollama — private, no cloud billing.'}
-            {scanMode === 'ai' && 'Claude AI scoring — requires a Claude API key saved in Profile → API Keys.'}
           </p>
         </div>
 
@@ -614,9 +612,7 @@ export default function Screen() {
                   : progress === 100
                   ? 'Compiling final scores…'
                   : scanMode === 'openclaw-local'
-                  ? 'Extracting text and scoring with OpenClaw local model…'
-                  : scanMode === 'ai'
-                  ? 'Uploading CVs and scoring with Claude…'
+                  ? 'Extracting text and scoring with Scan mode 2…'
                   : 'Extracting text and scoring locally…'}
               </span>
               <span>{progress > 0 ? `${progress}%` : 'Processing…'}</span>

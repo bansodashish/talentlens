@@ -487,129 +487,127 @@ function SearchesTab() {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
-// Every completed screening is kept forever in the `screenings` table, grouped
-// here by the day it ran on — this is the persistent "candidate list used in
-// JD matching" for that day.
-const SCREEN_REC_STYLE = {
-  'Strong Hire': 'bg-green-100 text-green-700',
-  'Consider':    'bg-amber-100 text-amber-700',
-  'Reject':      'bg-red-100 text-red-700',
-};
+// Every completed screening is kept forever in the `screenings` table. The tab
+// below shows a flat, filterable candidate list (by job, name/email search, and
+// pipeline status) rather than grouping by day.
+const SCREENING_STATUS_FILTERS = ['All', 'Screened', 'In Pipeline'];
 
-function ScreeningDayDetail({ date, onBack }) {
+
+function ScreeningsTab() {
+  const [jobs, setJobs] = useState([]);
+  const [selectedJob, setSelectedJob] = useState('');
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    api.get('/screen/jobs')
+      .then(r => setJobs(r.data.jobs || []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     let active = true;
     setLoading(true);
     setError('');
-    api.get(`/screen/daily-lists/${date}`)
+    const params = {};
+    if (selectedJob) params.jobTitle = selectedJob;
+    if (search.trim()) params.q = search.trim();
+    if (statusFilter !== 'All') params.status = statusFilter;
+    api.get('/screen/candidates', { params })
       .then(r => { if (active) setCandidates(r.data.candidates || []); })
-      .catch(err => { if (active) setError(err.response?.data?.error || "Failed to load this day's candidates."); })
+      .catch(err => { if (active) setError(err.response?.data?.error || 'Failed to load screening history.'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [date]);
+  }, [selectedJob, search, statusFilter]);
+
+  const hasAnyJobs = jobs.length > 0;
 
   return (
-    <div className="space-y-3">
-      <button type="button" className="text-sm text-blue-600 hover:underline" onClick={onBack}>
-        ← All screening days
-      </button>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="min-w-[220px]">
+          <label className="block text-xs font-semibold text-slate-500 mb-1">Select Job</label>
+          <select
+            className="input"
+            value={selectedJob}
+            onChange={e => setSelectedJob(e.target.value)}
+          >
+            <option value="">All jobs</option>
+            {jobs.map(j => (
+              <option key={j.jobTitle} value={j.jobTitle}>
+                {j.jobTitle} ({j.candidateCount})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex-1 min-w-[200px]">
+          <label className="block text-xs font-semibold text-slate-500 mb-1">Search candidates</label>
+          <input
+            type="text"
+            className="input"
+            placeholder="Search by name or email…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+
+        <div className="min-w-[160px]">
+          <label className="block text-xs font-semibold text-slate-500 mb-1">Filter</label>
+          <select
+            className="input"
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+          >
+            {SCREENING_STATUS_FILTERS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+      </div>
 
       {loading ? (
         <div className="p-10 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div></div>
       ) : error ? (
         <div className="card p-4 bg-red-50 border-red-200 text-red-700 text-sm">{error}</div>
+      ) : !hasAnyJobs && !candidates.length ? (
+        <div className="card p-10 text-center text-slate-400">
+          <p className="text-4xl mb-2">🤖</p>
+          <p>No screening batches yet. Go to <Link to="/screen" className="text-blue-600 hover:underline">AI Resume Screener</Link>.</p>
+        </div>
       ) : !candidates.length ? (
         <div className="card p-10 text-center text-slate-400">
-          <p className="text-4xl mb-2">🗂️</p>
-          <p>No candidates screened on {date}.</p>
+          <p className="text-4xl mb-2">🔍</p>
+          <p>No candidates match this filter.</p>
         </div>
       ) : (
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                {['Name', 'Role', 'Email', 'Score', 'Recommendation'].map(h => (
+                {['Candidate', 'Match Score', 'Status', 'Screened On'].map(h => (
                   <th key={h} className="text-left px-4 py-2 font-semibold text-slate-600 text-xs uppercase">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {candidates.map((c, i) => (
-                <tr key={c.id || i} className="hover:bg-slate-50">
-                  <td className="px-4 py-2 font-medium text-slate-800">{c.name || c.fileName || '—'}</td>
-                  <td className="px-4 py-2 text-slate-600">{c.jobTitle || '—'}</td>
-                  <td className="px-4 py-2 text-slate-600">{c.email || '—'}</td>
-                  <td className="px-4 py-2 font-medium text-slate-700">{c.overallScore ?? 0}</td>
+              {candidates.map(c => (
+                <tr key={c.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-2 font-medium text-slate-800">{c.name}</td>
+                  <td className="px-4 py-2 text-slate-700 font-medium">{c.matchScore}%</td>
                   <td className="px-4 py-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${SCREEN_REC_STYLE[c.recommendation] || 'bg-slate-100 text-slate-700'}`}>
-                      {c.recommendation || '—'}
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.status === 'In Pipeline' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'}`}>
+                      {c.status}
                     </span>
                   </td>
+                  <td className="px-4 py-2 text-xs text-slate-400">{new Date(c.screenedOn).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-    </div>
-  );
-}
-
-function ScreeningsTab() {
-  const [days, setDays] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [activeDate, setActiveDate] = useState(null);
-
-  useEffect(() => {
-    api.get('/screen/daily-lists')
-      .then(r => setDays(r.data.lists || []))
-      .catch(err => setError(err.response?.data?.error || 'Failed to load screening history.'))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (activeDate) {
-    return <ScreeningDayDetail date={activeDate} onBack={() => setActiveDate(null)} />;
-  }
-
-  if (loading) return <div className="p-10 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div></div>;
-  if (error) return <div className="card p-4 bg-red-50 border-red-200 text-red-700 text-sm">{error}</div>;
-  if (!days.length) return (
-    <div className="card p-10 text-center text-slate-400">
-      <p className="text-4xl mb-2">🤖</p>
-      <p>No screening batches yet. Go to <Link to="/screen" className="text-blue-600 hover:underline">AI Resume Screener</Link>.</p>
-    </div>
-  );
-
-  return (
-    <div className="card overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-slate-50 border-b border-slate-200">
-          <tr>
-            {['Date', 'Candidates', 'Batches', ''].map(h => (
-              <th key={h} className="text-left px-4 py-2 font-semibold text-slate-600 text-xs uppercase">{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {days.map(d => (
-            <tr key={d.listDate} className="hover:bg-slate-50">
-              <td className="px-4 py-2 font-medium text-slate-800">{d.listDate}</td>
-              <td className="px-4 py-2 text-slate-600">{d.candidateCount}</td>
-              <td className="px-4 py-2 text-slate-600">{d.batchCount}</td>
-              <td className="px-4 py-2 text-right">
-                <button type="button" className="text-blue-600 hover:underline font-medium text-xs" onClick={() => setActiveDate(d.listDate)}>
-                  View list →
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 }
