@@ -153,11 +153,11 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
 
       <p className="text-[10px] text-slate-300 mt-3"><span aria-hidden="true">📄</span> {c.fileName}</p>
 
-      {/* Add to Pipeline */}
+      {/* Pipeline status — candidates are auto-added right after screening */}
       {c.status !== 'pending' && !c.error && (
         <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
           <p className="text-xs text-slate-400">
-            Add this candidate to your recruitment pipeline
+            {isAdded ? 'This candidate is in your recruitment pipeline' : 'Not yet in your recruitment pipeline'}
           </p>
           {isAdded ? (
             <span className="flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-lg">
@@ -366,6 +366,7 @@ export default function Screen() {
         setLoading(false);
         setProgress(0);
         autoSaveToHistory(bId, data.results || []);
+        autoAddAllToPipeline(data.results || []);
         return;
       }
 
@@ -391,7 +392,10 @@ export default function Screen() {
             clearInterval(interval);
             setLoading(false);
             setProgress(0);
-            if (batch.status === 'completed') autoSaveToHistory(bId, batch.results || []);
+            if (batch.status === 'completed') {
+              autoSaveToHistory(bId, batch.results || []);
+              autoAddAllToPipeline(batch.results || []);
+            }
           }
         } catch (pollErr) {
           clearInterval(interval);
@@ -471,6 +475,40 @@ export default function Screen() {
       setTimeout(() => setPipelineMsg(''), 4000);
     } catch (err) {
       setPipelineMsg(err.response?.data?.error || 'Could not add to pipeline.');
+      setTimeout(() => setPipelineMsg(''), 4000);
+    }
+  };
+
+  // Fires automatically once a screening batch completes — every scored
+  // candidate is put straight into the pipeline (Shortlisted stage), so
+  // recruiters no longer have to click "Add to Pipeline" one by one. They can
+  // then drag candidates between stages on the Pipeline board.
+  const autoAddAllToPipeline = async (resultRows) => {
+    const valid = (resultRows || []).filter(r => r.status !== 'failed' && !r.error);
+    if (!valid.length) return;
+    const newlyAdded = new Set();
+    await Promise.all(valid.map(async (c) => {
+      const key = c.email || c.name || c.fileName;
+      if (!key || addedToPipeline.has(key) || newlyAdded.has(key)) return;
+      try {
+        await api.post('/candidates', {
+          name:            c.name || c.fileName || 'Unknown',
+          email:           c.email || '',
+          phone:           c.phone || '',
+          current_title:   c.currentRole || '',
+          ai_score:        c.overallScore || null,
+          pipeline_stage:  'shortlisted',
+          source:          'resume_upload',
+          notes:           c.summary || '',
+        });
+        newlyAdded.add(key);
+      } catch (err) {
+        // Likely an existing/duplicate candidate — safe to skip silently.
+      }
+    }));
+    if (newlyAdded.size) {
+      setAddedToPipeline(prev => new Set([...prev, ...newlyAdded]));
+      setPipelineMsg(`${newlyAdded.size} candidate${newlyAdded.size === 1 ? '' : 's'} auto-added to pipeline as Shortlisted.`);
       setTimeout(() => setPipelineMsg(''), 4000);
     }
   };
