@@ -32,7 +32,7 @@ if (isProd) {
 }
 
 // Initialise DB (runs schema + migrations)
-require('./db');
+const db = require('./db');
 
 // ── Core routes ──────────────────────────────────────────────────────────────
 app.use('/api/auth',         require('./routes/auth'));
@@ -50,9 +50,21 @@ app.use('/api/users',        require('./routes/users'));     // Admin: user mana
 app.use('/api/tasks',        require('./routes/tasks'));     // Recruitment tasks
 
 // ── Health check ─────────────────────────────────────────────────────────────
+// Verifies the DB is actually reachable (not just that the process is up), so
+// deploy.sh's post-deploy health-check loop catches data-access problems too
+// (e.g. a permissions issue or a failed migration), not just process liveness.
 app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
+  let dbStatus = 'ok';
+  try {
+    db.prepare('SELECT 1').get();
+  } catch (err) {
+    console.error('[health] DB check failed:', err.message);
+    dbStatus = 'error';
+  }
+  const status = dbStatus === 'ok' ? 'ok' : 'degraded';
+  res.status(dbStatus === 'ok' ? 200 : 503).json({
+    status,
+    db: dbStatus,
     service: 'TalentLenses API',
     version: '2.0.0',
     modules: {

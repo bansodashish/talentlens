@@ -14,8 +14,20 @@ db.pragma('foreign_keys = ON');
 const schema = fs.readFileSync(path.resolve(__dirname, '../db/schema.sql'), 'utf8');
 db.exec(schema);
 
-// Additive migrations — try/catch because SQLite has no "ADD COLUMN IF NOT EXISTS"
-const migrate = (sql) => { try { db.exec(sql); } catch (_) {} };
+// Additive migrations — try/catch because SQLite has no "ADD COLUMN IF NOT EXISTS".
+// Expected no-ops (column/table/index already exists) are ignored silently; any
+// other failure (disk full, locked db, bad SQL, etc.) is logged loudly so it's
+// visible in `pm2 logs` instead of silently leaving the schema out of date.
+const EXPECTED_MIGRATION_ERRORS = /duplicate column name|already exists|no such column/i;
+const migrate = (sql) => {
+  try {
+    db.exec(sql);
+  } catch (err) {
+    if (!EXPECTED_MIGRATION_ERRORS.test(err.message || '')) {
+      console.error('[migration] failed:', sql.trim().slice(0, 120), '—', err.message);
+    }
+  }
+};
 
 migrate('ALTER TABLE candidates ADD COLUMN cv_text TEXT');
 migrate('ALTER TABLE candidates ADD COLUMN cv_parsed_at DATETIME');
