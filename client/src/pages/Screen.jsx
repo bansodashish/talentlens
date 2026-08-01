@@ -294,7 +294,7 @@ export default function Screen() {
   const [activeTab, setActiveTab]   = useState('screen');
   const [jobDescription, setJobDescription] = useState(() => loadPersistedScreenState()?.jobDescription || '');
   const [jobTitle, setJobTitle] = useState(() => loadPersistedScreenState()?.jobTitle || '');
-  const [scanMode, setScanMode] = useState(() => loadPersistedScreenState()?.scanMode || 'local');
+  const scanMode = 'local';
   const [files, setFiles] = useState([]);
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -540,19 +540,14 @@ export default function Screen() {
 
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Screening Mode</label>
-          <select
-            className="input"
-            value={scanMode}
-            onChange={e => setScanMode(e.target.value)}
-            disabled={loading}
+          <button
+            type="button"
+            disabled
+            className="btn-primary cursor-default opacity-100 flex items-center gap-2"
           >
-            <option value="local">⚡ Scan Resume (free, instant)</option>
-            <option value="openclaw-local">🦅 Scan mode 2 (private VPS inference)</option>
-          </select>
-          <p className="text-xs text-slate-400 mt-1">
-            {scanMode === 'local' && 'Fast keyword scoring — no API key needed, results in seconds.'}
-            {scanMode === 'openclaw-local' && 'Runs inference on your VPS via Ollama — private, no cloud billing.'}
-          </p>
+            ⚡ Scan
+          </button>
+          <p className="text-xs text-slate-400 mt-1">Fast keyword scoring — no API key needed, results in seconds.</p>
         </div>
 
         <div>
@@ -611,8 +606,6 @@ export default function Screen() {
                   ? `Analysing resumes: ${progress}% complete…`
                   : progress === 100
                   ? 'Compiling final scores…'
-                  : scanMode === 'openclaw-local'
-                  ? 'Extracting text and scoring with Scan mode 2…'
                   : 'Extracting text and scoring locally…'}
               </span>
               <span>{progress > 0 ? `${progress}%` : 'Processing…'}</span>
@@ -693,7 +686,7 @@ export default function Screen() {
       {!loading && results.length === 0 && !error && (
           <div className="card text-center py-16 text-slate-400">
             <div className="text-4xl mb-3">⚡</div>
-            <p className="font-medium text-slate-600 mb-1">Choose Local, OpenClaw Local, or Claude mode</p>
+            <p className="font-medium text-slate-600 mb-1">Scan resumes locally</p>
             <p className="text-sm">Paste a JD, upload CVs, and get ranked results in seconds.</p>
           </div>
         )}
