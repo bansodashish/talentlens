@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Layout from './components/Layout';
@@ -23,16 +23,14 @@ import History from './pages/History';
 import Landing from './pages/Landing';
 import Onboarding from './pages/Onboarding';
 
-// Recruiters may only access these feature paths; everything else is frozen.
-const RECRUITER_PATHS = ['/dashboard', '/candidate-search', '/cv-match', '/profile', '/onboarding'];
-
-function homePathFor(user) {
-  return user?.role === 'admin' ? '/dashboard' : '/candidate-search';
+// All authenticated users now have full access to every feature — no
+// role-based path restrictions.
+function homePathFor() {
+  return '/dashboard';
 }
 
-function PrivateRoute({ children, adminOnly = false }) {
+function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
-  const location = useLocation();
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-600 border-t-transparent"></div>
@@ -41,12 +39,6 @@ function PrivateRoute({ children, adminOnly = false }) {
   if (!user) return <Navigate to="/login" replace />;
   // First-time users → onboarding
   if (user.onboarding_complete === false) return <Navigate to="/onboarding" replace />;
-  if (adminOnly && user.role !== 'admin') return <Navigate to={homePathFor(user)} replace />;
-  // Recruiters are restricted to their allowed feature pages
-  if (user.role !== 'admin') {
-    const allowed = RECRUITER_PATHS.some(p => location.pathname.startsWith(p));
-    if (!allowed) return <Navigate to={homePathFor(user)} replace />;
-  }
   return <Layout>{children}</Layout>;
 }
 
@@ -111,7 +103,7 @@ export default function App() {
 
           {/* Account */}
           <Route path="/profile"   element={<PrivateRoute><Profile /></PrivateRoute>} />
-          <Route path="/admin"     element={<PrivateRoute adminOnly><Admin /></PrivateRoute>} />
+          <Route path="/admin"     element={<PrivateRoute><Admin /></PrivateRoute>} />
 
           {/* Fallbacks */}
           <Route path="*"  element={<HomeRedirect />} />

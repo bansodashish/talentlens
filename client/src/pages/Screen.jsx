@@ -365,6 +365,7 @@ export default function Screen() {
         setResults(data.results || []);
         setLoading(false);
         setProgress(0);
+        autoSaveToHistory(bId, data.results || []);
         return;
       }
 
@@ -390,6 +391,7 @@ export default function Screen() {
             clearInterval(interval);
             setLoading(false);
             setProgress(0);
+            if (batch.status === 'completed') autoSaveToHistory(bId, batch.results || []);
           }
         } catch (pollErr) {
           clearInterval(interval);
@@ -437,6 +439,15 @@ export default function Screen() {
     // so this is just a friendly confirmation for the recruiter.
     if (!batchId) return;
     const n = results.filter(r => r.status !== 'failed' && !r.error).length;
+    setSavedMsg(`Saved — ${n} candidate${n === 1 ? '' : 's'} added to your History.`);
+    setTimeout(() => setSavedMsg(''), 4000);
+  };
+
+  // Screenings are persisted server-side the instant they're scored — this
+  // just surfaces the confirmation automatically instead of requiring a click.
+  const autoSaveToHistory = (bId, resultRows) => {
+    if (!bId) return;
+    const n = resultRows.filter(r => r.status !== 'failed' && !r.error).length;
     setSavedMsg(`Saved — ${n} candidate${n === 1 ? '' : 's'} added to your History.`);
     setTimeout(() => setSavedMsg(''), 4000);
   };

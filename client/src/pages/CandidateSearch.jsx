@@ -109,6 +109,9 @@ export default function CandidateSearch() {
       setSelected(new Set(candidates.map((_, i) => i)));
       setSearched(true);
       api.get('/search/history').then(r => setHistory(r.data.sessions || [])).catch(() => {});
+      // Automatically save every result to history/candidates — no manual
+      // "Import" click required.
+      if (candidates.length) autoImport(res.data.searchId, candidates);
     } catch (err) {
       const msg = err.response?.data?.hint || err.response?.data?.error || err.message || 'Search failed.';
       setError(msg);
@@ -140,6 +143,20 @@ export default function CandidateSearch() {
       setImportMsg(`✅ Imported ${res.data.inserted} candidates${res.data.skipped > 0 ? ` (${res.data.skipped} duplicates skipped)` : ''}.`);
     } catch (err) {
       setImportMsg('❌ Import failed: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  // Fires automatically right after a search completes, so results are
+  // saved to History/Candidates without requiring the manual Import click.
+  const autoImport = async (searchId, candidates) => {
+    setImporting(true); setImportMsg('');
+    try {
+      const res = await api.post('/search/save', { searchId, candidates });
+      setImportMsg(`✅ Auto-saved ${res.data.inserted} candidates to History${res.data.skipped > 0 ? ` (${res.data.skipped} duplicates skipped)` : ''}.`);
+    } catch (err) {
+      setImportMsg('❌ Auto-save failed: ' + (err.response?.data?.error || err.message));
     } finally {
       setImporting(false);
     }
@@ -294,7 +311,7 @@ export default function CandidateSearch() {
                       📊 Export to Sheets
                     </button>
                     <button onClick={handleImport} className="btn-primary text-sm" disabled={selected.size === 0 || importing}>
-                      {importing ? 'Importing…' : `⬇️ Import ${selected.size} to TalentLenses`}
+                      {importing ? 'Saving…' : `⬇️ Re-save ${selected.size} to TalentLenses`}
                     </button>
                   </div>
                 </div>
