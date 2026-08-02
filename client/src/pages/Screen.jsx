@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
 
 // Persist in-progress/completed screening state across page navigation —
@@ -237,22 +237,78 @@ function ScreeningDayDetail({ date, onBack }) {
   );
 }
 
-function ScreeningHistory() {
+function ScreeningHistory({ jobFilter, onClearJobFilter }) {
   const [days, setDays] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeDate, setActiveDate] = useState(null);
+  const [filteredCandidates, setFilteredCandidates] = useState([]);
 
   useEffect(() => {
+    if (jobFilter) {
+      setLoading(true);
+      api.get('/screen/candidates', { params: { jobTitle: jobFilter } })
+        .then(r => setFilteredCandidates(r.data.candidates || []))
+        .catch(err => setError(err.response?.data?.error || 'Failed to load screening results.'))
+        .finally(() => setLoading(false));
+      return;
+    }
     api.get('/screen/daily-lists')
       .then(r => setDays(r.data.lists || []))
       .catch(err => setError(err.response?.data?.error || 'Failed to load screening history.'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [jobFilter]);
 
   if (activeDate) return <ScreeningDayDetail date={activeDate} onBack={() => setActiveDate(null)} />;
   if (loading) return <div className="p-10 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div></div>;
   if (error) return <div className="card p-4 bg-red-50 border-red-200 text-red-700 text-sm">{error}</div>;
+
+  if (jobFilter) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-slate-600">Showing screening results for <strong>{jobFilter}</strong></p>
+          <button type="button" onClick={onClearJobFilter} className="text-xs text-blue-600 hover:underline font-medium">✕ Clear filter</button>
+        </div>
+        {filteredCandidates.length === 0 ? (
+          <div className="card p-10 text-center text-slate-400">No screened candidates found for this job title.</div>
+        ) : (
+          <div className="card overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  {['Candidate','Score','Recommendation','Status','Screened On'].map(h => (
+                    <th key={h} className="text-left px-4 py-2 font-semibold text-slate-600 text-xs uppercase">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredCandidates.map(c => (
+                  <tr key={c.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-2 font-medium text-slate-800">{c.name}</td>
+                    <td className="px-4 py-2">
+                      <span className={`font-bold tabular-nums ${
+                        (c.matchScore || 0) >= 75 ? 'text-green-700' :
+                        (c.matchScore || 0) >= 55 ? 'text-amber-700' : 'text-red-600'
+                      }`}>{c.matchScore ?? '—'}</span>
+                    </td>
+                    <td className="px-4 py-2">
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${
+                        REC_STYLE[c.recommendation] || 'bg-slate-100 text-slate-700 border-slate-200'
+                      }`}>{c.recommendation || '—'}</span>
+                    </td>
+                    <td className="px-4 py-2 text-xs text-slate-500">{c.status}</td>
+                    <td className="px-4 py-2 text-xs text-slate-400">{new Date(c.screenedOn).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   if (!days.length) return (
     <div className="card p-10 text-center text-slate-400">
       <p className="text-4xl mb-2">🤖</p>
@@ -291,7 +347,9 @@ function ScreeningHistory() {
 }
 
 export default function Screen() {
-  const [activeTab, setActiveTab]   = useState('screen');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab]   = useState(() => searchParams.get('tab') === 'history' ? 'history' : 'screen');
+  const [jobFilter, setJobFilter] = useState(() => searchParams.get('job') || '');
   const [jobDescription, setJobDescription] = useState(() => loadPersistedScreenState()?.jobDescription || '');
   const [jobTitle, setJobTitle] = useState(() => loadPersistedScreenState()?.jobTitle || '');
   const scanMode = 'local';
@@ -465,6 +523,7 @@ export default function Screen() {
         pipeline_stage:  'shortlisted',
         source:          'resume_upload',
         notes:           c.summary || '',
+        job_title:       jobTitle || '',
       });
       setAddedToPipeline(prev => new Set([...prev, key]));
       setPipelineMsg(`${c.name || c.fileName} added to pipeline as Shortlisted.`);
@@ -493,7 +552,7 @@ export default function Screen() {
         ].map(t => (
           <button
             key={t.id}
-            onClick={() => setActiveTab(t.id)}
+            onClick={() => { setActiveTab(t.id); setJobFilter(''); }}
             className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeTab === t.id
                 ? 'border-blue-600 text-blue-600'
@@ -506,7 +565,12 @@ export default function Screen() {
       </div>
 
       {/* ── Screening History tab ── */}
-      {activeTab === 'history' && <ScreeningHistory />}
+      {activeTab === 'history' && (
+        <ScreeningHistory
+          jobFilter={jobFilter}
+          onClearJobFilter={() => { setJobFilter(''); setSearchParams({ tab: 'history' }); }}
+        />
+      )}
 
       {/* ── Screen Candidates tab ── */}
       {activeTab === 'screen' && (

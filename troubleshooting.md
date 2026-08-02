@@ -410,6 +410,60 @@ restarts the app via `pm2 startOrReload`.
 
 ---
 
+## Incident: "Add to Pipeline" Candidates Never Appeared on Pipeline Board or Dashboard (Resolved — 2026-08-01)
+
+### Symptoms
+- Screening resumes and clicking "Add to Pipeline" on a result card showed a
+  success message ("added to pipeline as Shortlisted") and a frozen ✓ badge, but
+  the candidate never showed up on the Pipeline board (`/pipeline`) — every stage
+  column read 0 candidates.
+- The Dashboard's "Pipeline Activity" widget also always showed "No candidates in
+  pipeline yet", even after adding multiple candidates.
+
+### Root Cause
+`server/routes/candidates.js`'s `POST /` handler (candidate creation) never
+included `pipeline_stage` (or `source`) in its `INSERT INTO candidates` statement —
+it destructured `req.body` without those fields and hardcoded `source` as the SQL
+literal `'manual'`. So every candidate created via this endpoint silently got
+`pipeline_stage = NULL` in the database, no matter what the frontend
+(`Screen.jsx`'s `addToPipeline`) actually sent. The Pipeline board and Dashboard
+both filter/query on `pipeline_stage`, so they never saw these candidates.
+
+Note: the `PATCH /:id` endpoint (used by drag-and-drop stage changes) already
+correctly whitelisted `pipeline_stage` — only the initial creation path was
+broken, which is why the bug wasn't caught by testing existing pipeline
+drag/reorder behavior.
+
+### Diagnosis Steps
+```bash
+# Start the app locally and log in
+node server/index.js &
+curl -s -X POST http://localhost:5001/api/auth/login \
+  -H "Content-Type: application/json" --data @login.json
+
+# Create a candidate exactly like the frontend does
+curl -s -X POST http://localhost:5001/api/candidates \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  --data '{"name":"Test","email":"t@example.com","pipeline_stage":"shortlisted"}'
+# Response's "pipeline_stage" came back null instead of "shortlisted" — proved
+# the field was accepted by the API but dropped before the INSERT.
+```
+
+### Fix Applied
+- `server/routes/candidates.js` — added `pipeline_stage` and `source` to the
+  destructured `req.body` fields, and to both the `INSERT` column list and bound
+  parameters (`pipeline_stage || null`, `source || 'manual'`).
+- Re-tested the same `POST /api/candidates` call — response now correctly returns
+  `"pipeline_stage":"shortlisted"`, and the candidate immediately appears on the
+  Pipeline board and Dashboard's Pipeline Activity widget.
+
+### Prevention
+A `PATCH`/update endpoint correctly whitelisting a field does **not** guarantee the
+corresponding `POST`/creation endpoint also persists it — both write paths for any
+given column must be checked independently when a field silently fails to save.
+
+---
+
 ## What Each User Is Responsible For
 
 | Task | User |

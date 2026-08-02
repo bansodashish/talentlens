@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
 
 const STAGES = ['shortlisted', 'contacted', 'phone_screen', 'interview', 'offer'];
@@ -26,6 +26,8 @@ const STAGE_DROP_BG = {
 };
 
 export default function Pipeline() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const jobFilter = searchParams.get('job') || '';
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [marketFilter, setMarketFilter] = useState('');
@@ -87,7 +89,10 @@ export default function Pipeline() {
   };
 
   const inPipeline = candidates.filter(c => STAGES.includes(c.pipeline_stage));
-  const filtered = marketFilter ? inPipeline.filter(c => c.market === marketFilter) : inPipeline;
+  const jobFiltered = jobFilter
+    ? inPipeline.filter(c => (c.job_title || '').trim().toLowerCase() === jobFilter.trim().toLowerCase())
+    : inPipeline;
+  const filtered = marketFilter ? jobFiltered.filter(c => c.market === marketFilter) : jobFiltered;
   const byStage = STAGES.reduce((acc, s) => ({ ...acc, [s]: filtered.filter(c => c.pipeline_stage === s) }), {});
 
   return (
@@ -96,6 +101,12 @@ export default function Pipeline() {
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Pipeline</h1>
           <p className="text-slate-500 text-sm">{filtered.length} active application{filtered.length !== 1 ? 's' : ''}</p>
+          {jobFilter && (
+            <p className="text-xs text-blue-600 mt-1">
+              Filtered by job: <strong>{jobFilter}</strong>{' '}
+              <button type="button" onClick={() => setSearchParams({})} className="underline ml-1">Clear</button>
+            </p>
+          )}
         </div>
         <div className="flex gap-2">
           <select className="input w-40 text-sm" value={marketFilter} onChange={e => setMarketFilter(e.target.value)}>

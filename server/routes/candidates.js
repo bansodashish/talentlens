@@ -104,7 +104,7 @@ async function processCV(filePath, currentTitle, originalName = '') {
 // POST /api/candidates
 router.post('/', upload.single('cv'), async (req, res) => {
   const { name, email, phone, location, market, current_title, current_company,
-    experience_years, skills, linkedin_url, notes, pipeline_stage, source } = req.body;
+    experience_years, skills, linkedin_url, notes, pipeline_stage, source, job_title } = req.body;
 
   if (!name) return res.status(400).json({ error: 'Candidate name is required.' });
 
@@ -125,8 +125,8 @@ router.post('/', upload.single('cv'), async (req, res) => {
     INSERT INTO candidates
       (name, email, phone, location, market, current_title, current_company,
        experience_years, skills, linkedin_url, cv_filename, cv_path, cv_text, cv_parsed_at,
-       ai_score, ai_summary, notes, pipeline_stage, source, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ai_score, ai_summary, notes, pipeline_stage, source, job_title, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     name, email || null, phone || null, location || null,
     market || 'Global', current_title || null, current_company || null,
@@ -135,7 +135,7 @@ router.post('/', upload.single('cv'), async (req, res) => {
     req.file ? req.file.originalname : null,
     req.file ? req.file.filename : null,
     cvText || null, cvParsedAt,
-    aiScore, aiSummary, notes || null, pipeline_stage || null, source || 'manual', req.user.id
+    aiScore, aiSummary, notes || null, pipeline_stage || null, source || 'manual', job_title || null, req.user.id
   );
 
   const candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(result.lastInsertRowid);
@@ -206,7 +206,7 @@ router.patch('/:id', (req, res) => {
 
   const ALLOWED = [
     'name', 'email', 'phone', 'location', 'market', 'current_title', 'current_company',
-    'experience_years', 'skills', 'linkedin_url', 'status', 'notes', 'pipeline_stage',
+    'experience_years', 'skills', 'linkedin_url', 'status', 'notes', 'pipeline_stage', 'job_title',
   ];
   const sets = [];
   const params = [];

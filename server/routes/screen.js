@@ -150,7 +150,7 @@ function withTimeout(promise, ms, label = 'operation') {
 }
 
 // ── Background Async Screener Worker ──────────────────────────────────────────
-async function processScreeningsBackground({ batchId, mode, apiKey, jobDescription, inserted, userId }) {
+async function processScreeningsBackground({ batchId, mode, apiKey, jobDescription, jobTitle, inserted, userId }) {
   const updateStmt = db.prepare(`
     UPDATE screenings
     SET candidate_name = ?, email = ?, phone = ?, current_role = ?, years_experience = ?,
@@ -261,6 +261,27 @@ async function processScreeningsBackground({ batchId, mode, apiKey, jobDescripti
       VALUES ('resume_screened', ?, 'screening_batch', NULL, ?)
     `).run(`Screened ${inserted.length} resume(s) (${mode === 'local' ? 'local scan' : mode === 'openclaw-local' ? 'OpenClaw local' : 'Claude'})`, userId);
   } catch (_) {}
+
+  // Find-or-create a Job entry for this job title so it shows up in the Jobs tab.
+  // Re-screening the same title (case/whitespace-insensitive) reuses the
+  // existing job row instead of creating a duplicate.
+  if (jobTitle && jobTitle.trim()) {
+    try {
+      const existing = db.prepare(
+        `SELECT id FROM jobs WHERE created_by = ? AND lower(trim(title)) = lower(trim(?))`
+      ).get(userId, jobTitle);
+      if (existing) {
+        db.prepare('UPDATE jobs SET updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(existing.id);
+      } else {
+        db.prepare(`
+          INSERT INTO jobs (title, location, market, status, created_by)
+          VALUES (?, ?, ?, 'active', ?)
+        `).run(jobTitle.trim(), 'Not specified', 'Global', userId);
+      }
+    } catch (e) {
+      console.error('[screen] find-or-create job error:', e.message);
+    }
+  }
 }
 
 // ── POST /api/screen/resume ──────────────────────────────────────────────────
@@ -350,6 +371,7 @@ router.post('/resume', limitScreenings, upload.array('files', 25), async (req, r
     mode,
     apiKey,
     jobDescription,
+    jobTitle: batchJobTitle,
     inserted,
     userId: req.user.id
   }).catch((err) => {
