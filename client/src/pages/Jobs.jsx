@@ -2,7 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 
-const statusBadge = { active: 'badge-green', paused: 'badge-yellow', closed: 'badge-red' };
+function timeAgo(dateStr) {
+  if (!dateStr) return '—';
+  const diffMs = Date.now() - new Date(dateStr.replace(' ', 'T') + 'Z').getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} minute${mins !== 1 ? 's' : ''} ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'Yesterday';
+  if (days < 30) return `${days} days ago`;
+  return new Date(dateStr).toLocaleDateString();
+}
 
 export default function Jobs() {
   const [jobs, setJobs] = useState([]);
@@ -24,6 +36,15 @@ export default function Jobs() {
   };
 
   useEffect(() => { fetchJobs(); }, [filters]);
+
+  const toggleActive = async (job, e) => {
+    e.stopPropagation();
+    const newStatus = job.status === 'active' ? 'closed' : 'active';
+    try {
+      await api.put(`/jobs/${job.id}`, { status: newStatus });
+      setJobs(prev => prev.map(j => j.id === job.id ? { ...j, status: newStatus } : j));
+    } catch (err) { console.error(err); }
+  };
 
   return (
     <div className="space-y-5">
@@ -73,24 +94,50 @@ export default function Jobs() {
                   <h3 className="font-semibold text-slate-800">{job.title}</h3>
                   <p className="text-sm text-slate-500 mt-0.5">{job.location}</p>
                 </div>
-                <span className={`badge ${statusBadge[job.status]}`}>{job.status}</span>
+                <button
+                  type="button"
+                  onClick={(e) => toggleActive(job, e)}
+                  className={`badge ${job.status === 'active' ? 'badge-green' : 'badge-red'} cursor-pointer`}
+                  title={job.status === 'active' ? 'Click to mark Inactive' : 'Click to mark Active'}
+                >
+                  ● {job.status === 'active' ? 'Active' : 'Inactive'}
+                </button>
               </div>
 
-              <div className="flex flex-wrap gap-2 mb-3">
-                <span className="badge badge-blue">
-                  🌍 {job.market}
-                </span>
-                <span className="badge badge-slate">{job.employment_type}</span>
-                {job.salary_min && (
-                  <span className="badge badge-green">
-                    {job.salary_currency} {job.salary_min.toLocaleString()}{job.salary_max ? `–${job.salary_max.toLocaleString()}` : '+'}
-                  </span>
-                )}
+              <div className="grid grid-cols-3 gap-2 mb-3 text-center">
+                <div>
+                  <p className="text-lg font-bold text-slate-800">{job.screened_count ?? 0}</p>
+                  <p className="text-[11px] text-slate-500 uppercase tracking-wide">Applications</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-slate-800">{job.strong_match_count ?? 0}</p>
+                  <p className="text-[11px] text-slate-500 uppercase tracking-wide">Strong Matches</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-slate-800">{job.in_pipeline_count ?? 0}</p>
+                  <p className="text-[11px] text-slate-500 uppercase tracking-wide">In Pipeline</p>
+                </div>
               </div>
 
-              <div className="flex items-center justify-between text-sm text-slate-500">
-                <span>📋 {job.application_count} application{job.application_count !== 1 ? 's' : ''}</span>
-                <span>{new Date(job.created_at).toLocaleDateString()}</span>
+              <p className="text-xs text-slate-400 mb-3">Last Updated: {timeAgo(job.updated_at)}</p>
+
+              <div className="flex items-center justify-between text-sm pt-3 border-t border-slate-100">
+                <div className="flex gap-3">
+                  <Link
+                    to={`/screen?tab=history&job=${encodeURIComponent(job.title)}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-blue-600 hover:underline font-medium text-xs"
+                  >
+                    View Screening Results
+                  </Link>
+                  <Link
+                    to={`/pipeline?job=${encodeURIComponent(job.title)}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-blue-600 hover:underline font-medium text-xs"
+                  >
+                    View Pipeline
+                  </Link>
+                </div>
               </div>
             </div>
           ))}

@@ -19,10 +19,32 @@ router.get('/', (req, res) => {
   query += ' ORDER BY j.created_at DESC';
   const jobs = db.prepare(query).all(...params);
 
-  // Add application count
+  // Aggregate screening-based stats per job (matched by title, case/whitespace-insensitive):
+  // Applications = candidates screened for this title, Strong Matches = 'Strong Hire'
+  // recommendations, In Pipeline = candidates added to the pipeline for this title.
+  const PIPELINE_STAGES = ['shortlisted', 'contacted', 'phone_screen', 'interview', 'offer'];
+  const screenedCountStmt = db.prepare(
+    `SELECT COUNT(*) as count FROM screenings WHERE lower(trim(job_title)) = lower(trim(?)) AND status = 'completed'`
+  );
+  const strongMatchCountStmt = db.prepare(
+    `SELECT COUNT(*) as count FROM screenings WHERE lower(trim(job_title)) = lower(trim(?)) AND status = 'completed' AND recommendation = 'Strong Hire'`
+  );
+  const inPipelineCountStmt = db.prepare(
+    `SELECT COUNT(*) as count FROM candidates WHERE lower(trim(job_title)) = lower(trim(?)) AND pipeline_stage IN (${PIPELINE_STAGES.map(() => '?').join(',')})`
+  );
+
   const withCounts = jobs.map(job => {
-    const count = db.prepare('SELECT COUNT(*) as count FROM applications WHERE job_id = ?').get(job.id);
-    return { ...job, application_count: count.count };
+    const applicationCount = db.prepare('SELECT COUNT(*) as count FROM applications WHERE job_id = ?').get(job.id);
+    const screened = screenedCountStmt.get(job.title);
+    const strongMatches = strongMatchCountStmt.get(job.title);
+    const inPipeline = inPipelineCountStmt.get(job.title, ...PIPELINE_STAGES);
+    return {
+      ...job,
+      application_count: applicationCount.count,
+      screened_count: screened.count,
+      strong_match_count: strongMatches.count,
+      in_pipeline_count: inPipeline.count,
+    };
   });
 
   res.json({ jobs: withCounts });
