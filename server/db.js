@@ -57,6 +57,21 @@ migrate('ALTER TABLE users ADD COLUMN onboarding_complete INTEGER DEFAULT 0');
 migrate("UPDATE users SET plan = 'pro' WHERE lower(plan) = 'enterprise'");
 migrate("UPDATE users SET plan = 'basic' WHERE plan IS NULL OR trim(plan) = '' OR lower(plan) NOT IN ('basic', 'pro')");
 
+// Self-service plan-upgrade requests (admin-approved, no billing/email integration)
+migrate(`
+  CREATE TABLE IF NOT EXISTS upgrade_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    requested_plan TEXT NOT NULL DEFAULT 'pro',
+    status TEXT NOT NULL DEFAULT 'pending',
+    note TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    resolved_at DATETIME,
+    resolved_by INTEGER,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )
+`);
+
 // Step 3 — LinkedIn search module
 migrate(`
   CREATE TABLE IF NOT EXISTS searches (

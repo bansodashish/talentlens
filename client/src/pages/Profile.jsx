@@ -30,6 +30,9 @@ export default function Profile() {
   const [msgKeys, setMsgKeys] = useState('');
   const [msgPw, setMsgPw] = useState('');
   const [keysLoaded, setKeysLoaded] = useState(false);
+  const [requestingPlan, setRequestingPlan] = useState(false);
+  const [planRequested, setPlanRequested] = useState(false);
+  const [msgPlan, setMsgPlan] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -95,6 +98,23 @@ export default function Profile() {
   };
 
   const marketBadge = user?.market || 'Global';
+
+  const handleRequestUpgrade = async () => {
+    setRequestingPlan(true);
+    try {
+      await api.post('/auth/me/upgrade-request');
+      setPlanRequested(true);
+      flash(setMsgPlan, '✅ Request sent — an admin will review it.');
+    } catch (err) {
+      const status = err.response?.status;
+      if (status === 409) {
+        setPlanRequested(true);
+        flash(setMsgPlan, 'You already have a pending request.');
+      } else {
+        flash(setMsgPlan, err.response?.data?.error || '❌ Request failed.');
+      }
+    } finally { setRequestingPlan(false); }
+  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-5">
@@ -208,6 +228,46 @@ export default function Profile() {
         </form>
       </Section>
       )}
+
+      {/* Plan & Usage */}
+      <Section title="💳 Plan & Usage">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-sm text-slate-500">Current plan</p>
+            <p className="text-lg font-semibold text-slate-800 capitalize">{user?.plan || 'basic'}</p>
+          </div>
+          {(user?.plan || 'basic') !== 'pro' && (
+            <button type="button" className="btn-primary" disabled={requestingPlan || planRequested}
+              onClick={handleRequestUpgrade}>
+              {planRequested ? 'Request sent' : requestingPlan ? 'Sending…' : 'Request Pro upgrade'}
+            </button>
+          )}
+        </div>
+        {msgPlan && <p className="text-sm mb-4">{msgPlan}</p>}
+        {user?.usage && (
+          <div className="space-y-3">
+            {[
+              ['LinkedIn searches', user.usage.searches],
+              ['Resume screenings', user.usage.screenings],
+            ].map(([label, u]) => {
+              const pct = u.limit ? Math.min(100, Math.round((u.used / u.limit) * 100)) : 0;
+              return (
+                <div key={label}>
+                  <div className="flex justify-between text-xs text-slate-500 mb-1">
+                    <span>{label}</span>
+                    <span>{u.used} / {u.limit === null ? 'Unlimited' : u.limit}</span>
+                  </div>
+                  {u.limit !== null && (
+                    <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                      <div className="h-full bg-blue-600" style={{ width: `${pct}%` }} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Section>
 
       {/* Change password */}
       <Section title="🔒 Change Password">

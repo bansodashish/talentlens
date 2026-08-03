@@ -109,6 +109,28 @@ router.get('/me', authMiddleware, (req, res) => {
   res.json({ user: safeUser });
 });
 
+// ── POST /api/auth/me/upgrade-request ── request a Pro upgrade (admin approves) ──
+router.post('/me/upgrade-request', authMiddleware, (req, res) => {
+  const row = db.prepare('SELECT plan FROM users WHERE id = ?').get(req.user.id);
+  if (!row) return res.status(404).json({ error: 'User not found.' });
+
+  const currentPlan = (row.plan || 'basic').toLowerCase();
+  if (currentPlan === 'pro')
+    return res.status(400).json({ error: 'You are already on the Pro plan.' });
+
+  const existing = db.prepare(
+    "SELECT id FROM upgrade_requests WHERE user_id = ? AND status = 'pending'"
+  ).get(req.user.id);
+  if (existing)
+    return res.status(409).json({ error: 'You already have a pending upgrade request.' });
+
+  db.prepare(
+    "INSERT INTO upgrade_requests (user_id, requested_plan, status) VALUES (?, 'pro', 'pending')"
+  ).run(req.user.id);
+
+  res.status(201).json({ ok: true });
+});
+
 // ── POST /api/auth/onboarding/complete ───────────────────────────────────────────
 router.post('/onboarding/complete', authMiddleware, (req, res) => {
   db.prepare('UPDATE users SET onboarding_complete = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(req.user.id);
