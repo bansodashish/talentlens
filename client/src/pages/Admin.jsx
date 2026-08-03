@@ -13,15 +13,18 @@ export default function Admin() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [upgradeRequests, setUpgradeRequests] = useState([]);
 
   useEffect(() => {
     if (user?.role !== 'admin') { navigate('/dashboard'); return; }
     Promise.all([
       api.get('/users'),
       api.get('/users/stats'),
-    ]).then(([u, s]) => {
+      api.get('/users/upgrade-requests'),
+    ]).then(([u, s, r]) => {
       setUsers(u.data.users);
       setStats(s.data.stats);
+      setUpgradeRequests(r.data.requests);
     }).catch(() => setError('Failed to load admin data.'))
       .finally(() => setLoading(false));
   }, [user, navigate]);
@@ -29,6 +32,22 @@ export default function Admin() {
   const handleRoleChange = async (id, role) => {
     await api.patch(`/users/${id}/role`, { role });
     setUsers(prev => prev.map(u => u.id === id ? { ...u, role } : u));
+  };
+
+  const handlePlanChange = async (id, plan) => {
+    await api.patch(`/users/${id}/plan`, { plan });
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, plan } : u));
+  };
+
+  const handleApproveUpgrade = async (req) => {
+    await api.patch(`/users/upgrade-requests/${req.id}/approve`);
+    setUsers(prev => prev.map(u => u.id === req.user_id ? { ...u, plan: req.requested_plan } : u));
+    setUpgradeRequests(prev => prev.filter(r => r.id !== req.id));
+  };
+
+  const handleDismissUpgrade = async (req) => {
+    await api.patch(`/users/upgrade-requests/${req.id}/dismiss`);
+    setUpgradeRequests(prev => prev.filter(r => r.id !== req.id));
   };
 
   const handleDelete = async (id, name) => {
@@ -70,6 +89,31 @@ export default function Admin() {
         </div>
       )}
 
+      {/* Pending Pro-upgrade requests */}
+      {upgradeRequests.length > 0 && (
+        <div className="card overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100">
+            <h3 className="font-semibold text-slate-800">Pending Upgrade Requests ({upgradeRequests.length})</h3>
+          </div>
+          <div className="divide-y divide-slate-50">
+            {upgradeRequests.map(r => (
+              <div key={r.id} className="px-5 py-3 flex items-center justify-between gap-3">
+                <div>
+                  <div className="font-medium text-slate-800">{r.name} <span className="text-xs text-slate-400">({r.email})</span></div>
+                  <div className="text-xs text-slate-500">
+                    {r.company || '—'} · currently <span className="capitalize">{r.current_plan}</span> → requesting <span className="capitalize font-medium">{r.requested_plan}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button onClick={() => handleApproveUpgrade(r)} className="btn-primary text-xs px-3 py-1.5">Approve</button>
+                  <button onClick={() => handleDismissUpgrade(r)} className="btn-secondary text-xs px-3 py-1.5">Dismiss</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Users table */}
       <div className="card overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
@@ -79,7 +123,7 @@ export default function Admin() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-100">
               <tr>
-                {['User', 'Company', 'Market', 'Role', 'Activity', 'API Keys', 'Joined', 'Actions'].map(h => (
+                {['User', 'Company', 'Market', 'Role', 'Plan', 'Activity', 'API Keys', 'Joined', 'Actions'].map(h => (
                   <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -113,6 +157,15 @@ export default function Admin() {
                         <option value="viewer">viewer</option>
                       </select>
                     )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <select
+                      className="text-xs border border-slate-200 rounded px-1.5 py-1 bg-white capitalize"
+                      value={u.plan || 'basic'}
+                      onChange={e => handlePlanChange(u.id, e.target.value)}>
+                      <option value="basic">basic</option>
+                      <option value="pro">pro</option>
+                    </select>
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-500">
                     <div>{u.candidate_count} candidates</div>
