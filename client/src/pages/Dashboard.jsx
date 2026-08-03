@@ -477,7 +477,10 @@ export default function Dashboard() {
                 <div key={v.id} className="rounded-xl border border-slate-200 p-3 bg-white">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-800 truncate">{v.title}</p>
+                      <p className="text-sm font-semibold text-slate-800 truncate flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block shrink-0" title="Active"></span>
+                        {v.title}
+                      </p>
                       <p className="text-xs text-slate-500 mt-0.5">
                         {v.location || '—'} · {v.market || '—'}
                       </p>

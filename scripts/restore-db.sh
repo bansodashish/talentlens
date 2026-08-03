@@ -53,7 +53,7 @@ DB_PATH="${DB_PATH:-}"
 if [ -z "$DB_PATH" ] && [ -f "$APP_DIR/server/.env" ]; then
 	DB_PATH=$(grep -E '^DB_PATH=' "$APP_DIR/server/.env" | tail -1 | cut -d= -f2-)
 fi
-DB_PATH="${DB_PATH:-../db/talentlenses.db}"
+DB_PATH="${DB_PATH:-../db/talentlens.db}"
 case "$DB_PATH" in
 	/*) DB_FILE="$DB_PATH" ;;
 	*) DB_FILE="$APP_DIR/server/$DB_PATH" ;;

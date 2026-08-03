@@ -7,15 +7,14 @@
 const db = require('../db');
 
 const PLAN_LIMITS = {
-  starter:    { searches: 1000,      screenings: 1000 },
-  growth:     { searches: 2000,      screenings: 5000 },
-  enterprise: { searches: Infinity, screenings: Infinity },
+  basic: { searches: 500,      screenings: 500 },
+  pro:   { searches: Infinity, screenings: Infinity },
 };
 
 function getPlan(userId) {
   const row = db.prepare('SELECT plan FROM users WHERE id = ?').get(userId);
-  const key = (row?.plan || 'starter').toLowerCase();
-  return PLAN_LIMITS[key] ? key : 'starter';
+  const key = (row?.plan || 'basic').toLowerCase();
+  return PLAN_LIMITS[key] ? key : 'basic';
 }
 
 function monthStartSql() {

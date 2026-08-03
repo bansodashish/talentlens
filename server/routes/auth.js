@@ -22,8 +22,8 @@ router.post('/register', async (req, res) => {
   const userMarket = (typeof market === 'string' && market.trim()) ? market.trim().slice(0, 60) : 'Global';
 
   const result = db.prepare(
-    'INSERT INTO users (name, email, password, company, role, market) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(name, email, hashed, company || null, userRole, userMarket);
+    'INSERT INTO users (name, email, password, company, role, market, plan) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(name, email, hashed, company || null, userRole, userMarket, 'basic');
 
   const user = db.prepare('SELECT id, name, email, role, company, market, plan, onboarding_complete, created_at FROM users WHERE id = ?').get(result.lastInsertRowid);
   user.onboarding_complete = !!user.onboarding_complete;
@@ -79,7 +79,7 @@ router.post('/login', async (req, res) => {
 
   const { password: _, apify_key_enc, claude_key_enc, apollo_key_enc, openai_key_enc, ...safeUser } = user;
   safeUser.onboarding_complete = !!safeUser.onboarding_complete;
-  safeUser.plan = (safeUser.plan || 'starter').toLowerCase();
+  safeUser.plan = (safeUser.plan || 'basic').toLowerCase();
   res.json({ token, user: safeUser });
 });
 
@@ -96,8 +96,8 @@ router.get('/me', authMiddleware, (req, res) => {
   safeUser.has_openai_key = !!openai_key_enc;
 
   // Plan + usage snapshot for the current month
-  const planKey = (safeUser.plan || 'starter').toLowerCase();
-  const limits  = PLAN_LIMITS[planKey] || PLAN_LIMITS.starter;
+  const planKey = (safeUser.plan || 'basic').toLowerCase();
+  const limits  = PLAN_LIMITS[planKey] || PLAN_LIMITS.basic;
   const usage   = getUsage(req.user.id);
   safeUser.plan  = planKey;
   safeUser.usage = {

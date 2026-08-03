@@ -4,7 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const db = require('../db');
-const { authMiddleware, adminMiddleware } = require('../middleware/auth');
+const { authMiddleware } = require('../middleware/auth');
 const { parseCV } = require('../services/cvParser');
 const { scoreCandidate, detectRole } = require('../services/scorer');
 
@@ -29,14 +29,13 @@ const upload = multer({
   },
 });
 
-router.use(authMiddleware, adminMiddleware);
+router.use(authMiddleware);
 
 // GET /api/candidates
 router.get('/', (req, res) => {
-  const { market, role, status, search, min_score, max_score, source, mine } = req.query;
-  let query = 'SELECT c.*, u.name as added_by FROM candidates c LEFT JOIN users u ON c.created_by = u.id WHERE 1=1';
-  const params = [];
-  if (mine === '1' || mine === 'true') { query += ' AND c.created_by = ?'; params.push(req.user.id); }
+  const { market, role, status, search, min_score, max_score, source } = req.query;
+  let query = 'SELECT c.*, u.name as added_by FROM candidates c LEFT JOIN users u ON c.created_by = u.id WHERE c.created_by = ?';
+  const params = [req.user.id];
   if (market) { query += ' AND c.market = ?'; params.push(market); }
   if (role) { query += ' AND c.current_title = ?'; params.push(role); }
   if (status) { query += ' AND c.status = ?'; params.push(status); }
@@ -56,7 +55,7 @@ router.get('/', (req, res) => {
 // GET /api/candidates/:id
 router.get('/:id', (req, res) => {
   const candidate = db.prepare('SELECT c.*, u.name as added_by FROM candidates c LEFT JOIN users u ON c.created_by = u.id WHERE c.id = ?').get(req.params.id);
-  if (!candidate) return res.status(404).json({ error: 'Candidate not found.' });
+  if (!candidate || candidate.created_by !== req.user.id) return res.status(404).json({ error: 'Candidate not found.' });
 
   const applications = db.prepare(`
     SELECT a.*, j.title as job_title, j.location as job_location, j.market as job_market
@@ -149,7 +148,7 @@ router.post('/', upload.single('cv'), async (req, res) => {
 // PUT /api/candidates/:id
 router.put('/:id', upload.single('cv'), async (req, res) => {
   const existing = db.prepare('SELECT * FROM candidates WHERE id = ?').get(req.params.id);
-  if (!existing) return res.status(404).json({ error: 'Candidate not found.' });
+  if (!existing || existing.created_by !== req.user.id) return res.status(404).json({ error: 'Candidate not found.' });
 
   const { name, email, phone, location, market, current_title, current_company,
     experience_years, skills, linkedin_url, status, notes } = req.body;
@@ -194,7 +193,7 @@ router.put('/:id', upload.single('cv'), async (req, res) => {
 // DELETE /api/candidates/:id
 router.delete('/:id', (req, res) => {
   const candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(req.params.id);
-  if (!candidate) return res.status(404).json({ error: 'Candidate not found.' });
+  if (!candidate || candidate.created_by !== req.user.id) return res.status(404).json({ error: 'Candidate not found.' });
   db.prepare('DELETE FROM candidates WHERE id = ?').run(req.params.id);
   res.json({ message: 'Candidate deleted.' });
 });
@@ -202,7 +201,7 @@ router.delete('/:id', (req, res) => {
 // PATCH /api/candidates/:id — partial update (status, notes, etc.)
 router.patch('/:id', (req, res) => {
   const existing = db.prepare('SELECT * FROM candidates WHERE id = ?').get(req.params.id);
-  if (!existing) return res.status(404).json({ error: 'Candidate not found.' });
+  if (!existing || existing.created_by !== req.user.id) return res.status(404).json({ error: 'Candidate not found.' });
 
   const ALLOWED = [
     'name', 'email', 'phone', 'location', 'market', 'current_title', 'current_company',
@@ -228,8 +227,8 @@ router.post('/bulk-status', (req, res) => {
   const { ids, status } = req.body || {};
   if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids array is required.' });
   if (!status) return res.status(400).json({ error: 'status is required.' });
-  const stmt = db.prepare('UPDATE candidates SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?');
-  const tx = db.transaction((rows) => { for (const id of rows) stmt.run(status, id); });
+  const stmt = db.prepare('UPDATE candidates SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND created_by=?');
+  const tx = db.transaction((rows) => { for (const id of rows) stmt.run(status, id, req.user.id); });
   tx(ids);
   res.json({ updated: ids.length });
 });
@@ -238,16 +237,16 @@ router.post('/bulk-status', (req, res) => {
 router.post('/bulk-delete', (req, res) => {
   const { ids } = req.body || {};
   if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids array is required.' });
-  const stmt = db.prepare('DELETE FROM candidates WHERE id=?');
-  const tx = db.transaction((rows) => { for (const id of rows) stmt.run(id); });
+  const stmt = db.prepare('DELETE FROM candidates WHERE id=? AND created_by=?');
+  const tx = db.transaction((rows) => { for (const id of rows) stmt.run(id, req.user.id); });
   tx(ids);
   res.json({ deleted: ids.length });
 });
 
 // GET /api/candidates/:id/download-cv — gated resume download
 router.get('/:id/download-cv', (req, res) => {
-  const candidate = db.prepare('SELECT cv_path, cv_filename FROM candidates WHERE id = ?').get(req.params.id);
-  if (!candidate || !candidate.cv_path) {
+  const candidate = db.prepare('SELECT cv_path, cv_filename, created_by FROM candidates WHERE id = ?').get(req.params.id);
+  if (!candidate || candidate.created_by !== req.user.id || !candidate.cv_path) {
     return res.status(404).json({ error: 'Resume CV file not found for this candidate.' });
   }
 

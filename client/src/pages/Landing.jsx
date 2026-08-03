@@ -12,19 +12,14 @@ const FEATURES = [
 
 const PLANS = [
   {
-    name: 'Starter', price: '£49', period: '/mo',
-    features: ['100 LinkedIn searches / mo', '1000 resume screens / mo', '1 user', 'CSV & Excel export', 'Email support'],
+    name: 'Basic', price: '£49', period: '/mo',
+    features: ['500 LinkedIn searches / mo', '500 resume screens / mo', '1 user', 'CSV & Excel export', 'Email support'],
     cta: 'Start Free Trial', highlight: false,
   },
   {
-    name: 'Growth', price: '£99', period: '/mo',
-    features: ['500 LinkedIn searches / mo', '2000 resume screens / mo', '3 users', 'CSV & Excel export', 'Priority support'],
+    name: 'Pro', price: '£60', period: '/mo',
+    features: ['Unlimited LinkedIn searches', 'Unlimited resume screens', 'Unlimited users', 'CSV & Excel export', 'Priority support'],
     cta: 'Start Free Trial', highlight: true,
-  },
-  {
-    name: 'Enterprise', price: 'Custom', period: '',
-    features: ['Unlimited searches & screens', 'Unlimited users', 'SSO + custom integrations', 'Dedicated CSM', 'SLA & on-prem option'],
-    cta: 'Contact Sales', highlight: false,
   },
 ];
 
