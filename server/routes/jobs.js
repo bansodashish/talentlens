@@ -1,16 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { authMiddleware, adminMiddleware } = require('../middleware/auth');
+const { authMiddleware } = require('../middleware/auth');
 
 // All routes require auth
-router.use(authMiddleware, adminMiddleware);
+router.use(authMiddleware);
 
 // GET /api/jobs
 router.get('/', (req, res) => {
   const { market, status, search } = req.query;
-  let query = 'SELECT j.*, u.name as created_by_name FROM jobs j LEFT JOIN users u ON j.created_by = u.id WHERE 1=1';
-  const params = [];
+  let query = 'SELECT j.*, u.name as created_by_name FROM jobs j LEFT JOIN users u ON j.created_by = u.id WHERE j.created_by = ?';
+  const params = [req.user.id];
 
   if (market) { query += ' AND j.market = ?'; params.push(market); }
   if (status) { query += ' AND j.status = ?'; params.push(status); }
@@ -24,20 +24,20 @@ router.get('/', (req, res) => {
   // recommendations, In Pipeline = candidates added to the pipeline for this title.
   const PIPELINE_STAGES = ['shortlisted', 'contacted', 'phone_screen', 'interview', 'offer'];
   const screenedCountStmt = db.prepare(
-    `SELECT COUNT(*) as count FROM screenings WHERE lower(trim(job_title)) = lower(trim(?)) AND status = 'completed'`
+    `SELECT COUNT(*) as count FROM screenings WHERE created_by = ? AND lower(trim(job_title)) = lower(trim(?)) AND status = 'completed'`
   );
   const strongMatchCountStmt = db.prepare(
-    `SELECT COUNT(*) as count FROM screenings WHERE lower(trim(job_title)) = lower(trim(?)) AND status = 'completed' AND recommendation = 'Strong Hire'`
+    `SELECT COUNT(*) as count FROM screenings WHERE created_by = ? AND lower(trim(job_title)) = lower(trim(?)) AND status = 'completed' AND recommendation = 'Strong Hire'`
   );
   const inPipelineCountStmt = db.prepare(
-    `SELECT COUNT(*) as count FROM candidates WHERE lower(trim(job_title)) = lower(trim(?)) AND pipeline_stage IN (${PIPELINE_STAGES.map(() => '?').join(',')})`
+    `SELECT COUNT(*) as count FROM candidates WHERE created_by = ? AND lower(trim(job_title)) = lower(trim(?)) AND pipeline_stage IN (${PIPELINE_STAGES.map(() => '?').join(',')})`
   );
 
   const withCounts = jobs.map(job => {
     const applicationCount = db.prepare('SELECT COUNT(*) as count FROM applications WHERE job_id = ?').get(job.id);
-    const screened = screenedCountStmt.get(job.title);
-    const strongMatches = strongMatchCountStmt.get(job.title);
-    const inPipeline = inPipelineCountStmt.get(job.title, ...PIPELINE_STAGES);
+    const screened = screenedCountStmt.get(req.user.id, job.title);
+    const strongMatches = strongMatchCountStmt.get(req.user.id, job.title);
+    const inPipeline = inPipelineCountStmt.get(req.user.id, job.title, ...PIPELINE_STAGES);
     return {
       ...job,
       application_count: applicationCount.count,
@@ -53,7 +53,7 @@ router.get('/', (req, res) => {
 // GET /api/jobs/:id
 router.get('/:id', (req, res) => {
   const job = db.prepare('SELECT j.*, u.name as created_by_name FROM jobs j LEFT JOIN users u ON j.created_by = u.id WHERE j.id = ?').get(req.params.id);
-  if (!job) return res.status(404).json({ error: 'Job not found.' });
+  if (!job || job.created_by !== req.user.id) return res.status(404).json({ error: 'Job not found.' });
 
   const applications = db.prepare(`
     SELECT a.*, c.name as candidate_name, c.email as candidate_email, c.current_title, c.ai_score
@@ -91,7 +91,7 @@ router.post('/', (req, res) => {
 // PUT /api/jobs/:id
 router.put('/:id', (req, res) => {
   const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
-  if (!job) return res.status(404).json({ error: 'Job not found.' });
+  if (!job || job.created_by !== req.user.id) return res.status(404).json({ error: 'Job not found.' });
 
   const { title, description, requirements, location, market, employment_type, salary_min, salary_max, salary_currency, status } = req.body;
 
@@ -107,7 +107,7 @@ router.put('/:id', (req, res) => {
 // DELETE /api/jobs/:id
 router.delete('/:id', (req, res) => {
   const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
-  if (!job) return res.status(404).json({ error: 'Job not found.' });
+  if (!job || job.created_by !== req.user.id) return res.status(404).json({ error: 'Job not found.' });
   db.prepare('DELETE FROM jobs WHERE id = ?').run(req.params.id);
   res.json({ message: 'Job deleted.' });
 });

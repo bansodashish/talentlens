@@ -3,9 +3,10 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
 
-const dbPath = path.resolve(__dirname, process.env.DB_PATH || '../db/talentlenses.db');
+const dbPath = path.resolve(__dirname, process.env.DB_PATH || '../db/talentlens.db');
 const dbDir = path.dirname(dbPath);
 if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
+console.log('[db] using database file:', dbPath);
 
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
@@ -49,8 +50,12 @@ migrate('ALTER TABLE users ADD COLUMN apollo_key_enc TEXT');
 migrate('ALTER TABLE users ADD COLUMN openai_key_enc TEXT');
 
 // Step 7 — SaaS plans + onboarding
-migrate('ALTER TABLE users ADD COLUMN plan TEXT DEFAULT "starter"');
+migrate('ALTER TABLE users ADD COLUMN plan TEXT DEFAULT "basic"');
 migrate('ALTER TABLE users ADD COLUMN onboarding_complete INTEGER DEFAULT 0');
+
+// Consolidate plans down to just 'basic' / 'pro' (previously starter/growth/enterprise).
+migrate("UPDATE users SET plan = 'pro' WHERE lower(plan) = 'enterprise'");
+migrate("UPDATE users SET plan = 'basic' WHERE plan IS NULL OR trim(plan) = '' OR lower(plan) NOT IN ('basic', 'pro')");
 
 // Step 3 — LinkedIn search module
 migrate(`

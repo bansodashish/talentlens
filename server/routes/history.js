@@ -8,9 +8,9 @@
 const express = require('express');
 const router  = express.Router();
 const db      = require('../db');
-const { authMiddleware, adminMiddleware } = require('../middleware/auth');
+const { authMiddleware } = require('../middleware/auth');
 
-router.use(authMiddleware, adminMiddleware);
+router.use(authMiddleware);
 
 // ── GET /api/history/searches ────────────────────────────────────────────────
 router.get('/searches', (req, res) => {

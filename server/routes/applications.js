@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { authMiddleware, adminMiddleware } = require('../middleware/auth');
+const { authMiddleware } = require('../middleware/auth');
 const { scoreCandidate, detectRole } = require('../services/scorer');
 
-router.use(authMiddleware, adminMiddleware);
+router.use(authMiddleware);
 
 const PIPELINE_STAGES = ['application', 'phone_screen', 'technical', 'final', 'offer'];
 
@@ -23,9 +23,9 @@ router.get('/', (req, res) => {
     FROM applications a
     LEFT JOIN jobs j ON a.job_id = j.id
     LEFT JOIN candidates c ON a.candidate_id = c.id
-    WHERE 1=1
+    WHERE j.created_by = ? AND c.created_by = ?
   `;
-  const params = [];
+  const params = [req.user.id, req.user.id];
   if (job_id)       { query += ' AND a.job_id = ?';       params.push(job_id); }
   if (candidate_id) { query += ' AND a.candidate_id = ?'; params.push(candidate_id); }
   if (status)       { query += ' AND a.status = ?';       params.push(status); }
@@ -44,8 +44,8 @@ router.post('/', async (req, res) => {
 
   const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(job_id);
   const candidate = db.prepare('SELECT * FROM candidates WHERE id = ?').get(candidate_id);
-  if (!job)       return res.status(404).json({ error: 'Job not found.' });
-  if (!candidate) return res.status(404).json({ error: 'Candidate not found.' });
+  if (!job || job.created_by !== req.user.id)             return res.status(404).json({ error: 'Job not found.' });
+  if (!candidate || candidate.created_by !== req.user.id) return res.status(404).json({ error: 'Candidate not found.' });
 
   const existing = db.prepare('SELECT id FROM applications WHERE job_id = ? AND candidate_id = ?').get(job_id, candidate_id);
   if (existing) return res.status(409).json({ error: 'Candidate already applied to this job.' });
@@ -96,7 +96,12 @@ router.post('/', async (req, res) => {
 
 // PUT /api/applications/:id
 router.put('/:id', (req, res) => {
-  const app = db.prepare('SELECT * FROM applications WHERE id = ?').get(req.params.id);
+  const app = db.prepare(`
+    SELECT a.* FROM applications a
+    LEFT JOIN jobs j ON a.job_id = j.id
+    LEFT JOIN candidates c ON a.candidate_id = c.id
+    WHERE a.id = ? AND j.created_by = ? AND c.created_by = ?
+  `).get(req.params.id, req.user.id, req.user.id);
   if (!app) return res.status(404).json({ error: 'Application not found.' });
 
   const { status, stage, notes } = req.body;
@@ -111,7 +116,12 @@ router.put('/:id', (req, res) => {
 
 // DELETE /api/applications/:id
 router.delete('/:id', (req, res) => {
-  const app = db.prepare('SELECT * FROM applications WHERE id = ?').get(req.params.id);
+  const app = db.prepare(`
+    SELECT a.* FROM applications a
+    LEFT JOIN jobs j ON a.job_id = j.id
+    LEFT JOIN candidates c ON a.candidate_id = c.id
+    WHERE a.id = ? AND j.created_by = ? AND c.created_by = ?
+  `).get(req.params.id, req.user.id, req.user.id);
   if (!app) return res.status(404).json({ error: 'Application not found.' });
   db.prepare('DELETE FROM applications WHERE id = ?').run(req.params.id);
   res.json({ message: 'Application removed.' });
