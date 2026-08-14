@@ -18,11 +18,14 @@ function StatCard({ icon, label, value, sub, accent, to }) {
   return to ? <Link to={to}>{content}</Link> : content;
 }
 
-function ChartCard({ title, children, action, className = '' }) {
+function ChartCard({ title, subtitle, children, action, className = '' }) {
   return (
     <div className={`card p-5 ${className}`}>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-slate-800">{title}</h3>
+        <div>
+          <h3 className="font-semibold text-slate-800">{title}</h3>
+          {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+        </div>
         {action}
       </div>
       {children}
@@ -416,10 +419,6 @@ export default function Dashboard() {
             AI-powered recruitment · {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Link to="/cv-match"         className="btn-primary text-sm">🤖 Screen Resumes</Link>
-          <Link to="/candidates"       className="btn-secondary text-sm">👥 View All Candidates</Link>
-        </div>
       </div>
 
       {/* ── Getting Started banner ────────────────────────────── */}
@@ -470,7 +469,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-up delay-150">
 
         {/* Active Vacancies */}
-        <ChartCard title="Active Vacancies">
+        <ChartCard title="Active Vacancies" subtitle="Manage your active jobs and monitor recruitment progress.">
           {activeVacancies.length > 0 ? (
             <div className="space-y-2 max-h-[290px] overflow-auto pr-1">
               {activeVacancies.map((v) => (
@@ -490,13 +489,24 @@ export default function Dashboard() {
                       Active Job
                     </span>
                   </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                    <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium">
-                      {v.screenedCandidates || 0} candidates screened
+                  <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
+                    <span className="text-slate-600">
+                      Applications: <strong className="text-slate-800">{v.screenedCandidates || 0}</strong>
                     </span>
-                    <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-medium">
-                      {v.screeningBatches || 0} batch{(v.screeningBatches || 0) === 1 ? '' : 'es'}
+                    <span className="text-slate-600">
+                      Strong Matches: <strong className="text-slate-800">{v.strongMatches || 0}</strong>
                     </span>
+                    <span className="text-slate-600">
+                      In Pipeline: <strong className="text-slate-800">{v.inPipeline || 0}</strong>
+                    </span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                    <Link to="/history?tab=screenings" className="text-blue-600 font-medium hover:underline">
+                      View Screening Results →
+                    </Link>
+                    <Link to={`/pipeline?job=${encodeURIComponent(v.title)}`} className="text-blue-600 font-medium hover:underline">
+                      View Pipeline →
+                    </Link>
                     {v.lastScreenedAt && (
                       <span className="text-slate-400">
                         Last screening: {new Date(v.lastScreenedAt).toLocaleDateString()}

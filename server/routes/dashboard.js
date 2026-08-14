@@ -123,13 +123,16 @@ router.get('/analytics', (req, res) => {
       j.updated_at,
       COALESCE(s.screened_candidates, 0) as screened_candidates,
       COALESCE(s.screening_batches, 0) as screening_batches,
-      s.last_screened_at
+      COALESCE(s.strong_matches, 0) as strong_matches,
+      s.last_screened_at,
+      COALESCE(p.in_pipeline, 0) as in_pipeline
     FROM jobs j
     LEFT JOIN (
       SELECT
         lower(trim(job_title)) as title_key,
         COUNT(*) as screened_candidates,
         COUNT(DISTINCT batch_id) as screening_batches,
+        SUM(CASE WHEN recommendation = 'Strong Hire' THEN 1 ELSE 0 END) as strong_matches,
         MAX(created_at) as last_screened_at
       FROM screenings
       WHERE created_by = ?
@@ -137,11 +140,23 @@ router.get('/analytics', (req, res) => {
         AND trim(job_title) <> ''
       GROUP BY lower(trim(job_title))
     ) s ON lower(trim(j.title)) = s.title_key
+    LEFT JOIN (
+      SELECT
+        lower(trim(job_title)) as title_key,
+        COUNT(*) as in_pipeline
+      FROM candidates
+      WHERE created_by = ?
+        AND job_title IS NOT NULL
+        AND trim(job_title) <> ''
+        AND pipeline_stage IS NOT NULL
+        AND trim(pipeline_stage) <> ''
+      GROUP BY lower(trim(job_title))
+    ) p ON lower(trim(j.title)) = p.title_key
     WHERE j.created_by = ?
       AND j.status = 'active'
     ORDER BY COALESCE(s.last_screened_at, j.updated_at, j.created_at) DESC, j.id DESC
     LIMIT 10
-  `).all(uid, uid);
+  `).all(uid, uid, uid);
 
   const activeVacancies = activeJobs
     .map((j) => ({
@@ -152,6 +167,8 @@ router.get('/analytics', (req, res) => {
       status: j.status,
       screenedCandidates: j.screened_candidates || 0,
       screeningBatches: j.screening_batches || 0,
+      strongMatches: j.strong_matches || 0,
+      inPipeline: j.in_pipeline || 0,
       lastScreenedAt: j.last_screened_at || null,
       source: 'jobs',
     }))
