@@ -638,7 +638,7 @@ export default function Screen() {
           <div className="flex flex-wrap items-center gap-2">
             {jobMode === 'existing' ? (
               <select
-                className="input flex-1 min-w-[220px]"
+                className="input w-auto max-w-xs"
                 value={selectedJobId}
                 onChange={e => {
                   const id = e.target.value;
@@ -658,7 +658,7 @@ export default function Screen() {
             ) : (
               <input
                 type="text"
-                className="input flex-1 min-w-[220px]"
+                className="input w-auto max-w-xs"
                 placeholder="e.g. Senior DevOps Engineer"
                 value={jobTitle}
                 onChange={e => setJobTitle(e.target.value)}
