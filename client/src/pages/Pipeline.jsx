@@ -30,7 +30,6 @@ export default function Pipeline() {
   const jobFilter = searchParams.get('job') || '';
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [marketFilter, setMarketFilter] = useState('');
   const [draggedId, setDraggedId] = useState(null);
   const [dragOverStage, setDragOverStage] = useState(null);
 
@@ -92,8 +91,9 @@ export default function Pipeline() {
   const jobFiltered = jobFilter
     ? inPipeline.filter(c => (c.job_title || '').trim().toLowerCase() === jobFilter.trim().toLowerCase())
     : inPipeline;
-  const filtered = marketFilter ? jobFiltered.filter(c => c.market === marketFilter) : jobFiltered;
+  const filtered = jobFiltered;
   const byStage = STAGES.reduce((acc, s) => ({ ...acc, [s]: filtered.filter(c => c.pipeline_stage === s) }), {});
+  const jobOptions = [...new Set(candidates.map(c => (c.job_title || '').trim()).filter(Boolean))].sort();
 
   return (
     <div className="space-y-5">
@@ -109,14 +109,15 @@ export default function Pipeline() {
           )}
         </div>
         <div className="flex gap-2">
-          <select className="input w-40 text-sm" value={marketFilter} onChange={e => setMarketFilter(e.target.value)}>
-            <option value="">All Markets</option>
-            <option value="Global">🌍 Global</option>
-            <option value="Americas">🌎 Americas</option>
-            <option value="Europe">🌍 Europe</option>
-            <option value="Asia Pacific">🌏 Asia Pacific</option>
-            <option value="MENA">🕌 MENA</option>
-            <option value="Africa">🌍 Africa</option>
+          <select
+            className="input w-56 text-sm"
+            value={jobFilter}
+            onChange={e => setSearchParams(e.target.value ? { job: e.target.value } : {})}
+          >
+            <option value="">All Jobs</option>
+            {jobOptions.map(title => (
+              <option key={title} value={title}>{title}</option>
+            ))}
           </select>
         </div>
       </div>
