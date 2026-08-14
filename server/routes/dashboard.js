@@ -143,29 +143,8 @@ router.get('/analytics', (req, res) => {
     LIMIT 10
   `).all(uid, uid);
 
-  // Secondary source: screening titles not yet present in active jobs.
-  const screeningOnlyVacancies = db.prepare(`
-    SELECT
-      MIN(job_title) as job_title,
-      COUNT(*) as screened_candidates,
-      COUNT(DISTINCT batch_id) as screening_batches,
-      MAX(created_at) as last_screened_at
-    FROM screenings
-    WHERE created_by = ?
-      AND job_title IS NOT NULL
-      AND trim(job_title) <> ''
-      AND lower(trim(job_title)) NOT IN (
-        SELECT lower(trim(title))
-        FROM jobs
-        WHERE created_by = ? AND status = 'active'
-      )
-    GROUP BY lower(trim(job_title))
-    ORDER BY last_screened_at DESC
-    LIMIT 10
-  `).all(uid, uid);
-
-  const activeVacancies = [
-    ...activeJobs.map((j) => ({
+  const activeVacancies = activeJobs
+    .map((j) => ({
       id: `job-${j.job_id}`,
       title: j.job_title,
       location: j.location || '—',
@@ -175,19 +154,7 @@ router.get('/analytics', (req, res) => {
       screeningBatches: j.screening_batches || 0,
       lastScreenedAt: j.last_screened_at || null,
       source: 'jobs',
-    })),
-    ...screeningOnlyVacancies.map((s) => ({
-      id: `screening-${String(s.job_title || '').toLowerCase().replace(/\s+/g, '-')}`,
-      title: s.job_title,
-      location: 'From Screening',
-      market: '—',
-      status: 'active',
-      screenedCandidates: s.screened_candidates || 0,
-      screeningBatches: s.screening_batches || 0,
-      lastScreenedAt: s.last_screened_at || null,
-      source: 'screening',
-    })),
-  ]
+    }))
     .sort((a, b) => {
       const aT = a.lastScreenedAt ? Date.parse(a.lastScreenedAt) : 0;
       const bT = b.lastScreenedAt ? Date.parse(b.lastScreenedAt) : 0;
