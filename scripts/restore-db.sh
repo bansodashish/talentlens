@@ -61,6 +61,19 @@ esac
 mkdir -p "$(dirname "$DB_FILE")"
 DB_FILE="$(cd "$(dirname "$DB_FILE")" && pwd)/$(basename "$DB_FILE")"
 
+UPLOADS_DIR="${UPLOADS_DIR:-}"
+if [ -z "$UPLOADS_DIR" ] && [ -f "$APP_DIR/server/.env" ]; then
+	UPLOADS_DIR=$(grep -E '^UPLOADS_DIR=' "$APP_DIR/server/.env" | tail -1 | cut -d= -f2-)
+fi
+if [ -n "$UPLOADS_DIR" ]; then
+	case "$UPLOADS_DIR" in
+		/*) : ;;
+		*) UPLOADS_DIR="$APP_DIR/server/$UPLOADS_DIR" ;;
+	esac
+else
+	UPLOADS_DIR="$(dirname "$DB_FILE")/uploads"
+fi
+
 echo "🛑 Stopping app..."
 pm2 stop talentlenses || true
 
@@ -70,8 +83,9 @@ cp "$BACKUP_DB_FILE" "$DB_FILE"
 
 if [ -f "$SNAPSHOT/uploads.tar.gz" ]; then
 	echo "♻️  Restoring uploads..."
-	rm -rf "$APP_DIR/db/uploads"
-	tar -xzf "$SNAPSHOT/uploads.tar.gz" -C "$APP_DIR/db"
+	rm -rf "$UPLOADS_DIR"
+	mkdir -p "$(dirname "$UPLOADS_DIR")"
+	tar -xzf "$SNAPSHOT/uploads.tar.gz" -C "$(dirname "$UPLOADS_DIR")"
 fi
 
 echo "▶️  Starting app..."

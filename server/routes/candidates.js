@@ -7,8 +7,9 @@ const db = require('../db');
 const { authMiddleware } = require('../middleware/auth');
 const { parseCV } = require('../services/cvParser');
 const { scoreCandidate, detectRole } = require('../services/scorer');
+const { resolveUploadsDir } = require('../utils/storagePaths');
 
-const uploadsDir = path.resolve(__dirname, '../../db/uploads');
+const uploadsDir = resolveUploadsDir();
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const storage = multer.diskStorage({
@@ -250,7 +251,7 @@ router.get('/:id/download-cv', (req, res) => {
     return res.status(404).json({ error: 'Resume CV file not found for this candidate.' });
   }
 
-  const fullPath = path.resolve(__dirname, '../../db/uploads', candidate.cv_path);
+  const fullPath = path.resolve(uploadsDir, candidate.cv_path);
   if (!fs.existsSync(fullPath)) {
     return res.status(404).json({ error: 'Physical CV file not found on disk.' });
   }

@@ -12,6 +12,8 @@ module.exports = {
       env_production: {
         NODE_ENV: 'production',
         PORT: 5001,
+        DB_PATH: '/home/talentlens/data/talentlens.db',
+        UPLOADS_DIR: '/home/talentlens/data/uploads',
       },
     },
   ],

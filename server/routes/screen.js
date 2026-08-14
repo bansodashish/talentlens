@@ -24,6 +24,7 @@ const { screenResume, MODEL } = require('../services/claudeScreener');
 const { screenResume: screenOpenClawLocal, MODEL: OPENCLAW_LOCAL_MODEL } = require('../services/openclawLocalScreener');
 const { scoreCandidate, detectRole, ALL_ROLES } = require('../services/scorer');
 const { extractJobTitle } = require('../utils/extractJobTitle');
+const { resolveUploadsDir } = require('../utils/storagePaths');
 
 // Quick regex-based extraction for local mode (Claude does this natively).
 function extractContact(text) {
@@ -87,7 +88,7 @@ function toScreeningShape(scored, contact, role, text, jobDescription) {
 }
 
 // Temp upload dir
-const tmpDir = path.resolve(__dirname, '../../db/uploads/tmp');
+const tmpDir = path.resolve(resolveUploadsDir(), 'tmp');
 if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 
 const upload = multer({

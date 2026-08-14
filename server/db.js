@@ -2,11 +2,23 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
+const { resolveDbPath, resolveUploadsDir } = require('./utils/storagePaths');
 
-const dbPath = path.resolve(__dirname, process.env.DB_PATH || '../db/talentlens.db');
+const dbPath = resolveDbPath();
 const dbDir = path.dirname(dbPath);
 if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
+const uploadsDir = resolveUploadsDir();
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+try {
+  fs.accessSync(dbDir, fs.constants.W_OK);
+  fs.accessSync(uploadsDir, fs.constants.W_OK);
+} catch (err) {
+  throw new Error(`Storage path is not writable (${err.path || 'unknown path'}). Fix ownership/permissions before starting API.`);
+}
+
 console.log('[db] using database file:', dbPath);
+console.log('[db] using uploads dir :', uploadsDir);
 
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
