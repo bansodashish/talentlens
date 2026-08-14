@@ -470,7 +470,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-up delay-150">
 
         {/* Active Vacancies */}
-        <ChartCard title="Active Vacancies for Screening">
+        <ChartCard title="Active Vacancies">
           {activeVacancies.length > 0 ? (
             <div className="space-y-2 max-h-[290px] overflow-auto pr-1">
               {activeVacancies.map((v) => (
@@ -486,8 +486,8 @@ export default function Dashboard() {
                       </p>
                     </div>
                     <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
-                      style={{ background: v.source === 'screening' ? '#e0f2fe' : '#e2e8f0', color: v.source === 'screening' ? '#0369a1' : '#334155' }}>
-                      {v.source === 'screening' ? 'From Screening' : 'Active Job'}
+                      style={{ background: '#e2e8f0', color: '#334155' }}>
+                      Active Job
                     </span>
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
