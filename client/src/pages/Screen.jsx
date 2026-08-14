@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
 
 // Persist in-progress/completed screening state across page navigation —
@@ -348,6 +348,7 @@ function ScreeningHistory({ jobFilter, onClearJobFilter }) {
 
 export default function Screen() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab]   = useState(() => searchParams.get('tab') === 'history' ? 'history' : 'screen');
   const [jobFilter, setJobFilter] = useState(() => searchParams.get('job') || '');
@@ -379,8 +380,13 @@ export default function Screen() {
 
     if (titleFromNav) setJobTitle(titleFromNav);
     if (descriptionFromNav) setJobDescription(descriptionFromNav);
-    setJobMode('new');
-    setSelectedJobId('');
+    setJobMode('existing');
+    if (navState.jobId) {
+      setSelectedJobId(navState.jobId);
+      setJobsList(prev => (prev.some(j => String(j.id) === String(navState.jobId))
+        ? prev
+        : [{ id: navState.jobId, title: titleFromNav, description: descriptionFromNav }, ...prev]));
+    }
     setActiveTab('screen');
     consumedNavPrefill.current = true;
   }, [location.state]);
@@ -426,7 +432,7 @@ export default function Screen() {
 
   const runScreening = async (e) => {
     e.preventDefault();
-    if (jobMode === 'existing' && !selectedJobId) { setError('Please select an existing job.'); return; }
+    if (!selectedJobId)         { setError('Please select an existing job.'); return; }
     if (!jobTitle.trim())       { setError('Please enter the job title being hired for.'); return; }
     if (!jobDescription.trim()) { setError('Please paste a job description.'); return; }
     if (!files.length)          { setError('Please upload at least one CV.');  return; }
@@ -434,33 +440,12 @@ export default function Screen() {
     setError(''); setResults([]); setBatchId(null);
     setLoading(true); setProgress(0);
 
-    if (jobMode === 'new') {
-      try {
-        const res = await api.post('/jobs', {
-          title: jobTitle.trim(),
-          description: jobDescription,
-          location: 'Remote',
-          market: 'Global',
-          status: 'active',
-        });
-        const createdJob = res.data?.job;
-        if (createdJob) {
-          setJobsList(prev => [createdJob, ...prev]);
-          setSelectedJobId(createdJob.id);
-          setJobMode('existing');
-        }
-      } catch (err) {
-        setError(err.response?.data?.error || 'Failed to create the new job.');
-        setLoading(false);
-        return;
-      }
-    }
-
     const form = new FormData();
     form.append('job_title', jobTitle);
     form.append('job_description', jobDescription);
     form.append('mode', scanMode);
     files.forEach(f => form.append('files', f));
+
 
     try {
       const { data } = await api.post('/screen/resume', form, {
@@ -636,63 +621,32 @@ export default function Screen() {
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Job *</label>
           <div className="flex flex-wrap items-center gap-2">
-            {jobMode === 'existing' ? (
-              <select
-                className="input w-auto max-w-xs"
-                value={selectedJobId}
-                onChange={e => {
-                  const id = e.target.value;
-                  setSelectedJobId(id);
-                  const job = jobsList.find(j => String(j.id) === String(id));
-                  if (job) {
-                    setJobTitle(job.title || '');
-                    setJobDescription(job.description || '');
-                  }
-                }}
-              >
-                <option value="">{loadingJobs ? 'Loading jobs…' : 'Select Existing Job'}</option>
-                {jobsList.map(j => (
-                  <option key={j.id} value={j.id}>{j.title}</option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type="text"
-                className="input w-auto max-w-xs"
-                placeholder="e.g. Senior DevOps Engineer"
-                value={jobTitle}
-                onChange={e => setJobTitle(e.target.value)}
-                autoComplete="off"
-                required
-              />
-            )}
+            <select
+              className="input w-auto max-w-xs"
+              value={selectedJobId}
+              onChange={e => {
+                const id = e.target.value;
+                setSelectedJobId(id);
+                const job = jobsList.find(j => String(j.id) === String(id));
+                if (job) {
+                  setJobTitle(job.title || '');
+                  setJobDescription(job.description || '');
+                }
+              }}
+            >
+              <option value="">{loadingJobs ? 'Loading jobs…' : 'Select Existing Job'}</option>
+              {jobsList.map(j => (
+                <option key={j.id} value={j.id}>{j.title}</option>
+              ))}
+            </select>
 
-            {jobMode === 'existing' ? (
-              <button
-                type="button"
-                className="btn-secondary text-sm whitespace-nowrap"
-                onClick={() => {
-                  setJobMode('new');
-                  setSelectedJobId('');
-                  setJobTitle('');
-                  setJobDescription('');
-                }}
-              >
-                + Create New Job
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="btn-secondary text-sm whitespace-nowrap"
-                onClick={() => {
-                  setJobMode('existing');
-                  setJobTitle('');
-                  setJobDescription('');
-                }}
-              >
-                ← Use Existing Job
-              </button>
-            )}
+            <button
+              type="button"
+              className="btn-secondary text-sm whitespace-nowrap"
+              onClick={() => navigate('/jobs/new', { state: { returnTo: '/cv-match' } })}
+            >
+              + Create New Job
+            </button>
           </div>
         </div>
 
