@@ -500,18 +500,19 @@ export default function Dashboard() {
                       In Pipeline: <strong className="text-slate-800">{v.inPipeline || 0}</strong>
                     </span>
                   </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
-                    <Link to="/history?tab=screenings" className="text-blue-600 font-medium hover:underline">
-                      View Screening Results →
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                    <Link
+                      to="/history?tab=screenings"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-medium hover:bg-blue-100 transition-colors"
+                    >
+                      View Screening Results <span aria-hidden="true">→</span>
                     </Link>
-                    <Link to={`/pipeline?job=${encodeURIComponent(v.title)}`} className="text-blue-600 font-medium hover:underline">
-                      View Pipeline →
+                    <Link
+                      to={`/pipeline?job=${encodeURIComponent(v.title)}`}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 font-medium hover:bg-slate-200 transition-colors"
+                    >
+                      View Pipeline <span aria-hidden="true">→</span>
                     </Link>
-                    {v.lastScreenedAt && (
-                      <span className="text-slate-400">
-                        Last screening: {new Date(v.lastScreenedAt).toLocaleDateString()}
-                      </span>
-                    )}
                   </div>
                 </div>
               ))}
