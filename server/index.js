@@ -8,6 +8,12 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 const isProd = process.env.NODE_ENV === 'production';
 
+// Behind nginx/reverse proxy in production, trust X-Forwarded-* headers
+// so middleware like express-rate-limit can identify client IPs correctly.
+if (isProd) {
+  app.set('trust proxy', 1);
+}
+
 // Hide the Express/Node signature (also done by helmet, kept explicit for clarity).
 app.disable('x-powered-by');
 

@@ -24,6 +24,20 @@ case "$DB_PATH" in
 	*) DB_FILE="$APP_DIR/server/$DB_PATH" ;;
 esac
 DB_FILE="$(cd "$(dirname "$DB_FILE")" 2>/dev/null && pwd)/$(basename "$DB_FILE")" || DB_FILE=""
+DB_DIR="$(dirname "$DB_FILE")"
+
+UPLOADS_DIR="${UPLOADS_DIR:-}"
+if [ -z "$UPLOADS_DIR" ] && [ -f "$APP_DIR/server/.env" ]; then
+	UPLOADS_DIR=$(grep -E '^UPLOADS_DIR=' "$APP_DIR/server/.env" | tail -1 | cut -d= -f2-)
+fi
+if [ -n "$UPLOADS_DIR" ]; then
+	case "$UPLOADS_DIR" in
+		/*) : ;;
+		*) UPLOADS_DIR="$APP_DIR/server/$UPLOADS_DIR" ;;
+	esac
+else
+	UPLOADS_DIR="$DB_DIR/uploads"
+fi
 
 if [ -z "$DB_FILE" ] || [ ! -f "$DB_FILE" ]; then
 	echo "⚠️  No database file found — skipping backup (nothing to back up yet)."
@@ -42,10 +56,9 @@ else
 	cp "$DB_FILE" "$DEST/$(basename "$DB_FILE")"
 fi
 
-UPLOADS_DIR="$APP_DIR/db/uploads"
 if [ -d "$UPLOADS_DIR" ] && [ -n "$(ls -A "$UPLOADS_DIR" 2>/dev/null)" ]; then
 	echo "💾 Backing up uploads: $UPLOADS_DIR"
-	tar -czf "$DEST/uploads.tar.gz" -C "$APP_DIR/db" uploads
+	tar -czf "$DEST/uploads.tar.gz" -C "$(dirname "$UPLOADS_DIR")" "$(basename "$UPLOADS_DIR")"
 fi
 
 echo "✅ Backup written to $DEST"

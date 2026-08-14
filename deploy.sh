@@ -6,16 +6,63 @@
 set -e
 # Use script location by default so deployment works regardless of VPS folder.
 APP_DIR="${APP_DIR:-$(cd "$(dirname "$0")" && pwd)}"
-BRANCH="${BRANCH:-$(git -C "$APP_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo dev)}"
+BRANCH="${BRANCH:-main}"
 
-echo "� Checking database ownership..."
-if [ -d "$APP_DIR/db" ]; then
-	DB_OWNER=$(stat -c '%U' "$APP_DIR/db" 2>/dev/null || stat -f '%Su' "$APP_DIR/db" 2>/dev/null || echo "")
+read_env_var() {
+	local key="$1"
+	local env_file="$APP_DIR/server/.env"
+	if [ -f "$env_file" ]; then
+		grep -E "^${key}=" "$env_file" | tail -1 | cut -d= -f2-
+	fi
+}
+
+DB_PATH_FROM_ENV="${DB_PATH:-$(read_env_var DB_PATH)}"
+DB_PATH_FROM_ENV="${DB_PATH_FROM_ENV:-../db/talentlens.db}"
+case "$DB_PATH_FROM_ENV" in
+	/*) DB_FILE="$DB_PATH_FROM_ENV" ;;
+	*) DB_FILE="$APP_DIR/server/$DB_PATH_FROM_ENV" ;;
+esac
+DB_FILE="$(cd "$(dirname "$DB_FILE")" 2>/dev/null && pwd)/$(basename "$DB_FILE")"
+DB_DIR="$(dirname "$DB_FILE")"
+
+UPLOADS_DIR_FROM_ENV="${UPLOADS_DIR:-$(read_env_var UPLOADS_DIR)}"
+if [ -n "$UPLOADS_DIR_FROM_ENV" ]; then
+	case "$UPLOADS_DIR_FROM_ENV" in
+		/*) UPLOADS_DIR="$UPLOADS_DIR_FROM_ENV" ;;
+		*) UPLOADS_DIR="$APP_DIR/server/$UPLOADS_DIR_FROM_ENV" ;;
+	esac
+else
+	UPLOADS_DIR="$DB_DIR/uploads"
+fi
+
+echo "Checking database ownership..."
+if [ -d "$DB_DIR" ]; then
+	DB_OWNER=$(stat -c '%U' "$DB_DIR" 2>/dev/null || stat -f '%Su' "$DB_DIR" 2>/dev/null || echo "")
 	CURRENT_USER=$(whoami)
 	if [ -n "$DB_OWNER" ] && [ "$DB_OWNER" != "$CURRENT_USER" ]; then
-		echo "❌ db/ is owned by '$DB_OWNER', but this deploy is running as '$CURRENT_USER'."
+		echo "❌ Database directory is owned by '$DB_OWNER', but this deploy is running as '$CURRENT_USER'."
 		echo "   Continuing would risk SQLITE_READONLY errors (see troubleshooting.md)."
-		echo "   Fix with: sudo chown -R $CURRENT_USER:$CURRENT_USER \"$APP_DIR\""
+		echo "   Fix with: sudo chown -R $CURRENT_USER:$CURRENT_USER \"$DB_DIR\""
+		exit 1
+	fi
+
+	# Catch the common failure mode where DB directory ownership is correct
+	# but one or more SQLite files are still root-owned.
+	NON_OWNED_DB_FILE=$(find "$DB_DIR" -type f ! -user "$CURRENT_USER" -print -quit 2>/dev/null || true)
+	if [ -n "$NON_OWNED_DB_FILE" ]; then
+		echo "❌ Found database-related file not owned by '$CURRENT_USER': $NON_OWNED_DB_FILE"
+		echo "   This can cause SQLITE_READONLY at runtime."
+		echo "   Fix with: sudo chown -R $CURRENT_USER:$CURRENT_USER \"$DB_DIR\""
+		exit 1
+	fi
+fi
+
+if [ -d "$UPLOADS_DIR" ]; then
+	CURRENT_USER=$(whoami)
+	NON_OWNED_UPLOADS_FILE=$(find "$UPLOADS_DIR" -type f ! -user "$CURRENT_USER" -print -quit 2>/dev/null || true)
+	if [ -n "$NON_OWNED_UPLOADS_FILE" ]; then
+		echo "❌ Found uploads file not owned by '$CURRENT_USER': $NON_OWNED_UPLOADS_FILE"
+		echo "   Fix with: sudo chown -R $CURRENT_USER:$CURRENT_USER \"$UPLOADS_DIR\""
 		exit 1
 	fi
 fi
@@ -23,9 +70,11 @@ fi
 echo "💾 Backing up database before deploy..."
 bash "$APP_DIR/scripts/backup-db.sh" || { echo "🛑 Backup failed — aborting deploy to avoid risking data. The running app was left untouched."; exit 1; }
 
-echo "�📦 Pulling latest code..."
+echo "Pulling latest code..."
 cd "$APP_DIR"
-git pull origin "$BRANCH"
+git fetch origin "$BRANCH"
+git checkout -f "$BRANCH"
+git pull --ff-only origin "$BRANCH"
 
 echo "🔧 Installing server dependencies..."
 cd "$APP_DIR/server"
