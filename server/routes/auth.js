@@ -24,7 +24,11 @@ router.post('/register', authLimiter, async (req, res) => {
   if (!name || !email || !password)
     return res.status(400).json({ error: 'Name, email and password are required.' });
 
-  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+  const normalizedEmail = String(email).trim().toLowerCase();
+  if (!normalizedEmail)
+    return res.status(400).json({ error: 'Email and password are required.' });
+
+  const existing = db.prepare('SELECT id FROM users WHERE lower(email) = ?').get(normalizedEmail);
   if (existing) return res.status(409).json({ error: 'Email already registered.' });
 
   const hashed = await bcrypt.hash(password, 12);
@@ -33,7 +37,7 @@ router.post('/register', authLimiter, async (req, res) => {
 
   const result = db.prepare(
     'INSERT INTO users (name, email, password, company, role, market, plan) VALUES (?, ?, ?, ?, ?, ?, ?)'
-  ).run(name, email, hashed, company || null, userRole, userMarket, 'basic');
+  ).run(name, normalizedEmail, hashed, company || null, userRole, userMarket, 'basic');
 
   const user = db.prepare('SELECT id, name, email, role, company, market, plan, onboarding_complete, created_at FROM users WHERE id = ?').get(result.lastInsertRowid);
   user.onboarding_complete = !!user.onboarding_complete;
@@ -67,7 +71,8 @@ router.post('/login', authLimiter, async (req, res) => {
   if (!email || !password)
     return res.status(400).json({ error: 'Email and password are required.' });
 
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  const normalizedEmail = String(email).trim().toLowerCase();
+  const user = db.prepare('SELECT * FROM users WHERE lower(email) = ?').get(normalizedEmail);
   if (!user) return res.status(401).json({ error: 'Invalid credentials.' });
 
   const valid = await bcrypt.compare(password, user.password);
