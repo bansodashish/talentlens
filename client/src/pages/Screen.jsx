@@ -554,17 +554,21 @@ export default function Screen() {
     const key = c.email || c.name || c.fileName;
     if (addedToPipeline.has(key)) return;
     try {
-      await api.post('/candidates', {
-        name:            c.name || c.fileName || 'Unknown',
-        email:           c.email || '',
-        phone:           c.phone || '',
-        current_title:   c.currentRole || '',
-        ai_score:        c.overallScore || null,
-        pipeline_stage:  'shortlisted',
-        source:          'resume_upload',
-        notes:           c.summary || '',
-        job_title:       jobTitle || '',
-      });
+      const matchedFile = files.find(f => f.name === c.fileName);
+      const form = new FormData();
+      form.append('name',           c.name || c.fileName || 'Unknown');
+      form.append('email',          c.email || '');
+      form.append('phone',          c.phone || '');
+      form.append('current_title',  c.currentRole || '');
+      form.append('ai_score',       c.overallScore || '');
+      form.append('ai_summary',     c.summary || '');
+      form.append('pipeline_stage', 'shortlisted');
+      form.append('source',         'resume_upload');
+      form.append('notes',          c.summary || '');
+      form.append('job_title',      jobTitle || '');
+      if (matchedFile) form.append('cv', matchedFile);
+
+      await api.post('/candidates', form, { headers: { 'Content-Type': 'multipart/form-data' } });
       setAddedToPipeline(prev => new Set([...prev, key]));
       setPipelineMsg(`${c.name || c.fileName} added to pipeline as Shortlisted.`);
       setTimeout(() => setPipelineMsg(''), 4000);

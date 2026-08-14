@@ -104,21 +104,27 @@ async function processCV(filePath, currentTitle, originalName = '') {
 // POST /api/candidates
 router.post('/', upload.single('cv'), async (req, res) => {
   const { name, email, phone, location, market, current_title, current_company,
-    experience_years, skills, linkedin_url, notes, pipeline_stage, source, job_title } = req.body;
+    experience_years, skills, linkedin_url, notes, pipeline_stage, source, job_title,
+    ai_score, ai_summary } = req.body;
 
   if (!name) return res.status(400).json({ error: 'Candidate name is required.' });
 
   let cvText = '';
-  let aiScore = null;
-  let aiSummary = null;
+  // If the caller already computed a score (e.g. the resume was scored against a
+  // specific job during AI Resume Screening), trust that over the generic-JD score
+  // `processCV` would otherwise compute below — it's more accurate.
+  let aiScore = (ai_score !== undefined && ai_score !== null && ai_score !== '') ? Number(ai_score) : null;
+  let aiSummary = ai_summary || null;
   let cvParsedAt = null;
 
   if (req.file) {
     const processed = await processCV(req.file.path, current_title, req.file.originalname);
     cvText = processed.cvText;
-    aiScore = processed.aiScore;
-    aiSummary = processed.aiSummary;
     if (cvText) cvParsedAt = new Date().toISOString();
+    if (aiScore === null) {
+      aiScore = processed.aiScore;
+      aiSummary = processed.aiSummary;
+    }
   }
 
   const result = db.prepare(`
