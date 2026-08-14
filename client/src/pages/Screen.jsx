@@ -632,6 +632,15 @@ export default function Screen() {
                   setJobTitle(job.title || '');
                   setJobDescription(job.description || '');
                 }
+                // Switching jobs should not carry over the previous job's screening results.
+                setResults([]);
+                setBatchId(null);
+                setFiles([]);
+                setProgress(0);
+                setError('');
+                setSavedMsg('');
+                setPipelineMsg('');
+                setAddedToPipeline(new Set());
               }}
             >
               <option value="">{loadingJobs ? 'Loading jobs…' : 'Select Existing Job'}</option>
