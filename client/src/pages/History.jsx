@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -614,7 +614,10 @@ function ScreeningsTab() {
 
 // ───────────────────────────────────────────────────────────────────────────────
 export default function History() {
-  const [tab, setTab] = useState('candidates');
+  const [searchParams] = useSearchParams();
+  const validTabs = ['candidates', 'searches', 'screenings'];
+  const initialTab = validTabs.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'candidates';
+  const [tab, setTab] = useState(initialTab);
 
   return (
     <div className="space-y-5">
