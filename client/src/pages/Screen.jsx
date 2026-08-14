@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
 
 // Persist in-progress/completed screening state across page navigation —
@@ -347,6 +347,7 @@ function ScreeningHistory({ jobFilter, onClearJobFilter }) {
 }
 
 export default function Screen() {
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab]   = useState(() => searchParams.get('tab') === 'history' ? 'history' : 'screen');
   const [jobFilter, setJobFilter] = useState(() => searchParams.get('job') || '');
@@ -363,6 +364,20 @@ export default function Screen() {
   const [addedToPipeline, setAddedToPipeline] = useState(new Set());
   const [pipelineMsg, setPipelineMsg] = useState('');
   const fileInputRef = useRef(null);
+  const consumedNavPrefill = useRef(false);
+
+  useEffect(() => {
+    if (consumedNavPrefill.current) return;
+    const navState = location.state || {};
+    const titleFromNav = (navState.jobTitle || '').trim();
+    const descriptionFromNav = (navState.jobDescription || '').trim();
+    if (!titleFromNav && !descriptionFromNav) return;
+
+    if (titleFromNav) setJobTitle(titleFromNav);
+    if (descriptionFromNav) setJobDescription(descriptionFromNav);
+    setActiveTab('screen');
+    consumedNavPrefill.current = true;
+  }, [location.state]);
 
   // Keep sessionStorage in sync so switching to another page and back
   // restores the last job description + results instead of losing them.
