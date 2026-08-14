@@ -505,13 +505,13 @@ export default function Dashboard() {
                       to="/history?tab=screenings"
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-medium hover:bg-blue-100 transition-colors"
                     >
-                      View Screening Results <span aria-hidden="true">→</span>
+                      View Screening Results
                     </Link>
                     <Link
                       to={`/pipeline?job=${encodeURIComponent(v.title)}`}
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 font-medium hover:bg-slate-200 transition-colors"
                     >
-                      View Pipeline <span aria-hidden="true">→</span>
+                      View Pipeline
                     </Link>
                   </div>
                 </div>
