@@ -2,13 +2,23 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 const db = require('../db');
 const { authMiddleware } = require('../middleware/auth');
 const { encrypt, decrypt } = require('../utils/encryption');
 const { PLAN_LIMITS, getUsage } = require('../middleware/planLimits');
 
-// ── POST /api/auth/register ────────────────────────────────────────────────
-router.post('/register', async (req, res) => {
+// Brute-force protection: cap login/register attempts per IP.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many attempts. Please try again later.' },
+});
+
+// ── POST /api/auth/register ──────────────────────────────────────────
+router.post('/register', authLimiter, async (req, res) => {
   const { name, email, password, company, market, role } = req.body;
 
   if (!name || !email || !password)
@@ -51,7 +61,7 @@ router.post('/register', async (req, res) => {
 });
 
 // ── POST /api/auth/login ───────────────────────────────────────────────────
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password)

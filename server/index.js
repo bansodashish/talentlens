@@ -1,11 +1,36 @@
 require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const express = require('express');
+const helmet = require('helmet');
 const cors = require('cors');
 const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
 const isProd = process.env.NODE_ENV === 'production';
+
+// Hide the Express/Node signature (also done by helmet, kept explicit for clarity).
+app.disable('x-powered-by');
+
+// Security headers: CSP tuned for a same-origin React SPA + JSON API (no external
+// script/style/font CDNs are used), plus HSTS, X-Frame-Options, nosniff, etc.
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],  
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:'],
+      fontSrc: ["'self'", 'data:'],
+      connectSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+    },
+  },
+  crossOriginResourcePolicy: { policy: 'same-origin' },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+}));
 
 // In production the React build is served by Express itself — no CORS needed.
 // In development allow the CRA dev server on :3000.

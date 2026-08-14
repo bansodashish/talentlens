@@ -5,13 +5,10 @@ import { useTheme, THEMES } from '../context/ThemeContext';
 
 const mainNav = [
   { path: '/dashboard',  label: 'Dashboard' },
-  { path: '/candidates', label: 'Candidates' },
   { path: '/jobs',       label: 'Jobs' },
+  { path: '/cv-match',   label: 'Screening' },
   { path: '/pipeline',   label: 'Pipeline' },
-];
-
-const aiNav = [
-  { path: '/cv-match',         label: 'Screening' },
+  { path: '/candidates', label: 'Candidates' },
 ];
 
 function NavLink({ path, label, onClick, navText, navActiveBg, disabled }) {
@@ -87,14 +84,6 @@ export default function Layout({ children }) {
           {/* Primary nav */}
           <nav className="hidden md:flex items-center gap-0.5">
             {mainNav.map(n => <NavLink key={n.path} {...n} disabled={navDisabled(n.path)} navText={navText} navActiveBg={navActive} />)}
-          </nav>
-
-          <div className="hidden md:block h-5 w-px mx-1" style={{ background: navBorder }} />
-
-          {/* AI nav */}
-          <nav className="hidden md:flex items-center gap-0.5">
-            <span className="text-xs font-semibold uppercase tracking-wider px-1 select-none" style={{ color: navText, opacity: 0.5 }}>AI</span>
-            {aiNav.map(n => <NavLink key={n.path} {...n} disabled={navDisabled(n.path)} navText={navText} navActiveBg={navActive} />)}
           </nav>
 
           <div className="flex-1" />
@@ -255,8 +244,6 @@ export default function Layout({ children }) {
           <div className="md:hidden px-4 py-3 space-y-1" style={{ borderTop: `1px solid ${navBorder}`, background: navBg }}>
             <p className="text-xs font-semibold uppercase tracking-wider px-2 mb-2" style={{ color: navText, opacity: 0.5 }}>Navigation</p>
             {mainNav.map(n => <NavLink key={n.path} {...n} disabled={navDisabled(n.path)} onClick={() => setMobileOpen(false)} navText={navText} navActiveBg={navActive} />)}
-            <p className="text-xs font-semibold uppercase tracking-wider px-2 mt-3 mb-2" style={{ color: navText, opacity: 0.5 }}>AI Tools</p>
-            {aiNav.map(n => <NavLink key={n.path} {...n} disabled={navDisabled(n.path)} onClick={() => setMobileOpen(false)} navText={navText} navActiveBg={navActive} />)}
             <div style={{ borderTop: `1px solid ${navBorder}`, paddingTop: '8px', marginTop: '8px' }}>
               <NavLink path="/profile" label="Profile & Settings" onClick={() => setMobileOpen(false)} navText={navText} navActiveBg={navActive} />
               {user?.role === 'admin' && <NavLink path="/admin" label="Admin Panel" onClick={() => setMobileOpen(false)} navText={navText} navActiveBg={navActive} />}

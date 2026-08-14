@@ -20,20 +20,67 @@ export default function JobForm() {
     }
   }, [id, isEdit, navigate]);
 
+  const buildPayload = () => {
+    const payload = { ...form };
+    payload.title = (payload.title || '').trim();
+    payload.description = payload.description || '';
+    payload.market = payload.market || 'Global';
+    payload.location = payload.location || 'Remote';
+    payload.employment_type = payload.employment_type || 'Full-time';
+    payload.salary_currency = payload.salary_currency || 'GBP';
+    if (payload.salary_min === '') payload.salary_min = null;
+    else if (payload.salary_min != null) payload.salary_min = Number(payload.salary_min);
+    if (payload.salary_max === '') payload.salary_max = null;
+    else if (payload.salary_max != null) payload.salary_max = Number(payload.salary_max);
+    return payload;
+  };
+
+  const saveJob = async () => {
+    const payload = buildPayload();
+    if (isEdit) {
+      const res = await api.put(`/jobs/${id}`, payload);
+      return res.data.job;
+    }
+    const res = await api.post('/jobs', payload);
+    return res.data.job;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const payload = { ...form };
-      if (payload.salary_min) payload.salary_min = Number(payload.salary_min);
-      if (payload.salary_max) payload.salary_max = Number(payload.salary_max);
-      if (isEdit) await api.put(`/jobs/${id}`, payload);
-      else await api.post('/jobs', payload);
+      await saveJob();
       navigate('/jobs');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to save job.');
     } finally { setLoading(false); }
+  };
+
+  const handleStartScreening = async () => {
+    const title = (form.title || '').trim();
+    const description = (form.description || '').trim();
+    if (!title || !description) {
+      setError('Please enter Job Title and Job Description before starting screening.');
+      return;
+    }
+
+    setError('');
+    setLoading(true);
+    try {
+      const savedJob = await saveJob();
+      navigate('/cv-match', {
+        state: {
+          jobId: savedJob?.id,
+          jobTitle: title,
+          jobDescription: description,
+        },
+      });
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to start screening.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const f = (field) => ({ value: form[field] || '', onChange: e => setForm(p => ({ ...p, [field]: e.target.value })) });
@@ -42,7 +89,7 @@ export default function JobForm() {
     <div className="max-w-2xl mx-auto space-y-5">
       <div>
         <button onClick={() => navigate('/jobs')} className="text-sm text-slate-500 hover:text-slate-700 mb-2">← Back to Jobs</button>
-        <h1 className="text-2xl font-bold text-slate-800">{isEdit ? 'Edit Job' : 'Post New Job'}</h1>
+        <h1 className="text-2xl font-bold text-slate-800">{isEdit ? 'Edit Job' : 'Create New Job'}</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="card p-6 space-y-5">
@@ -52,30 +99,6 @@ export default function JobForm() {
           <div className="col-span-2">
             <label className="block text-sm font-medium text-slate-700 mb-1">Job Title *</label>
             <input type="text" required className="input" placeholder="e.g. Product Manager" {...f('title')} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Market *</label>
-            <select className="input" {...f('market')}>
-              <option value="Global">🌍 Global</option>
-              <option value="Americas">🌎 Americas</option>
-              <option value="Europe">🌍 Europe</option>
-              <option value="Asia Pacific">🌏 Asia Pacific</option>
-              <option value="MENA">🕌 MENA</option>
-              <option value="Africa">🌍 Africa</option>
-              <option value="Both">🌍 Both</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Location *</label>
-            <input type="text" required className="input" placeholder="London, UK" {...f('location')} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Employment Type</label>
-            <select className="input" {...f('employment_type')}>
-              <option>Full-time</option>
-              <option>Contract</option>
-              <option>Part-time</option>
-            </select>
           </div>
           {isEdit && (
             <div>
@@ -87,36 +110,21 @@ export default function JobForm() {
               </select>
             </div>
           )}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Currency</label>
-            <select className="input" {...f('salary_currency')}>
-              <option value="GBP">GBP £</option>
-              <option value="AED">AED د.إ</option>
-              <option value="USD">USD $</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Salary Min</label>
-            <input type="number" className="input" placeholder="50000" {...f('salary_min')} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Salary Max</label>
-            <input type="number" className="input" placeholder="75000" {...f('salary_max')} />
-          </div>
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Job Description</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Job Description *</label>
             <textarea rows={5} className="input resize-none" placeholder="Describe the role, responsibilities, and what you're looking for…" {...f('description')} />
-          </div>
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Requirements</label>
-            <textarea rows={4} className="input resize-none" placeholder="List required skills, qualifications, experience…" {...f('requirements')} />
           </div>
         </div>
 
         <div className="flex gap-3 pt-2">
           <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? 'Saving…' : isEdit ? 'Save Changes' : 'Post Job'}
+            {loading ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Job'}
           </button>
+          {!isEdit && (
+            <button type="button" className="btn-secondary" onClick={handleStartScreening} disabled={loading}>
+              {loading ? 'Saving…' : 'Start Screening'}
+            </button>
+          )}
           <button type="button" className="btn-secondary" onClick={() => navigate('/jobs')}>Cancel</button>
         </div>
       </form>

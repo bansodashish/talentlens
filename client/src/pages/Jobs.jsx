@@ -53,7 +53,7 @@ export default function Jobs() {
           <h1 className="text-2xl font-bold text-slate-800">Jobs</h1>
           <p className="text-slate-500 text-sm">{jobs.length} role{jobs.length !== 1 ? 's' : ''}</p>
         </div>
-        <Link to="/jobs/new" className="btn-primary">+ Post Job</Link>
+        <Link to="/jobs/new" className="btn-primary">+ Create Job</Link>
       </div>
 
       <div className="card p-4 flex flex-wrap gap-3">
@@ -83,7 +83,7 @@ export default function Jobs() {
         <div className="card text-center py-16 text-slate-400">
           <div className="text-4xl mb-3">💼</div>
           <p className="font-medium text-slate-600 mb-4">No jobs posted yet</p>
-          <Link to="/jobs/new" className="btn-primary text-sm">Post First Job</Link>
+          <Link to="/jobs/new" className="btn-primary text-sm">Create First Job</Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
