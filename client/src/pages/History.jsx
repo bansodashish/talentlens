@@ -22,6 +22,22 @@ const SOURCE_LABEL = {
   manual:          'Manual',
 };
 
+const PIPELINE_STAGE_LABELS = {
+  shortlisted:  '⭐ Shortlisted',
+  contacted:    '📬 Contacted',
+  phone_screen: '📞 Phone Screen',
+  interview:    '🗓 Interview',
+  offer:        '🎉 Offer',
+};
+
+const PIPELINE_STAGE_STYLE = {
+  shortlisted:  'bg-blue-100 text-blue-700',
+  contacted:    'bg-cyan-100 text-cyan-700',
+  phone_screen: 'bg-yellow-100 text-yellow-700',
+  interview:    'bg-purple-100 text-purple-700',
+  offer:        'bg-green-100 text-green-700',
+};
+
 // Normalise DB row → CRM candidate model
 function toCandidate(row) {
   const rawStatus = (row.status || 'new').toLowerCase();
@@ -40,6 +56,9 @@ function toCandidate(row) {
     source:        row.source || 'manual',
     overallScore:  row.ai_score || 0,
     status,
+    jobTitle:      row.job_title || '',
+    pipelineStage: row.pipeline_stage || '',
+    cvFilename:    row.cv_filename || '',
     hrNotes:       row.notes || '',
     skills:        row.skills || row.skills_json || '',
     createdAt:     row.created_at,
@@ -221,11 +240,74 @@ function Tabs({ active, setActive }) {
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
+function CandidateCard({ candidate: c }) {
+  const token = localStorage.getItem('token');
+  return (
+    <div className="card p-4 space-y-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="font-semibold text-slate-800 truncate">{c.name}</div>
+          <div className="text-xs text-slate-400">{c.market}</div>
+        </div>
+        {c.pipelineStage ? (
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${PIPELINE_STAGE_STYLE[c.pipelineStage] || 'bg-slate-100 text-slate-700'}`}>
+            {PIPELINE_STAGE_LABELS[c.pipelineStage] || c.pipelineStage}
+          </span>
+        ) : (
+          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-500 whitespace-nowrap">Not in Pipeline</span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 text-xs border-t border-b border-slate-100 py-2">
+        <div>
+          <div className="text-slate-400 uppercase tracking-wide text-[10px] mb-0.5">Job</div>
+          <div className="text-slate-700 truncate">{c.jobTitle || '—'}</div>
+        </div>
+        <div>
+          <div className="text-slate-400 uppercase tracking-wide text-[10px] mb-0.5">Match Score</div>
+          <div className="text-slate-700">{c.overallScore > 0 ? `${c.overallScore}%` : '—'}</div>
+        </div>
+        <div>
+          <div className="text-slate-400 uppercase tracking-wide text-[10px] mb-0.5">Screened On</div>
+          <div className="text-slate-700">
+            {c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+          </div>
+        </div>
+      </div>
+
+      <div className="text-xs space-y-1">
+        <div><span className="text-slate-400">Email:</span> {c.email ? <a href={`mailto:${c.email}`} className="text-blue-600 hover:underline ml-1">{c.email}</a> : <span className="ml-1 text-slate-300">—</span>}</div>
+        <div><span className="text-slate-400">Phone:</span> <span className="ml-1 text-slate-700">{c.phone || '—'}</span></div>
+      </div>
+
+      <div className="flex items-center gap-2 pt-1">
+        {c.cvFilename ? (
+          <a
+            href={`/api/candidates/${c.id}/download-cv?token=${token}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-secondary text-xs flex-1 text-center"
+          >
+            View CV
+          </a>
+        ) : (
+          <span className="btn-secondary text-xs flex-1 text-center opacity-50 cursor-not-allowed">View CV</span>
+        )}
+        <Link to={`/candidates/${c.id}`} className="btn-secondary text-xs flex-1 text-center">
+          View Screening Result
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────────────
 function CandidatesTab() {
   const [rows, setRows]            = useState([]);
   const [loading, setLoading]      = useState(true);
   const [active, setActive]        = useState(null);
   const [selectedIds, setSelected] = useState(new Set());
+  const [viewMode, setViewMode]    = useState('table');
 
   const [market, setMarket]   = useState('');
   const [status, setStatus]   = useState('');
@@ -355,11 +437,25 @@ function CandidatesTab() {
         </div>
       )}
 
-      {/* Table */}
+      {/* Table / Card toggle bar */}
       <div className="card overflow-hidden">
         <div className="flex items-center justify-between p-3 bg-slate-50 border-b border-slate-200">
           <span className="text-xs text-slate-500">{filtered.length} candidate{filtered.length === 1 ? '' : 's'}</span>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+              <button
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${viewMode === 'table' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                onClick={() => setViewMode('table')}
+              >
+                Table
+              </button>
+              <button
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${viewMode === 'card' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                onClick={() => setViewMode('card')}
+              >
+                Card
+              </button>
+            </div>
             <button className="btn-secondary text-xs" onClick={() => exportRows('all', 'csv')} disabled={!filtered.length}>⬇ Export CSV</button>
             <button className="btn-secondary text-xs" onClick={() => exportRows('all', 'xls')} disabled={!filtered.length}>⬇ Export Excel</button>
           </div>
@@ -371,6 +467,10 @@ function CandidatesTab() {
           <div className="p-10 text-center text-slate-400">
             <p className="text-4xl mb-2">👥</p>
             <p>No candidates match these filters.</p>
+          </div>
+        ) : viewMode === 'card' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 p-4">
+            {filtered.map(c => <CandidateCard key={c.id} candidate={c} />)}
           </div>
         ) : (
           <div className="overflow-x-auto">
