@@ -76,15 +76,34 @@ export const THEMES = [
 const ThemeContext = createContext(null);
 
 export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState(() => localStorage.getItem('tl_theme') || 'clean-slate');
+  const [colorTheme, setColorTheme] = useState(() => localStorage.getItem('tl_theme') || 'clean-slate');
+  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('tl_dark_mode') === 'true');
 
+  // Apply color theme
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('tl_theme', theme);
-  }, [theme]);
+    document.documentElement.setAttribute('data-theme', colorTheme);
+    localStorage.setItem('tl_theme', colorTheme);
+  }, [colorTheme]);
+
+  // Apply dark/light mode class to html element
+  useEffect(() => {
+    const html = document.documentElement;
+    if (isDarkMode) {
+      html.classList.add('dark');
+      html.classList.remove('light');
+    } else {
+      html.classList.add('light');
+      html.classList.remove('dark');
+    }
+    localStorage.setItem('tl_dark_mode', isDarkMode);
+  }, [isDarkMode]);
+
+  const toggleDarkMode = () => {
+    setIsDarkMode(prev => !prev);
+  };
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, themes: THEMES }}>
+    <ThemeContext.Provider value={{ colorTheme, setColorTheme, themes: THEMES, isDarkMode, toggleDarkMode }}>
       {children}
     </ThemeContext.Provider>
   );

@@ -37,7 +37,7 @@ function NavLink({ path, label, onClick, navText, navActiveBg, disabled }) {
 
 export default function Layout({ children }) {
   const { user, logout } = useAuth();
-  const { theme, setTheme } = useTheme();
+  const { colorTheme, setColorTheme, isDarkMode, toggleDarkMode } = useTheme();
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
@@ -93,43 +93,44 @@ export default function Layout({ children }) {
 
           <div className="flex-1" />
 
-          {/* Market badge */}
-          <span className="hidden sm:inline-flex text-xs px-2 py-1 rounded-full font-medium"
-            style={{ background: `${navBorder}`, color: navText }}>
-            {marketBadge} {user?.market}
-          </span>
+          {/* Dark/Light Mode Toggle */}
+          <button onClick={toggleDarkMode}
+            className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-sm font-medium transition-colors hover:bg-black/10 dark:hover:bg-white/10"
+            style={{ color: 'var(--tl-nav-text)' }} title="Toggle dark/light mode">
+            {isDarkMode ? '☀️' : '🌙'}
+          </button>
 
           {/* 🎨 Theme picker */}
           <div className="relative" ref={themeRef}>
             <button onClick={() => setThemeOpen(o => !o)}
-              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-black/5"
-              style={{ color: navText }} title="Change theme">
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-black/10 dark:hover:bg-white/10"
+              style={{ color: 'var(--tl-nav-text)' }} title="Change theme">
               <span>🎨</span>
               <span className="hidden sm:block">Themes</span>
             </button>
 
             {themeOpen && (
               <div className="absolute right-0 top-full mt-1.5 w-72 rounded-2xl shadow-xl py-3 z-50 overflow-hidden"
-                style={{ background: 'var(--tl-card-bg, #fff)', border: `1px solid ${navBorder}` }}>
+                style={{ background: 'var(--tl-card-bg, #fff)', border: `1px solid var(--tl-soft-border)` }}>
 
                 {/* Header */}
                 <div className="px-4 pb-2 flex items-center justify-between">
-                  <p className="text-xs font-bold uppercase tracking-widest" style={{ color: navText, opacity: 0.4 }}>Choose Theme</p>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: `${navActive}22`, color: navActive }}>
+                  <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--tl-nav-text)', opacity: 0.4 }}>Choose Theme</p>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: `var(--tl-primary)22`, color: 'var(--tl-primary)' }}>
                     {THEMES.length} themes
                   </span>
                 </div>
 
                 {/* Light group */}
                 <div className="px-3 pb-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider px-1 py-1.5" style={{ color: navText, opacity: 0.35 }}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider px-1 py-1.5" style={{ color: 'var(--tl-nav-text)', opacity: 0.35 }}>
                     ☀️ Light
                   </p>
                   {THEMES.filter(t => !t.dark).map(t => (
-                    <button key={t.id} onClick={() => { setTheme(t.id); setThemeOpen(false); }}
+                    <button key={t.id} onClick={() => { setColorTheme(t.id); setThemeOpen(false); }}
                       className="w-full flex items-center gap-3 px-2 py-2 rounded-xl text-left transition-all hover:scale-[1.01]"
-                      style={{ background: theme === t.id ? `${navActive}18` : 'transparent',
-                               outline: theme === t.id ? `1.5px solid ${navActive}50` : 'none' }}>
+                      style={{ background: colorTheme === t.id ? `var(--tl-primary)18` : 'transparent',
+                               outline: colorTheme === t.id ? `1.5px solid var(--tl-primary)50` : 'none' }}>
                       {/* Swatch strip */}
                       <div className="flex gap-0.5 flex-shrink-0 rounded-lg overflow-hidden" style={{ width: 40, height: 22 }}>
                         {t.swatches.map((s, i) => (
@@ -137,41 +138,41 @@ export default function Layout({ children }) {
                         ))}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs font-semibold truncate" style={{ color: navText }}>{t.name}</div>
-                        <div className="text-[10px] truncate" style={{ color: navText, opacity: 0.5 }}>{t.description}</div>
+                        <div className="text-xs font-semibold truncate" style={{ color: 'var(--tl-nav-text)' }}>{t.name}</div>
+                        <div className="text-[10px] truncate" style={{ color: 'var(--tl-nav-text)', opacity: 0.5 }}>{t.description}</div>
                       </div>
-                      {theme === t.id && (
+                      {colorTheme === t.id && (
                         <span className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[9px] flex-shrink-0"
-                          style={{ background: navActive }}>✓</span>
+                          style={{ background: 'var(--tl-primary)' }}>✓</span>
                       )}
                     </button>
                   ))}
                 </div>
 
-                <div className="mx-3 my-1.5" style={{ height: '1px', background: navBorder }} />
+                <div className="mx-3 my-1.5" style={{ height: '1px', background: 'var(--tl-soft-border)' }} />
 
                 {/* Dark group */}
                 <div className="px-3 pt-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider px-1 py-1.5" style={{ color: navText, opacity: 0.35 }}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider px-1 py-1.5" style={{ color: 'var(--tl-nav-text)', opacity: 0.35 }}>
                     🌙 Dark
                   </p>
                   {THEMES.filter(t => t.dark).map(t => (
-                    <button key={t.id} onClick={() => { setTheme(t.id); setThemeOpen(false); }}
+                    <button key={t.id} onClick={() => { setColorTheme(t.id); setThemeOpen(false); }}
                       className="w-full flex items-center gap-3 px-2 py-2 rounded-xl text-left transition-all hover:scale-[1.01]"
-                      style={{ background: theme === t.id ? `${navActive}18` : 'transparent',
-                               outline: theme === t.id ? `1.5px solid ${navActive}50` : 'none' }}>
-                      <div className="flex gap-0.5 flex-shrink-0 rounded-lg overflow-hidden border" style={{ width: 40, height: 22, borderColor: `${navBorder}` }}>
+                      style={{ background: colorTheme === t.id ? `var(--tl-primary)18` : 'transparent',
+                               outline: colorTheme === t.id ? `1.5px solid var(--tl-primary)50` : 'none' }}>
+                      <div className="flex gap-0.5 flex-shrink-0 rounded-lg overflow-hidden border" style={{ width: 40, height: 22, borderColor: `var(--tl-soft-border)` }}>
                         {t.swatches.map((s, i) => (
                           <div key={i} className="flex-1" style={{ background: s }} />
                         ))}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs font-semibold truncate" style={{ color: navText }}>{t.name}</div>
-                        <div className="text-[10px] truncate" style={{ color: navText, opacity: 0.5 }}>{t.description}</div>
+                        <div className="text-xs font-semibold truncate" style={{ color: 'var(--tl-nav-text)' }}>{t.name}</div>
+                        <div className="text-[10px] truncate" style={{ color: 'var(--tl-nav-text)', opacity: 0.5 }}>{t.description}</div>
                       </div>
-                      {theme === t.id && (
+                      {colorTheme === t.id && (
                         <span className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[9px] flex-shrink-0"
-                          style={{ background: navActive }}>✓</span>
+                          style={{ background: 'var(--tl-primary)' }}>✓</span>
                       )}
                     </button>
                   ))}
