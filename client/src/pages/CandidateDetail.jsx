@@ -68,7 +68,7 @@ export default function CandidateDetail() {
     </div>
   );
 
-  const { candidate, applications, cvMatches } = data || {};
+  const { candidate, applications, cvMatches, latestScreening } = data || {};
 
   return (
     <div className="max-w-5xl mx-auto space-y-5">
@@ -219,6 +219,47 @@ export default function CandidateDetail() {
               </p>
             )}
           </div>
+
+          {/* Screening Report */}
+          {latestScreening && (() => {
+            const rec = latestScreening.recommendation || '';
+            const recStyle = rec.toLowerCase().includes('strong hire') ? 'bg-green-100 text-green-700'
+              : rec.toLowerCase().includes('hire') ? 'bg-blue-100 text-blue-700'
+              : rec.toLowerCase().includes('consider') ? 'bg-yellow-100 text-yellow-700'
+              : 'bg-red-100 text-red-700';
+            return (
+              <div className="card p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-slate-800">📋 Screening Report</h3>
+                  {rec && <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${recStyle}`}>{rec}</span>}
+                </div>
+                <p className="text-xs text-slate-400 mb-2">
+                  {latestScreening.jobTitle && <><strong className="text-slate-600">{latestScreening.jobTitle}</strong> · </>}
+                  {new Date(latestScreening.screenedOn).toLocaleDateString()}
+                </p>
+                <ScoreBar score={latestScreening.overallScore} />
+                {latestScreening.summary && (
+                  <p className="text-xs text-slate-600 mt-2 leading-relaxed">{latestScreening.summary}</p>
+                )}
+                {latestScreening.strengths?.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-xs font-semibold text-green-700 mb-1">✅ Strengths</p>
+                    <ul className="space-y-0.5">
+                      {latestScreening.strengths.map((s, i) => <li key={i} className="text-xs text-slate-600">• {s}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {latestScreening.gaps?.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-xs font-semibold text-red-600 mb-1">⚠️ Gaps</p>
+                    <ul className="space-y-0.5">
+                      {latestScreening.gaps.map((g, i) => <li key={i} className="text-xs text-slate-600">• {g}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Match against job */}
           {candidate?.cv_text && (

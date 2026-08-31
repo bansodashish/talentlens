@@ -502,7 +502,7 @@ export default function Dashboard() {
                   </div>
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
                     <Link
-                      to="/history?tab=screenings"
+                      to={`/history?tab=screenings&job=${encodeURIComponent(v.title)}`}
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-medium hover:bg-blue-100 transition-colors"
                     >
                       View Screening Results
