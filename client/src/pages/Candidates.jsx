@@ -95,115 +95,97 @@ export default function Candidates() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-100">Candidates</h1>
-          <p className="text-slate-400 text-sm mt-1">{candidates.length} candidate{candidates.length !== 1 ? 's' : ''} found</p>
+          <h1 className="text-2xl font-bold text-slate-800">Candidates</h1>
+          <p className="text-slate-500 text-sm">{candidates.length} candidate{candidates.length !== 1 ? 's' : ''} found</p>
         </div>
-        <Link to="/candidates/new" className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-lg">+ Add Candidate</Link>
+        <Link to="/candidates/new" className="btn-primary">+ Add Candidate</Link>
       </div>
 
       {/* Filters */}
-      <div className="card border border-slate-800 bg-slate-900/50 backdrop-blur-sm p-4 flex flex-wrap gap-3 rounded-lg">
+      <div className="card p-4 flex flex-wrap gap-3">
         <input
-          type="text" placeholder="Search name, title, skills…" className="input bg-slate-800/50 border-slate-700 text-slate-200 placeholder-slate-500 max-w-xs rounded-lg"
+          type="text" placeholder="Search name, title, skills…" className="input max-w-xs"
           value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })}
         />
-        <select className="input bg-slate-800/50 border-slate-700 text-slate-200 w-40 rounded-lg" value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}>
+        <select className="input w-40" value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}>
           <option value="">All Statuses</option>
           {['new', 'screening', 'interview', 'offer', 'hired', 'rejected'].map(s => (
             <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
           ))}
         </select>
         {(filters.status || filters.search) && (
-          <button className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg text-sm transition-all" onClick={() => setFilters({ role: '', status: '', search: '' })}>Clear filters</button>
+          <button className="btn-secondary text-sm" onClick={() => setFilters({ role: '', status: '', search: '' })}>Clear filters</button>
         )}
       </div>
 
-      {pipelineError && <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/50 px-4 py-2 rounded-lg">❌ {pipelineError}</p>}
-      {pipelineSuccess && <p className="text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/50 px-4 py-2 rounded-lg">✓ {pipelineSuccess}</p>}
+      {pipelineError && <p className="text-sm text-red-600">{pipelineError}</p>}
+      {pipelineSuccess && <p className="text-sm text-green-600">✓ {pipelineSuccess}</p>}
 
       {/* Table */}
-      <div className="card border border-slate-800 bg-slate-900/50 backdrop-blur-sm overflow-hidden rounded-lg">
+      <div className="card overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-48">
-            <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
           </div>
         ) : candidates.length === 0 ? (
           <div className="text-center py-16 text-slate-400">
             <div className="text-4xl mb-3">👥</div>
-            <p className="font-medium text-slate-300 mb-1">No candidates found</p>
-            <p className="text-sm text-slate-500 mb-4">Add your first candidate to get started</p>
-            <Link to="/candidates/new" className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-all duration-200 transform hover:scale-105 inline-block">Add Candidate</Link>
+            <p className="font-medium text-slate-600 mb-1">No candidates found</p>
+            <p className="text-sm mb-4">Add your first candidate to get started</p>
+            <Link to="/candidates/new" className="btn-primary text-sm">Add Candidate</Link>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-800/50 border-b border-slate-700">
+              <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="text-left px-4 py-3 font-bold text-slate-300">Candidate</th>
-                  <th className="text-left px-4 py-3 font-bold text-slate-300">Market</th>
-                  <th className="text-left px-4 py-3 font-bold text-slate-300">AI Score</th>
-                  <th className="text-left px-4 py-3 font-bold text-slate-300">Status</th>
-                  <th className="text-left px-4 py-3 font-bold text-slate-300">Pipeline Stage</th>
-                  <th className="text-left px-4 py-3 font-bold text-slate-300">Added</th>
+                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Candidate</th>
+                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Market</th>
+                  <th className="text-left px-4 py-3 font-semibold text-slate-600">AI Score</th>
+                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Status</th>
+                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Pipeline Stage</th>
+                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Added</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-slate-100">
                 {candidates.map(c => {
-                  // Generate a color gradient from candidate name
-                  const charCode = c.name.charCodeAt(0) % 7;
-                  const gradients = [
-                    'from-blue-500 to-cyan-500',
-                    'from-purple-500 to-pink-500',
-                    'from-emerald-500 to-teal-500',
-                    'from-rose-500 to-orange-500',
-                    'from-indigo-500 to-blue-500',
-                    'from-violet-500 to-purple-500',
-                    'from-fuchsia-500 to-rose-500',
-                  ];
-                  const bgGradient = gradients[charCode];
                   return (
-                  <tr key={c.id} className="hover:bg-slate-800/30 cursor-pointer transition-colors" onClick={() => navigate(`/candidates/${c.id}`)}>
+                  <tr key={c.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => navigate(`/candidates/${c.id}`)}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${bgGradient} flex items-center justify-center text-xs font-bold text-white shadow-lg`}>
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-700">
                           {c.name.charAt(0)}
                         </div>
                         <div>
-                          <div className="font-semibold text-slate-200">{c.name}</div>
-                          <div className="text-xs text-slate-500">{c.email}</div>
+                          <div className="font-medium text-slate-800">{c.name}</div>
+                          <div className="text-xs text-slate-400">{c.email}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/50 px-2 py-1 rounded-lg text-xs font-medium">
+                      <span className="badge badge-blue">
                         🌍 {c.market}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       {c.ai_score != null ? (
                         <div className="flex items-center gap-2">
-                          <div className="w-16 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full" style={{ width: `${c.ai_score}%` }}></div>
+                          <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-green-500 rounded-full" style={{ width: `${c.ai_score}%` }}></div>
                           </div>
-                          <span className="text-xs font-bold text-emerald-300">{c.ai_score}%</span>
+                          <span className="text-xs font-medium text-slate-700">{c.ai_score}%</span>
                         </div>
                       ) : '—'}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold border ${
-                        c.status === 'screening' ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50' :
-                        c.status === 'interview' ? 'bg-purple-500/20 text-purple-300 border-purple-500/50' :
-                        c.status === 'offer' || c.status === 'hired' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50' :
-                        c.status === 'rejected' ? 'bg-red-500/20 text-red-300 border-red-500/50' :
-                        'bg-slate-700/50 text-slate-300 border-slate-600'
-                      }`}>
-                        {c.status}
+                      <span className={statusColors[c.status] || 'badge-slate'} style={{ display: 'inline-block' }}>
+                        <span className={`badge ${statusColors[c.status] || 'badge-slate'}`}>{c.status}</span>
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <select
-                        className="text-xs border border-slate-700 rounded px-2 py-1 bg-slate-800/50 text-slate-300 cursor-pointer min-w-[160px] disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed hover:border-slate-600 transition-colors"
+                        className="text-xs border border-slate-200 rounded px-2 py-1 bg-white text-slate-600 cursor-pointer min-w-[150px] disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
                         value={c.pipeline_stage || ''}
                         disabled={pipelineUpdatingId === c.id}
                         onClick={e => e.stopPropagation()}
@@ -215,11 +197,11 @@ export default function Candidates() {
                         ))}
                       </select>
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-500">{new Date(c.created_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-xs text-slate-400">{new Date(c.created_at).toLocaleDateString()}</td>
                     <td className="px-4 py-3">
                       <Link
                         to={`/candidates/${c.id}`}
-                        className="text-cyan-400 hover:text-cyan-300 text-xs font-semibold transition-colors"
+                        className="text-blue-600 hover:text-blue-700 text-xs font-medium"
                         onClick={e => e.stopPropagation()}
                       >
                         View →
