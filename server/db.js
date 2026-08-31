@@ -184,6 +184,9 @@ migrate('ALTER TABLE screenings RENAME COLUMN technology_score TO experience_sco
 // candidate's OWN current/most-recent job title from their résumé.
 migrate('ALTER TABLE screenings ADD COLUMN job_title TEXT');
 
+// Company field on jobs (added 2026-08-31)
+migrate('ALTER TABLE jobs ADD COLUMN company TEXT');
+
 // Recruitment Tasks widget
 migrate(`
   CREATE TABLE IF NOT EXISTS recruitment_tasks (

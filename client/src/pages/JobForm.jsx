@@ -129,7 +129,7 @@ export default function JobForm() {
             </button>
           ) : (
             <button type="button" className="btn-primary" onClick={handleStartScreening} disabled={loading}>
-              {loading ? 'Saving…' : 'Create Job & Start Screening'}
+              {loading ? 'Saving…' : 'Create Job & Screening'}
             </button>
           )}
           <button type="button" className="btn-secondary" onClick={() => navigate('/jobs')}>Cancel</button>
