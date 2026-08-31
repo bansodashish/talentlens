@@ -2,47 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── 2026 SaaS Animations ──────────────────────────────────────────────────── */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(-30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes glow {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  }
-  50% {
-    box-shadow: 0 0 40px rgba(59, 130, 246, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -1000px 0;
-  }
-  100% {
-    background-position: 1000px 0;
-  }
-}
-
 @layer base {
   * { box-sizing: border-box; }
   html {
@@ -56,55 +15,51 @@
     font-feature-settings: 'cv11', 'ss01', 'ss03';
     letter-spacing: -0.005em;
     line-height: 1.55;
-    @apply text-slate-200;
-    background-color: #0f172a;
+    @apply text-slate-900;
+    background-color: #f6f7fb;
     background-image:
-      linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%),
-      radial-gradient(at 18% 12%, rgba(99, 102, 241, 0.1) 0px, transparent 50%),
-      radial-gradient(at 82% 12%, rgba(139, 92, 246, 0.1) 0px, transparent 50%),
-      radial-gradient(at 18% 88%, rgba(236, 72, 153, 0.08) 0px, transparent 50%),
-      radial-gradient(at 82% 88%, rgba(6, 182, 212, 0.1) 0px, transparent 50%);
+      radial-gradient(at 18% 12%, rgba(79, 70, 229, 0.10) 0px, transparent 45%),
+      radial-gradient(at 82% 12%, rgba(168, 85, 247, 0.10) 0px, transparent 45%),
+      radial-gradient(at 18% 88%, rgba(236, 72, 153, 0.08) 0px, transparent 45%),
+      radial-gradient(at 82% 88%, rgba(14, 165, 233, 0.10) 0px, transparent 45%),
+      radial-gradient(at 50% 50%, rgba(255, 255, 255, 0.6) 0px, transparent 60%);
     background-attachment: fixed;
     background-size: 100% 100%;
-    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  h1, h2, h3, h4 { 
-    letter-spacing: -0.02em;
-    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-  }
+  h1, h2, h3, h4 { letter-spacing: -0.02em; }
 
   /* Lift micro-labels (10–11px arbitrary sizes used across the app) to a
      readable minimum so they remain legible in every theme. */
   .text-\[10px\] { font-size: 0.75rem !important;  line-height: 1.1rem !important; }
   .text-\[11px\] { font-size: 0.8125rem !important; line-height: 1.15rem !important; }
 
-  /* Enhanced, branded scrollbar for 2026 aesthetic */
+  /* Subtle, branded scrollbar */
   ::-webkit-scrollbar          { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track    { background: transparent; }
-  ::-webkit-scrollbar-thumb    { background: linear-gradient(180deg, #3b82f6, #06b6d4); border-radius: 999px; border: 2px solid transparent; background-clip: content-box; }
-  ::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #2563eb, #0891b2); background-clip: content-box; border: 2px solid transparent; }
+  ::-webkit-scrollbar-thumb    { background: #cbd5e1; border-radius: 999px; border: 2px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; background-clip: content-box; border: 2px solid transparent; }
 }
 
-/* ── Theme Variables (Dark Mode) ────────────────────────────────────────────── */
+/* ── Theme Variables ────────────────────────────────────────────────────────── */
 :root {
-  --tl-primary:       #3b82f6;
-  --tl-primary-dark:  #1e40af;
-  --tl-accent:        #06b6d4;
-  --tl-muted:         #94a3b8;
-  --tl-soft-bg:       #1e293b;
-  --tl-soft-border:   #334155;
-  --tl-hover-bg:      #0f172a;
+  --tl-primary:       #2563eb;
+  --tl-primary-dark:  #1d4ed8;
+  --tl-accent:        #14b8a6;
+  --tl-muted:         #64748b;
+  --tl-soft-bg:       #f1f5f9;
+  --tl-soft-border:   #e2e8f0;
+  --tl-hover-bg:      #f8fafc;
   --tl-primary-text:  #ffffff;
-  --tl-nav-bg:        #0f172a;
-  --tl-nav-border:    #1e293b;
-  --tl-nav-text:      #cbd5e1;
-  --tl-nav-active-bg: #3b82f6;
-  --tl-page-bg:       #0f172a;
-  --tl-logo-bg:       #3b82f6;
+  --tl-nav-bg:        #ffffff;
+  --tl-nav-border:    #e2e8f0;
+  --tl-nav-text:      #475569;
+  --tl-nav-active-bg: #2563eb;
+  --tl-page-bg:       #f8fafc;
+  --tl-logo-bg:       #2563eb;
   --tl-logo-text:     #ffffff;
-  --tl-card-bg:       #1e293b;
-  --tl-body-text:     #e2e8f0;
-  --tl-shadow-color:   rgba(0, 0, 0, 0.3);
+  --tl-card-bg:       #ffffff;
+  --tl-body-text:     #0f172a;
+  --tl-shadow-color:   rgba(15, 23, 42, 0.08);
 }
 
 body {
@@ -117,103 +72,55 @@ body {
   color: var(--tl-primary-text) !important;
   box-shadow: 0 8px 30px -10px var(--tl-primary) !important;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  font-weight: 600;
-  letter-spacing: 0.3px;
 }
-
-.btn-primary::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-  transition: left 0.5s ease;
-}
-
-.btn-primary:hover::before {
-  left: 100%;
-}
-
 .btn-primary:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 16px 50px -12px var(--tl-primary), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
-  filter: brightness(1.1) !important;
+  transform: translateY(-1.5px);
+  box-shadow: 0 14px 40px -12px var(--tl-primary) !important;
+  filter: brightness(1.05) !important;
 }
-
 .btn-primary:active {
-  transform: translateY(0px) scale(0.98);
-  box-shadow: 0 4px 15px -8px var(--tl-primary) !important;
+  transform: translateY(0.5px);
 }
 
 .btn-secondary {
-  background: rgba(30, 41, 59, 0.5) !important;
-  border-color: rgba(51, 65, 85, 0.6) !important;
+  background: var(--tl-card-bg) !important;
+  border-color: var(--tl-soft-border) !important;
   color: var(--tl-body-text) !important;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  backdrop-filter: blur(8px) !important;
-  font-weight: 500;
-  border: 1px solid var(--tl-soft-border) !important;
 }
-
 .btn-secondary:hover {
-  background: rgba(30, 41, 59, 0.8) !important;
-  transform: translateY(-1.5px);
-  border-color: color-mix(in srgb, var(--tl-primary) 40%, var(--tl-soft-border)) !important;
-  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.15) !important;
+  background: var(--tl-hover-bg) !important;
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--tl-primary) 30%, var(--tl-soft-border)) !important;
 }
-
 .btn-secondary:active {
   transform: translateY(0.5px);
 }
 
 .input {
-  background: rgba(30, 41, 59, 0.4) !important;
-  border-color: rgba(51, 65, 85, 0.5) !important;
+  background: var(--tl-card-bg) !important;
+  border-color: var(--tl-soft-border) !important;
   color: var(--tl-body-text) !important;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  backdrop-filter: blur(8px) !important;
-  border: 1px solid var(--tl-soft-border) !important;
-  font-weight: 500;
+  transition: all 0.2s ease !important;
 }
-
-.input::placeholder {
-  color: rgba(148, 163, 184, 0.6) !important;
-  font-weight: 400;
-}
-
 .input:focus {
   border-color: var(--tl-primary) !important;
-  background: rgba(30, 41, 59, 0.6) !important;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15), inset 0 0 0 1px rgba(59, 130, 246, 0.3) !important;
-  transform: translateY(-1px);
-}
-
-.input:focus::placeholder {
-  color: rgba(148, 163, 184, 0.4) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tl-primary) 18%, transparent) !important;
 }
 
 .card {
-  background: rgba(30, 41, 59, 0.35) !important;
-  border-color: rgba(51, 65, 85, 0.5) !important;
-  backdrop-filter: blur(16px) saturate(150%) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(150%) !important;
+  background: color-mix(in srgb, var(--tl-card-bg) 88%, transparent) !important;
+  border-color: var(--tl-soft-border) !important;
+  backdrop-filter: blur(12px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(120%) !important;
   color: var(--tl-body-text);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+  box-shadow: 0 10px 40px -25px var(--tl-shadow-color) !important;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  border: 1px solid var(--tl-soft-border) !important;
-  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
-
 .card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
-  border-color: rgba(59, 130, 246, 0.4) !important;
-  background: rgba(30, 41, 59, 0.45) !important;
+  transform: translateY(-2px) scale-[1.005];
+  box-shadow: 0 20px 45px -22px var(--tl-shadow-color) !important;
+  border-color: color-mix(in srgb, var(--tl-primary) 18%, var(--tl-soft-border)) !important;
 }
 
 .text-gradient {
