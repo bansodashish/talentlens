@@ -114,7 +114,7 @@ export default function Pipeline() {
             value={jobFilter}
             onChange={e => setSearchParams(e.target.value ? { job: e.target.value } : {})}
           >
-            <option value="">All Jobs</option>
+            <option value="">— Select a Job —</option>
             {jobOptions.map(title => (
               <option key={title} value={title}>{title}</option>
             ))}
@@ -125,6 +125,14 @@ export default function Pipeline() {
       {loading ? (
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
+        </div>
+      ) : !jobFilter ? (
+        <div className="flex items-center justify-center h-64 text-center text-slate-400">
+          <div>
+            <div className="text-4xl mb-3">🔄</div>
+            <p className="font-medium text-slate-600 mb-1">Select a job to view its pipeline</p>
+            <p className="text-sm">Use the dropdown above to choose a job</p>
+          </div>
         </div>
       ) : (
         <div className="flex gap-4 overflow-x-auto pb-4">
