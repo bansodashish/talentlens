@@ -694,7 +694,7 @@ export default function Screen() {
                 setAddedToPipeline(new Set());
               }}
             >
-              <option value="">{loadingJobs ? 'Loading jobs…' : 'Select Existing Job'}</option>
+              <option value="">{loadingJobs ? 'Loading jobs…' : '— Select a Job —'}</option>
               {jobsList.map(j => (
                 <option key={j.id} value={j.id}>{j.title}</option>
               ))}
