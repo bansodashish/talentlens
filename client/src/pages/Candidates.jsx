@@ -140,7 +140,6 @@ export default function Candidates() {
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
                   <th className="text-left px-4 py-3 font-semibold text-slate-600">Candidate</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Company</th>
                   <th className="text-left px-4 py-3 font-semibold text-slate-600">Market</th>
                   <th className="text-left px-4 py-3 font-semibold text-slate-600">AI Score</th>
                   <th className="text-left px-4 py-3 font-semibold text-slate-600">Status</th>
@@ -163,9 +162,6 @@ export default function Candidates() {
                           <div className="text-xs text-slate-400">{c.email}</div>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-sm text-slate-600">{c.current_company || '—'}</div>
                     </td>
                     <td className="px-4 py-3">
                       <span className="badge badge-blue">
