@@ -71,7 +71,12 @@ export default function Layout({ children }) {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: pageBg }}>
       {/* ── Top Navbar ─────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40" style={{ background: navBg, borderBottom: `1px solid ${navBorder}` }}>
+      <header className="sticky top-0 z-40 border-b backdrop-blur-sm" 
+        style={{ 
+          background: `linear-gradient(135deg, ${navBg} 0%, color-mix(in srgb, ${navBg} 80%, #3b82f6 20%) 100%)`,
+          borderBottom: `1px solid ${navBorder}`,
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+        }}>
         <div className="max-w-screen-xl mx-auto px-4 h-14 flex items-center gap-4">
 
           {/* Logo */}

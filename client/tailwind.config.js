@@ -39,8 +39,37 @@ module.exports = {
       backgroundImage: {
         'brand-gradient': 'linear-gradient(135deg, #4f46e5 0%, #9333ea 50%, #ec4899 100%)',
         'hero-mesh':      'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.25), transparent), radial-gradient(ellipse 60% 50% at 80% 50%, rgba(236, 72, 153, 0.12), transparent)',
+        'dark-gradient':  'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
+      },
+      keyframes: {
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        'slide-in-from-bottom': {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'scale-in': {
+          '0%': { opacity: '0', transform: 'scale(0.95)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        'pulse-glow': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.7' },
+        },
+      },
+      animation: {
+        'fade-in': 'fade-in 300ms ease-out',
+        'slide-in': 'slide-in-from-bottom 300ms ease-out',
+        'scale-in': 'scale-in 300ms ease-out',
+        'pulse-glow': 'pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/forms'),
+    require('@tailwindcss/typography'),
+    require('tailwindcss-animate'),
+  ],
 };
