@@ -107,7 +107,7 @@ export default function Jobs() {
               <div className="grid grid-cols-3 gap-2 mb-3 text-center">
                 <div>
                   <p className="text-lg font-bold text-slate-800">{job.screened_count ?? 0}</p>
-                  <p className="text-[11px] text-slate-500 uppercase tracking-wide">Applications</p>
+                  <p className="text-[11px] text-slate-500 uppercase tracking-wide">Screened</p>
                 </div>
                 <div>
                   <p className="text-lg font-bold text-slate-800">{job.strong_match_count ?? 0}</p>
@@ -121,24 +121,30 @@ export default function Jobs() {
 
               <p className="text-xs text-slate-400 mb-3">Last Updated: {timeAgo(job.updated_at)}</p>
 
-              <div className="flex items-center justify-between text-sm pt-3 border-t border-slate-100">
-                <div className="flex gap-3">
+              <div className="flex flex-wrap gap-2 text-sm pt-3 border-t border-slate-100">
                   <Link
-                    to={`/screen?tab=history&job=${encodeURIComponent(job.title)}`}
+                    to="/cv-match"
+                    state={{ jobId: job.id, jobTitle: job.title, jobDescription: job.description }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-emerald-600 hover:underline font-medium text-xs"
+                  >
+                    ⚡ Screen CVs
+                  </Link>
+                  <Link
+                    to={`/history?tab=screenings&job=${encodeURIComponent(job.title)}`}
                     onClick={(e) => e.stopPropagation()}
                     className="text-blue-600 hover:underline font-medium text-xs"
                   >
-                    View Screening Results
+                    📋 Screening Results
                   </Link>
                   <Link
                     to={`/pipeline?job=${encodeURIComponent(job.title)}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="text-blue-600 hover:underline font-medium text-xs"
+                    className="text-purple-600 hover:underline font-medium text-xs"
                   >
-                    View Pipeline
+                    🔄 View Pipeline
                   </Link>
                 </div>
-              </div>
             </div>
           ))}
         </div>

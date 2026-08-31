@@ -67,27 +67,29 @@ export default function JobDetail() {
 
           <div className="card p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-slate-800">Applications ({applications?.length || 0})</h3>
-              <Link to="/candidates" className="text-sm text-blue-600 hover:text-blue-700">Find candidates →</Link>
+              <h3 className="font-semibold text-slate-800">Screened Candidates</h3>
             </div>
-            {applications?.length > 0 ? (
-              <div className="space-y-2">
-                {applications.map(app => (
-                  <Link key={app.id} to={`/candidates/${app.candidate_id}`} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
-                    <div>
-                      <div className="font-medium text-sm text-slate-800">{app.candidate_name}</div>
-                      <div className="text-xs text-slate-400">{app.current_title} · Applied {new Date(app.applied_at).toLocaleDateString()}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {app.ai_score && <span className="text-xs font-medium text-green-700 bg-green-100 px-2 py-0.5 rounded-full">{app.ai_score}%</span>}
-                      <span className={`badge ${statusColors[app.status] || 'badge-slate'}`}>{app.stage}</span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-slate-400">No applications yet.</p>
-            )}
+            <div className="flex flex-wrap gap-3">
+              <Link
+                to={`/cv-match`}
+                state={{ jobId: job?.id, jobTitle: job?.title, jobDescription: job?.description }}
+                className="btn-primary text-sm"
+              >
+                ⚡ Screen CVs for this Job
+              </Link>
+              <Link
+                to={`/history?tab=screenings&job=${encodeURIComponent(job?.title || '')}`}
+                className="btn-secondary text-sm"
+              >
+                📋 View Screening Results
+              </Link>
+              <Link
+                to={`/pipeline?job=${encodeURIComponent(job?.title || '')}`}
+                className="btn-secondary text-sm"
+              >
+                🔄 View Pipeline
+              </Link>
+            </div>
           </div>
         </div>
 
