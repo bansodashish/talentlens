@@ -541,7 +541,7 @@ router.get('/candidates', (req, res) => {
     SELECT
       s.id, s.batch_id, s.candidate_name, s.email, s.job_title,
       s.overall_score, s.recommendation, s.created_at,
-      c.pipeline_stage
+      c.id as candidate_id, c.pipeline_stage
     FROM screenings s
     LEFT JOIN candidates c
       ON c.created_by = s.created_by AND (
@@ -561,6 +561,7 @@ router.get('/candidates', (req, res) => {
     matchScore: r.overall_score ?? 0,
     recommendation: r.recommendation || null,
     status: r.pipeline_stage ? 'In Pipeline' : 'Screened',
+    candidateId: r.candidate_id || null,
     screenedOn: r.created_at,
   }));
 
