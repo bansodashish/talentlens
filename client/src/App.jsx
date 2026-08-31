@@ -5,6 +5,9 @@ import { ThemeProvider } from './context/ThemeContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import VerifyEmail from './pages/VerifyEmail';
 import Dashboard from './pages/Dashboard';
 import Candidates from './pages/Candidates';
 import CandidateForm from './pages/CandidateForm';
@@ -79,6 +82,9 @@ export default function App() {
           <Route path="/"         element={<LandingRoute />} />
           <Route path="/login"    element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+          <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+          <Route path="/reset-password"  element={<PublicRoute><ResetPassword /></PublicRoute>} />
+          <Route path="/verify-email"    element={<VerifyEmail />} />
           <Route path="/onboarding" element={<OnboardingRoute />} />
 
           {/* Core recruitment */}
