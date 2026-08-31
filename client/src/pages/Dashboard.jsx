@@ -469,7 +469,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-up delay-150">
 
         {/* Active Vacancies */}
-        <ChartCard title="Active Vacancies" subtitle="Manage your active jobs and monitor recruitment progress.">
+        <ChartCard title="Active Vacancies" subtitle="Manage your active jobs and monitor recruitment progress." action={<Link to="/jobs/new" className="text-xs text-blue-600 hover:underline font-medium">+ Create Job</Link>}>
           {activeVacancies.length > 0 ? (
             <div className="space-y-2 max-h-[290px] overflow-auto pr-1">
               {activeVacancies.map((v) => (
