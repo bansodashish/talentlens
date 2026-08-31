@@ -448,7 +448,7 @@ function scoreCandidate(resumeText, jobDescription, targetRole = null) {
   const titleScore = scoreTitleMatch(resumeText, targetRole);
 
   // Weighted final score
-  const finalScore = Math.min(1, (skillsScore * 0.55) + (expScore * 0.25) + (location.score * 0.15) + (titleScore * 0.05));
+  const finalScore = Math.min(1, (skillsScore * 0.60) + (expScore * 0.25) + (location.score * 0.15));
   const rating = Math.max(1, Math.min(5, Math.round(finalScore * 5)));
   const scorePct = Math.round(finalScore * 100);
 

@@ -15,10 +15,10 @@
  *     matchedMustHave, missingMustHave, matchedNiceToHave, missingNiceToHave }
  *
  * Sub-score mapping (re-uses existing DB columns):
- *   supplyChainScore → Must-have skills match %     (weight 60)
+ *   supplyChainScore → Must-have skills match %     (weight 70)
  *   procurementScore → Nice-to-have match %         (weight 20)
  *   logisticsScore   → Title / Role match %         (weight 10)
- *   technologyScore  → Years-of-experience match %  (weight 10)
+ *   technologyScore  → Years-of-experience match %  (weight 0, hidden)
  *
  * Missing must-haves apply a SOFT PENALTY: each missing must-have reduces
  * the must-have component proportionally (already implicit in matched/total)
@@ -253,10 +253,10 @@ function extractRequiredYears(jd) {
 // ───── ATS scoring core ────────────────────────────────────────────────────
 
 const WEIGHTS = {
-  mustHave:    60,
+  mustHave:    80,
   niceToHave:  20,
-  title:       10,
-  experience:  10,
+  title:       0,
+  experience:  0,
 };
 
 const MISSING_MUST_PENALTY_PTS = 5; // additional flat penalty per missing must-have
