@@ -27,14 +27,49 @@ const { extractJobTitle } = require('../utils/extractJobTitle');
 const { resolveUploadsDir } = require('../utils/storagePaths');
 
 // Quick regex-based extraction for local mode (Claude does this natively).
+// Common single-word CV section headings that are never a person's name.
+const CV_SECTION_HEADERS = new Set([
+  'CONTACT','CONTACTS','EDUCATION','EXPERIENCE','SKILLS','SUMMARY','PROFILE',
+  'OBJECTIVE','REFERENCES','AWARDS','CERTIFICATIONS','CERTIFICATION','LANGUAGES',
+  'PROJECTS','VOLUNTEER','ACTIVITIES','HOBBIES','INTERESTS','ACHIEVEMENTS',
+  'COMPETENCIES','OVERVIEW','TECHNICAL','PROFESSIONAL','WORK','CORE','CAREER',
+  'QUALIFICATIONS','ACCOMPLISHMENTS','STRENGTHS','ABOUT','DETAILS','PERSONAL',
+  'EMPLOYMENT','BACKGROUND','EXPERTISE','HIGHLIGHTS','HISTORY','PUBLICATIONS',
+  'TRAINING','MEMBERSHIPS','AFFILIATIONS','PORTFOLIO','DECLARATION',
+]);
+
+function looksLikeName(line) {
+  if (line.length > 60) return false;
+  if (!/ /.test(line)) return false;                            // needs at least 2 words
+  if (/@|\d{4,}|http/i.test(line)) return false;               // no email/long numbers/urls
+  if (!/[A-Za-z]/.test(line)) return false;
+  if (/[^A-Za-z\u00C0-\u017E\s'\-.]/.test(line)) return false; // only name-safe characters
+  const upper = line.trim().toUpperCase();
+  if (CV_SECTION_HEADERS.has(upper)) return false;
+  // Single all-caps token (e.g. "SKILLS") — not a name
+  const words = line.trim().split(/\s+/);
+  if (words.length === 1 && line === line.toUpperCase()) return false;
+  return true;
+}
+
 function extractContact(text) {
   const emailMatch = text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
   const phoneMatch = text.match(/(?:\+?\d[\d\s().-]{7,}\d)/);
   const lines = text.split(/\n/).map(l => l.trim()).filter(Boolean);
-  // Best-effort name = first non-email, non-phone line under 60 chars
-  const name = lines.find(l =>
-    l.length < 60 && !/@|\d{4,}|http/i.test(l) && /[A-Za-z]/.test(l)
-  ) || '';
+
+  // Pass 1: find a line that looks like a real person's name (2+ words, no section keywords)
+  let name = lines.find(looksLikeName) || '';
+
+  // Pass 2 (fallback): original logic but skip known section headers
+  if (!name) {
+    name = lines.find(l =>
+      l.length < 60 &&
+      !/@|\d{4,}|http/i.test(l) &&
+      /[A-Za-z]/.test(l) &&
+      !CV_SECTION_HEADERS.has(l.trim().toUpperCase())
+    ) || '';
+  }
+
   return {
     email: emailMatch ? emailMatch[0] : '',
     phone: phoneMatch ? phoneMatch[0].trim() : '',
