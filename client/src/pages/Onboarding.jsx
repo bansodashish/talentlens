@@ -20,8 +20,8 @@ export default function Onboarding() {
   // Admins get the full setup including the Apify + Claude key steps.
   const isAdmin = user?.role === 'admin';
   const STEP_DEFS = isAdmin
-    ? [{ key: 'region', label: 'Region' }, { key: 'apify', label: 'Apify key' }, { key: 'claude', label: 'Claude key' }, { key: 'test', label: 'Test search' }]
-    : [{ key: 'region', label: 'Region' }, { key: 'test', label: 'Test search' }];
+    ? [{ key: 'region', label: 'Region' }, { key: 'apify', label: 'Apify key' }, { key: 'claude', label: 'Claude key' }]
+    : [{ key: 'region', label: 'Region' }];
 
   const [step, setStep]   = useState(0);
   const [market, setMarket]       = useState(user?.market || 'Global');
@@ -93,7 +93,7 @@ export default function Onboarding() {
         <div className="text-center mb-8">
           <div className="w-12 h-12 mx-auto rounded-2xl bg-brand-gradient flex items-center justify-center text-white font-bold text-lg shadow-glow mb-3">T</div>
           <h1 className="font-display text-3xl font-bold text-slate-800">Welcome to TalentLenses</h1>
-          <p className="text-slate-500 text-sm mt-2">Let's get your workspace ready in 4 quick steps.</p>
+          <p className="text-slate-500 text-sm mt-2">Let's get your workspace ready.</p>
         </div>
 
         {/* Progress */}
