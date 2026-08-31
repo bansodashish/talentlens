@@ -107,19 +107,13 @@ export default function Candidates() {
           type="text" placeholder="Search name, title, skills…" className="input max-w-xs"
           value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })}
         />
-        <select className="input w-40" value={filters.role} onChange={e => setFilters({ ...filters, role: e.target.value })}>
-          <option value="">Roles</option>
-          {roleOptions.map(r => (
-            <option key={r} value={r}>{r}</option>
-          ))}
-        </select>
         <select className="input w-40" value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}>
           <option value="">All Statuses</option>
           {['new', 'screening', 'interview', 'offer', 'hired', 'rejected'].map(s => (
             <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
           ))}
         </select>
-        {(filters.role || filters.status || filters.search) && (
+        {(filters.status || filters.search) && (
           <button className="btn-secondary text-sm" onClick={() => setFilters({ role: '', status: '', search: '' })}>Clear filters</button>
         )}
       </div>
@@ -146,7 +140,6 @@ export default function Candidates() {
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
                   <th className="text-left px-4 py-3 font-semibold text-slate-600">Candidate</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Role / Company</th>
                   <th className="text-left px-4 py-3 font-semibold text-slate-600">Market</th>
                   <th className="text-left px-4 py-3 font-semibold text-slate-600">AI Score</th>
                   <th className="text-left px-4 py-3 font-semibold text-slate-600">Status</th>
@@ -169,10 +162,6 @@ export default function Candidates() {
                           <div className="text-xs text-slate-400">{c.email}</div>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-slate-700">{c.current_title || '—'}</div>
-                      <div className="text-xs text-slate-400">{c.current_company || '—'}</div>
                     </td>
                     <td className="px-4 py-3">
                       <span className="badge badge-blue">
