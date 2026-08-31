@@ -564,6 +564,17 @@ router.get('/candidates', (req, res) => {
     screenedOn: r.created_at,
   }));
 
+  // Deduplicate: keep only the latest screening per candidate+job combination.
+  // Guards against the same CV being uploaded and screened multiple times.
+  const seen = new Map();
+  for (const c of candidates) {
+    const key = `${(c.email || c.name).toLowerCase().trim()}|||${c.jobTitle.toLowerCase().trim()}`;
+    if (!seen.has(key) || c.screenedOn > seen.get(key).screenedOn) {
+      seen.set(key, c);
+    }
+  }
+  candidates = [...seen.values()].sort((a, b) => b.screenedOn.localeCompare(a.screenedOn));
+
   if (status === 'in pipeline' || status === 'pipeline') {
     candidates = candidates.filter(c => c.status === 'In Pipeline');
   } else if (status === 'screened') {

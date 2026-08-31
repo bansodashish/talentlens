@@ -179,169 +179,204 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
   );
 }
 
-function ScreeningDayDetail({ date, onBack }) {
-  const [items, setItems] = useState([]);
+function ScreeningHistory({ jobFilter, onClearJobFilter }) {
+  const [jobs, setJobs] = useState([]);
+  const [selectedJob, setSelectedJob] = useState(jobFilter || '');
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [expanded, setExpanded] = useState({});
+  const [expandLoading, setExpandLoading] = useState({});
+
+  // Sync external jobFilter prop into internal selectedJob
+  useEffect(() => { setSelectedJob(jobFilter || ''); }, [jobFilter]);
 
   useEffect(() => {
-    api.get(`/screen/daily-lists/${date}`)
-      .then(r => setItems(r.data.candidates || []))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [date]);
+    api.get('/screen/jobs')
+      .then(r => setJobs(r.data.jobs || []))
+      .catch(() => {});
+  }, []);
 
-  if (loading) return <div className="p-10 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div></div>;
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError('');
+    const params = {};
+    if (selectedJob) params.jobTitle = selectedJob;
+    if (search.trim()) params.q = search.trim();
+    if (statusFilter !== 'All') params.status = statusFilter;
+    api.get('/screen/candidates', { params })
+      .then(r => { if (active) setCandidates(r.data.candidates || []); })
+      .catch(err => { if (active) setError(err.response?.data?.error || 'Failed to load screening history.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [selectedJob, search, statusFilter]);
+
+  const toggleExpand = async (c) => {
+    if (expanded[c.id]) {
+      setExpanded(prev => { const n = { ...prev }; delete n[c.id]; return n; });
+      return;
+    }
+    setExpandLoading(prev => ({ ...prev, [c.id]: true }));
+    try {
+      const r = await api.get(`/screen/screening/${c.id}`);
+      setExpanded(prev => ({ ...prev, [c.id]: r.data.screening }));
+    } catch (_) {
+      setExpanded(prev => ({ ...prev, [c.id]: { error: 'Could not load results.' } }));
+    } finally {
+      setExpandLoading(prev => { const n = { ...prev }; delete n[c.id]; return n; });
+    }
+  };
+
+  const addToPipeline = async (c) => {
+    try {
+      await api.post('/candidates', {
+        name: c.name, email: c.email, job_title: c.jobTitle,
+        pipeline_stage: 'shortlisted', source: 'resume_upload',
+      });
+      setCandidates(prev => prev.map(x => x.id === c.id ? { ...x, status: 'In Pipeline' } : x));
+    } catch (err) {
+      const existingId = err.response?.data?.candidateId;
+      if (existingId) {
+        await api.patch(`/candidates/${existingId}`, { pipeline_stage: 'shortlisted' });
+        setCandidates(prev => prev.map(x => x.id === c.id ? { ...x, status: 'In Pipeline' } : x));
+      }
+    }
+  };
+
+  const recColor = (rec) => {
+    if (!rec) return 'bg-slate-100 text-slate-600';
+    const r = rec.toLowerCase();
+    if (r.includes('strong hire')) return 'bg-green-100 text-green-700';
+    if (r.includes('hire')) return 'bg-blue-100 text-blue-700';
+    if (r.includes('consider')) return 'bg-yellow-100 text-yellow-700';
+    return 'bg-red-100 text-red-700';
+  };
 
   return (
     <div className="space-y-4">
-      <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline">
-        ← Back to history
-      </button>
-      <h3 className="font-semibold text-slate-800">{date}</h3>
-      {items.length === 0 ? (
-        <div className="card p-8 text-center text-slate-400">No candidates found for this date.</div>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="min-w-[220px]">
+          <label className="block text-xs font-semibold text-slate-500 mb-1">Select Job</label>
+          <select className="input" value={selectedJob}
+            onChange={e => { setSelectedJob(e.target.value); if (onClearJobFilter && !e.target.value) onClearJobFilter(); }}>
+            <option value="">All jobs</option>
+            {jobs.map(j => (
+              <option key={j.jobTitle} value={j.jobTitle}>{j.jobTitle} ({j.candidateCount})</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex-1 min-w-[200px]">
+          <label className="block text-xs font-semibold text-slate-500 mb-1">Search candidates</label>
+          <input type="text" className="input" placeholder="Search by name or email…"
+            value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <div className="min-w-[140px]">
+          <label className="block text-xs font-semibold text-slate-500 mb-1">Filter</label>
+          <select className="input" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+            {['All', 'Screened', 'In Pipeline'].map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="p-10 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div></div>
+      ) : error ? (
+        <div className="card p-4 bg-red-50 border-red-200 text-red-700 text-sm">{error}</div>
+      ) : !candidates.length ? (
+        <div className="card p-10 text-center text-slate-400">
+          <p className="text-4xl mb-2">🤖</p>
+          <p>{selectedJob ? `No screened candidates for "${selectedJob}".` : 'No screening results yet. Use the Screen Candidates tab to get started.'}</p>
+        </div>
       ) : (
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                {['Candidate','Role','Score','Recommendation','Batch'].map(h => (
+                {['Candidate', 'Match Score', 'Status', 'Screened On', 'Actions'].map(h => (
                   <th key={h} className="text-left px-4 py-2 font-semibold text-slate-600 text-xs uppercase">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {items.map((item, i) => (
-                <tr key={i} className="hover:bg-slate-50">
-                  <td className="px-4 py-2 font-medium text-slate-800">{item.candidate_name || '—'}</td>
-                  <td className="px-4 py-2 text-slate-500 text-xs">{item.current_role || '—'}</td>
-                  <td className="px-4 py-2">
-                    <span className={`font-bold tabular-nums ${
-                      (item.overall_score || 0) >= 75 ? 'text-green-700' :
-                      (item.overall_score || 0) >= 55 ? 'text-amber-700' : 'text-red-600'
-                    }`}>{item.overall_score ?? '—'}</span>
-                  </td>
-                  <td className="px-4 py-2">
-                    <span className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${
-                      REC_STYLE[item.recommendation] || 'bg-slate-100 text-slate-700 border-slate-200'
-                    }`}>{item.recommendation || '—'}</span>
-                  </td>
-                  <td className="px-4 py-2 text-xs text-slate-400 font-mono">{item.batch_id?.slice(0,8) || '—'}</td>
-                </tr>
+              {candidates.map(c => (
+                <React.Fragment key={c.id}>
+                  <tr className="hover:bg-slate-50">
+                    <td className="px-4 py-2 font-medium text-slate-800">{c.name}</td>
+                    <td className="px-4 py-2 text-slate-700 font-medium">{c.matchScore}%</td>
+                    <td className="px-4 py-2">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.status === 'In Pipeline' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'}`}>
+                        {c.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-xs text-slate-400">
+                      {new Date(c.screenedOn).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => toggleExpand(c)}
+                          className="text-xs px-2 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors font-medium">
+                          {expandLoading[c.id] ? '…' : expanded[c.id] ? 'Hide Results' : 'View Results'}
+                        </button>
+                        {c.status === 'Screened' && (
+                          <button onClick={() => addToPipeline(c)}
+                            className="text-xs px-2 py-1 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 transition-colors font-medium whitespace-nowrap">
+                            + Add to Pipeline
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                  {expanded[c.id] && (
+                    <tr className="bg-slate-50">
+                      <td colSpan={5} className="px-6 py-4">
+                        {expanded[c.id].error ? (
+                          <p className="text-sm text-red-600">{expanded[c.id].error}</p>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <span className="text-xs font-semibold text-slate-500">Job:</span>
+                              <span className="text-xs text-slate-700">{expanded[c.id].jobTitle || c.jobTitle}</span>
+                              {expanded[c.id].recommendation && (
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${recColor(expanded[c.id].recommendation)}`}>
+                                  {expanded[c.id].recommendation}
+                                </span>
+                              )}
+                            </div>
+                            {expanded[c.id].summary && (
+                              <p className="text-xs text-slate-600 leading-relaxed">{expanded[c.id].summary}</p>
+                            )}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              {expanded[c.id].strengths?.length > 0 && (
+                                <div>
+                                  <p className="text-xs font-semibold text-green-700 mb-1">✅ Strengths</p>
+                                  <ul className="space-y-0.5">
+                                    {expanded[c.id].strengths.map((s, i) => <li key={i} className="text-xs text-slate-600">• {s}</li>)}
+                                  </ul>
+                                </div>
+                              )}
+                              {expanded[c.id].gaps?.length > 0 && (
+                                <div>
+                                  <p className="text-xs font-semibold text-red-600 mb-1">⚠️ Gaps</p>
+                                  <ul className="space-y-0.5">
+                                    {expanded[c.id].gaps.map((g, i) => <li key={i} className="text-xs text-slate-600">• {g}</li>)}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>
         </div>
       )}
-    </div>
-  );
-}
-
-function ScreeningHistory({ jobFilter, onClearJobFilter }) {
-  const [days, setDays] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [activeDate, setActiveDate] = useState(null);
-  const [filteredCandidates, setFilteredCandidates] = useState([]);
-
-  useEffect(() => {
-    if (jobFilter) {
-      setLoading(true);
-      api.get('/screen/candidates', { params: { jobTitle: jobFilter } })
-        .then(r => setFilteredCandidates(r.data.candidates || []))
-        .catch(err => setError(err.response?.data?.error || 'Failed to load screening results.'))
-        .finally(() => setLoading(false));
-      return;
-    }
-    api.get('/screen/daily-lists')
-      .then(r => setDays(r.data.lists || []))
-      .catch(err => setError(err.response?.data?.error || 'Failed to load screening history.'))
-      .finally(() => setLoading(false));
-  }, [jobFilter]);
-
-  if (activeDate) return <ScreeningDayDetail date={activeDate} onBack={() => setActiveDate(null)} />;
-  if (loading) return <div className="p-10 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div></div>;
-  if (error) return <div className="card p-4 bg-red-50 border-red-200 text-red-700 text-sm">{error}</div>;
-
-  if (jobFilter) {
-    return (
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-slate-600">Showing screening results for <strong>{jobFilter}</strong></p>
-          <button type="button" onClick={onClearJobFilter} className="text-xs text-blue-600 hover:underline font-medium">✕ Clear filter</button>
-        </div>
-        {filteredCandidates.length === 0 ? (
-          <div className="card p-10 text-center text-slate-400">No screened candidates found for this job title.</div>
-        ) : (
-          <div className="card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>
-                  {['Candidate','Score','Recommendation','Status','Screened On'].map(h => (
-                    <th key={h} className="text-left px-4 py-2 font-semibold text-slate-600 text-xs uppercase">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredCandidates.map(c => (
-                  <tr key={c.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-2 font-medium text-slate-800">{c.name}</td>
-                    <td className="px-4 py-2">
-                      <span className={`font-bold tabular-nums ${
-                        (c.matchScore || 0) >= 75 ? 'text-green-700' :
-                        (c.matchScore || 0) >= 55 ? 'text-amber-700' : 'text-red-600'
-                      }`}>{c.matchScore ?? '—'}</span>
-                    </td>
-                    <td className="px-4 py-2">
-                      <span className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${
-                        REC_STYLE[c.recommendation] || 'bg-slate-100 text-slate-700 border-slate-200'
-                      }`}>{c.recommendation || '—'}</span>
-                    </td>
-                    <td className="px-4 py-2 text-xs text-slate-500">{c.status}</td>
-                    <td className="px-4 py-2 text-xs text-slate-400">{new Date(c.screenedOn).toLocaleDateString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  if (!days.length) return (
-    <div className="card p-10 text-center text-slate-400">
-      <p className="text-4xl mb-2">🤖</p>
-      <p>No screening batches yet. Use the <strong>Screen Candidates</strong> tab to get started.</p>
-    </div>
-  );
-
-  return (
-    <div className="card overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-slate-50 border-b border-slate-200">
-          <tr>
-            {['Date','Candidates','Batches',''].map(h => (
-              <th key={h} className="text-left px-4 py-2 font-semibold text-slate-600 text-xs uppercase">{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {days.map(d => (
-            <tr key={d.listDate} className="hover:bg-slate-50">
-              <td className="px-4 py-2 font-medium text-slate-800">{d.listDate}</td>
-              <td className="px-4 py-2 text-slate-600">{d.candidateCount}</td>
-              <td className="px-4 py-2 text-slate-600">{d.batchCount}</td>
-              <td className="px-4 py-2 text-right">
-                <button type="button" className="text-blue-600 hover:underline font-medium text-xs"
-                  onClick={() => setActiveDate(d.listDate)}>
-                  View list →
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 }
