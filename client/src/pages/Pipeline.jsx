@@ -11,18 +11,18 @@ const STAGE_LABELS = {
   offer:        '🎉 Offer',
 };
 const STAGE_COLORS = {
-  shortlisted:  'border-blue-300',
-  contacted:    'border-cyan-300',
-  phone_screen: 'border-yellow-300',
-  interview:    'border-purple-300',
-  offer:        'border-green-300',
+  shortlisted:  'border-t-blue-500 from-blue-500/10',
+  contacted:    'border-t-cyan-500 from-cyan-500/10',
+  phone_screen: 'border-t-yellow-500 from-yellow-500/10',
+  interview:    'border-t-purple-500 from-purple-500/10',
+  offer:        'border-t-emerald-500 from-emerald-500/10',
 };
 const STAGE_DROP_BG = {
-  shortlisted:  'bg-blue-50',
-  contacted:    'bg-cyan-50',
-  phone_screen: 'bg-yellow-50',
-  interview:    'bg-purple-50',
-  offer:        'bg-green-50',
+  shortlisted:  'bg-blue-500/10',
+  contacted:    'bg-cyan-500/10',
+  phone_screen: 'bg-yellow-500/10',
+  interview:    'bg-purple-500/10',
+  offer:        'bg-emerald-500/10',
 };
 
 export default function Pipeline() {
@@ -99,10 +99,10 @@ export default function Pipeline() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Pipeline</h1>
-          <p className="text-slate-500 text-sm">{filtered.length} active application{filtered.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-3xl font-bold text-slate-100">Pipeline</h1>
+          <p className="text-slate-400 text-sm mt-1">{filtered.length} active application{filtered.length !== 1 ? 's' : ''}</p>
           {jobFilter && (
-            <p className="text-xs text-blue-600 mt-1">
+            <p className="text-xs text-cyan-400 mt-1">
               Filtered by job: <strong>{jobFilter}</strong>{' '}
               <button type="button" onClick={() => setSearchParams({})} className="underline ml-1">Clear</button>
             </p>
@@ -110,7 +110,7 @@ export default function Pipeline() {
         </div>
         <div className="flex gap-2">
           <select
-            className="input w-56 text-sm"
+            className="input bg-slate-800/50 border-slate-700 text-slate-200 w-56 text-sm rounded-lg"
             value={jobFilter}
             onChange={e => setSearchParams(e.target.value ? { job: e.target.value } : {})}
           >
@@ -124,14 +124,14 @@ export default function Pipeline() {
 
       {loading ? (
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
         </div>
       ) : !jobFilter ? (
         <div className="flex items-center justify-center h-64 text-center text-slate-400">
           <div>
             <div className="text-4xl mb-3">🔄</div>
-            <p className="font-medium text-slate-600 mb-1">Select a job to view its pipeline</p>
-            <p className="text-sm">Use the dropdown above to choose a job</p>
+            <p className="font-medium text-slate-300 mb-1">Select a job to view its pipeline</p>
+            <p className="text-sm text-slate-500">Use the dropdown above to choose a job</p>
           </div>
         </div>
       ) : (
@@ -140,17 +140,19 @@ export default function Pipeline() {
             const isOver = dragOverStage === stage;
             const isOffer = stage === 'offer';
             return (
-              <div key={stage} className="flex-shrink-0 w-64">
-                <div className={`card border-t-4 ${STAGE_COLORS[stage]} overflow-hidden`}>
-                  <div className="p-3 bg-slate-50 border-b border-slate-100">
-                    <div className="text-sm font-semibold text-slate-700">{STAGE_LABELS[stage]}</div>
-                    <div className="text-xs text-slate-400 mt-0.5">
-                      {byStage[stage].length} candidate{byStage[stage].length !== 1 ? 's' : ''}
+              <div key={stage} className="flex-shrink-0 w-80">
+                <div className={`border-t-4 ${STAGE_COLORS[stage]} bg-gradient-to-b ${STAGE_COLORS[stage]} border border-slate-800 rounded-lg overflow-hidden backdrop-blur-sm`}>
+                  <div className="p-4 border-b border-slate-800/50 bg-slate-900/40">
+                    <div className="text-sm font-bold text-slate-100">{STAGE_LABELS[stage]}</div>
+                    <div className="text-xs text-slate-400 mt-1">
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-700 text-slate-200 text-[10px] font-semibold">
+                        {byStage[stage].length}
+                      </span>
                     </div>
                   </div>
 
                   <div
-                    className={`p-2 space-y-2 min-h-[300px] max-h-[600px] overflow-y-auto transition-colors duration-150 rounded-b-lg ${
+                    className={`p-3 space-y-2 min-h-[400px] max-h-[600px] overflow-y-auto transition-all duration-200 ${
                       isOver ? STAGE_DROP_BG[stage] : ''
                     }`}
                     onDragOver={e => handleDragOver(e, stage)}
@@ -158,8 +160,8 @@ export default function Pipeline() {
                     onDrop={e => handleDrop(e, stage)}
                   >
                     {byStage[stage].length === 0 && (
-                      <div className={`text-xs text-center py-8 border-2 border-dashed rounded-lg transition-colors ${
-                        isOver ? 'border-slate-300 text-slate-400' : 'border-transparent text-slate-300'
+                      <div className={`text-xs text-center py-12 border-2 border-dashed rounded-lg transition-all ${
+                        isOver ? 'border-blue-500/50 text-blue-400 bg-blue-500/10' : 'border-slate-700 text-slate-500'
                       }`}>
                         {isOver ? '⬇ Drop here' : 'No candidates'}
                       </div>
@@ -173,45 +175,45 @@ export default function Pipeline() {
                           draggable={!isOffer}
                           onDragStart={!isOffer ? e => handleDragStart(e, cand.id) : undefined}
                           onDragEnd={!isOffer ? handleDragEnd : undefined}
-                          className={`bg-white border rounded-lg p-3 transition-all duration-150 select-none ${
+                          className={`border rounded-lg p-3 transition-all duration-200 select-none backdrop-blur-sm ${
                             isOffer
-                              ? 'border-green-200 cursor-default'
+                              ? 'border-emerald-500/50 bg-emerald-500/10 cursor-default'
                               : isDragging
-                              ? 'border-blue-400 opacity-40 shadow-lg cursor-grabbing'
-                              : 'border-slate-200 hover:shadow-md hover:border-slate-300 cursor-grab active:cursor-grabbing'
+                              ? 'border-blue-400/50 bg-blue-500/10 opacity-60 shadow-xl cursor-grabbing scale-105'
+                              : 'border-slate-700/50 bg-slate-800/30 hover:border-slate-600 hover:bg-slate-800/50 hover:shadow-lg cursor-grab active:cursor-grabbing'
                           }`}
                         >
-                          <div className="flex items-start justify-between mb-1">
-                            <div className="flex items-center gap-1 min-w-0">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
                               {isOffer
-                                ? <span className="text-green-500 text-xs flex-shrink-0" title="Frozen at Offer">🔒</span>
-                                : <span className="text-slate-300 text-xs flex-shrink-0">⠿</span>
+                                ? <span className="text-emerald-400 text-xs flex-shrink-0" title="Frozen at Offer">🔒</span>
+                                : <span className="text-slate-500 text-xs flex-shrink-0">⠿</span>
                               }
                               <Link
                                 to={`/candidates/${cand.id}`}
-                                className="font-medium text-sm text-slate-800 hover:text-blue-600 leading-tight truncate"
+                                className="font-semibold text-sm text-slate-200 hover:text-cyan-300 leading-tight truncate transition-colors"
                                 onClick={e => e.stopPropagation()}
                               >
                                 {cand.name}
                               </Link>
                             </div>
                             {cand.ai_score != null && (
-                              <span className="text-xs font-medium text-green-700 bg-green-100 px-1.5 py-0.5 rounded-full ml-1 flex-shrink-0">
+                              <span className="text-xs font-bold text-emerald-300 bg-emerald-500/20 px-2 py-1 rounded-full ml-1 flex-shrink-0 border border-emerald-500/50">
                                 {cand.ai_score}%
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-slate-500 truncate mb-2">{cand.current_title || 'Candidate'}</p>
-                          <p className="text-xs text-slate-400 truncate mb-2">{cand.current_company || cand.email}</p>
+                          <p className="text-xs text-slate-400 truncate mb-1">{cand.current_title || 'Candidate'}</p>
+                          <p className="text-xs text-slate-500 truncate mb-2">{cand.current_company || cand.email}</p>
                           <div className="flex items-center justify-between">
-                            <span className="text-xs px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                            <span className="text-xs px-2 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium">
                               🌍 {cand.market}
                             </span>
                             {isOffer ? (
-                              <span className="text-xs text-green-600 font-semibold">✓ Offered</span>
+                              <span className="text-xs text-emerald-300 font-bold">✓ Offered</span>
                             ) : (
                               <select
-                                className="text-xs border border-slate-200 rounded px-1 py-0.5 bg-white text-slate-600 cursor-pointer"
+                                className="text-xs border border-slate-700 rounded px-1.5 py-0.5 bg-slate-800/50 text-slate-300 cursor-pointer hover:border-slate-600 transition-colors"
                                 value={cand.pipeline_stage}
                                 onChange={e => updateStage(cand.id, e.target.value)}
                                 onClick={e => e.stopPropagation()}
@@ -236,9 +238,9 @@ export default function Pipeline() {
       {!loading && filtered.length === 0 && (
         <div className="text-center py-12 text-slate-400">
           <div className="text-4xl mb-3">🔄</div>
-          <p className="font-medium text-slate-600 mb-1">Pipeline is empty</p>
-          <p className="text-sm mb-4">Set a candidate's pipeline stage on the Candidates page to see them here</p>
-          <Link to="/candidates" className="btn-primary text-sm">View Candidates</Link>
+          <p className="font-medium text-slate-300 mb-1">Pipeline is empty</p>
+          <p className="text-sm text-slate-500 mb-4">Set a candidate's pipeline stage on the Candidates page to see them here</p>
+          <Link to="/candidates" className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-all duration-200 transform hover:scale-105 inline-block">View Candidates</Link>
         </div>
       )}
     </div>

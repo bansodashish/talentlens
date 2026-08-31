@@ -15,14 +15,14 @@
     font-feature-settings: 'cv11', 'ss01', 'ss03';
     letter-spacing: -0.005em;
     line-height: 1.55;
-    @apply text-slate-900;
-    background-color: #f6f7fb;
+    @apply text-slate-200;
+    background-color: #0f172a;
     background-image:
-      radial-gradient(at 18% 12%, rgba(79, 70, 229, 0.10) 0px, transparent 45%),
-      radial-gradient(at 82% 12%, rgba(168, 85, 247, 0.10) 0px, transparent 45%),
-      radial-gradient(at 18% 88%, rgba(236, 72, 153, 0.08) 0px, transparent 45%),
-      radial-gradient(at 82% 88%, rgba(14, 165, 233, 0.10) 0px, transparent 45%),
-      radial-gradient(at 50% 50%, rgba(255, 255, 255, 0.6) 0px, transparent 60%);
+      linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%),
+      radial-gradient(at 18% 12%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+      radial-gradient(at 82% 12%, rgba(139, 92, 246, 0.08) 0px, transparent 50%),
+      radial-gradient(at 18% 88%, rgba(236, 72, 153, 0.06) 0px, transparent 50%),
+      radial-gradient(at 82% 88%, rgba(6, 182, 212, 0.08) 0px, transparent 50%);
     background-attachment: fixed;
     background-size: 100% 100%;
   }
@@ -33,33 +33,33 @@
   .text-\[10px\] { font-size: 0.75rem !important;  line-height: 1.1rem !important; }
   .text-\[11px\] { font-size: 0.8125rem !important; line-height: 1.15rem !important; }
 
-  /* Subtle, branded scrollbar */
+  /* Subtle, branded scrollbar for dark theme */
   ::-webkit-scrollbar          { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track    { background: transparent; }
-  ::-webkit-scrollbar-thumb    { background: #cbd5e1; border-radius: 999px; border: 2px solid transparent; background-clip: content-box; }
-  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; background-clip: content-box; border: 2px solid transparent; }
+  ::-webkit-scrollbar-thumb    { background: #475569; border-radius: 999px; border: 2px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: #64748b; background-clip: content-box; border: 2px solid transparent; }
 }
 
-/* ── Theme Variables ────────────────────────────────────────────────────────── */
+/* ── Theme Variables (Dark Mode) ────────────────────────────────────────────── */
 :root {
-  --tl-primary:       #2563eb;
-  --tl-primary-dark:  #1d4ed8;
-  --tl-accent:        #14b8a6;
-  --tl-muted:         #64748b;
-  --tl-soft-bg:       #f1f5f9;
-  --tl-soft-border:   #e2e8f0;
-  --tl-hover-bg:      #f8fafc;
+  --tl-primary:       #3b82f6;
+  --tl-primary-dark:  #1e40af;
+  --tl-accent:        #06b6d4;
+  --tl-muted:         #94a3b8;
+  --tl-soft-bg:       #1e293b;
+  --tl-soft-border:   #334155;
+  --tl-hover-bg:      #0f172a;
   --tl-primary-text:  #ffffff;
-  --tl-nav-bg:        #ffffff;
-  --tl-nav-border:    #e2e8f0;
-  --tl-nav-text:      #475569;
-  --tl-nav-active-bg: #2563eb;
-  --tl-page-bg:       #f8fafc;
-  --tl-logo-bg:       #2563eb;
+  --tl-nav-bg:        #0f172a;
+  --tl-nav-border:    #1e293b;
+  --tl-nav-text:      #cbd5e1;
+  --tl-nav-active-bg: #3b82f6;
+  --tl-page-bg:       #0f172a;
+  --tl-logo-bg:       #3b82f6;
   --tl-logo-text:     #ffffff;
-  --tl-card-bg:       #ffffff;
-  --tl-body-text:     #0f172a;
-  --tl-shadow-color:   rgba(15, 23, 42, 0.08);
+  --tl-card-bg:       #1e293b;
+  --tl-body-text:     #e2e8f0;
+  --tl-shadow-color:   rgba(0, 0, 0, 0.3);
 }
 
 body {
