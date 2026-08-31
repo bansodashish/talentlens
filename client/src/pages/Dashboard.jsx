@@ -462,41 +462,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-      {/* ── Plan & Usage ──────────────────────────────────────────────────── */}
-      {user && (
-        <div className="card p-5 animate-fade-up delay-100">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-4">
-              <span className="text-xl">💳</span>
-              <div>
-                <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Current Plan</p>
-                <p className="text-base font-bold text-slate-800 capitalize">{user?.plan || 'basic'}</p>
-              </div>
-              {user?.usage && (
-                <div className="hidden sm:flex items-center gap-6 ml-4 pl-4 border-l border-slate-200">
-                  {[['LinkedIn searches', user.usage.searches], ['Resume screenings', user.usage.screenings]].map(([label, u]) => u && (
-                    <div key={label}>
-                      <p className="text-xs text-slate-500">{label}</p>
-                      <p className="text-sm font-semibold text-slate-700">{u.used} <span className="font-normal text-slate-400">/ {u.limit === null ? '∞' : u.limit}</span></p>
-                      {u.limit !== null && (
-                        <div className="h-1 w-24 rounded-full bg-slate-100 mt-1 overflow-hidden">
-                          <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(100, Math.round((u.used / u.limit) * 100))}%` }} />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            {(user?.plan || 'basic') !== 'pro' && (
-              <button type="button" className="btn-primary text-sm px-4 py-2"
-                onClick={() => window.location.href='/profile'}>
-                ⬆ Upgrade to Pro
-              </button>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* ── Active vacancies + Pipeline Activity ──────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-up delay-150">

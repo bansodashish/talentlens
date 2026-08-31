@@ -204,6 +204,40 @@ export default function Layout({ children }) {
                   </div>
                 </div>
 
+                {/* Plan & Usage */}
+                <div className="px-4 py-2.5" style={{ borderBottom: `1px solid ${navBorder}` }}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: navText, opacity: 0.45 }}>Plan</div>
+                      <div className="text-xs font-bold capitalize" style={{ color: navText }}>{user?.plan || 'basic'}</div>
+                    </div>
+                    {(user?.plan || 'basic') !== 'pro' && (
+                      <Link to="/profile" onClick={() => setDropdownOpen(false)}
+                        className="text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors"
+                        style={{ background: `${navActive}22`, color: navActive }}>
+                        Upgrade ↑
+                      </Link>
+                    )}
+                  </div>
+                  {user?.usage && (
+                    <div className="mt-2 space-y-1.5">
+                      {[['Searches', user.usage.searches], ['Screenings', user.usage.screenings]].map(([label, u]) => u && (
+                        <div key={label}>
+                          <div className="flex justify-between text-[10px] mb-0.5" style={{ color: navText, opacity: 0.55 }}>
+                            <span>{label}</span>
+                            <span>{u.used} / {u.limit === null ? '∞' : u.limit}</span>
+                          </div>
+                          {u.limit !== null && (
+                            <div className="h-1 rounded-full bg-black/10 overflow-hidden">
+                              <div className="h-full rounded-full" style={{ width: `${Math.min(100, Math.round((u.used / u.limit) * 100))}%`, background: navActive }} />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <Link to="/profile" onClick={() => setDropdownOpen(false)}
                   className="flex items-center gap-2 px-4 py-2 text-sm transition-colors hover:bg-black/5"
                   style={{ color: navText }}>
