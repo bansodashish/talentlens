@@ -658,10 +658,16 @@ function ScreeningsTab() {
         const existingId = err.response?.data?.candidateId;
         if (existingId) {
           await api.patch(`/candidates/${existingId}`, { pipeline_stage: 'shortlisted' });
-          setCandidates(prev => prev.map(x => x.id === c.id ? { ...x, status: 'In Pipeline' } : x));
+          setCandidates(prev => prev.map(x => x.id === c.id ? { ...x, status: 'In Pipeline', candidateId: existingId } : x));
         }
       }
     }
+  };
+
+  const removeFromPipeline = async (c) => {
+    if (!c.candidateId) return;
+    await api.patch(`/candidates/${c.candidateId}`, { pipeline_stage: null });
+    setCandidates(prev => prev.map(x => x.id === c.id ? { ...x, status: 'Screened' } : x));
   };
 
   const recColor = (rec) => {
@@ -767,6 +773,14 @@ function ScreeningsTab() {
                             className="text-xs px-2 py-1 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 transition-colors font-medium whitespace-nowrap"
                           >
                             + Add to Pipeline
+                          </button>
+                        )}
+                        {c.status === 'In Pipeline' && c.candidateId && (
+                          <button
+                            onClick={() => removeFromPipeline(c)}
+                            className="text-xs px-2 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors font-medium whitespace-nowrap"
+                          >
+                            Remove from Pipeline
                           </button>
                         )}
                       </div>

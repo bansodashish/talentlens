@@ -241,9 +241,15 @@ function ScreeningHistory({ jobFilter, onClearJobFilter }) {
       const existingId = err.response?.data?.candidateId;
       if (existingId) {
         await api.patch(`/candidates/${existingId}`, { pipeline_stage: 'shortlisted' });
-        setCandidates(prev => prev.map(x => x.id === c.id ? { ...x, status: 'In Pipeline' } : x));
+        setCandidates(prev => prev.map(x => x.id === c.id ? { ...x, status: 'In Pipeline', candidateId: existingId } : x));
       }
     }
+  };
+
+  const removeFromPipeline = async (c) => {
+    if (!c.candidateId) return;
+    await api.patch(`/candidates/${c.candidateId}`, { pipeline_stage: null });
+    setCandidates(prev => prev.map(x => x.id === c.id ? { ...x, status: 'Screened', candidateId: c.candidateId } : x));
   };
 
   const recColor = (rec) => {
@@ -326,6 +332,12 @@ function ScreeningHistory({ jobFilter, onClearJobFilter }) {
                             + Add to Pipeline
                           </button>
                         )}
+                        {c.status === 'In Pipeline' && c.candidateId && (
+                          <button onClick={() => removeFromPipeline(c)}
+                            className="text-xs px-2 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors font-medium whitespace-nowrap">
+                            Remove from Pipeline
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -387,10 +399,10 @@ export default function Screen() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab]   = useState(() => searchParams.get('tab') === 'history' ? 'history' : 'screen');
   const [jobFilter, setJobFilter] = useState(() => searchParams.get('job') || '');
-  const [jobDescription, setJobDescription] = useState(() => loadPersistedScreenState()?.jobDescription || '');
-  const [jobTitle, setJobTitle] = useState(() => loadPersistedScreenState()?.jobTitle || '');
-  const [jobMode, setJobMode] = useState(() => loadPersistedScreenState()?.jobMode || 'existing');
-  const [selectedJobId, setSelectedJobId] = useState(() => loadPersistedScreenState()?.selectedJobId || '');
+  const [jobDescription, setJobDescription] = useState('');
+  const [jobTitle, setJobTitle] = useState('');
+  const [jobMode, setJobMode] = useState('existing');
+  const [selectedJobId, setSelectedJobId] = useState('');
   const [jobsList, setJobsList] = useState([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
   const scanMode = 'local';
@@ -398,8 +410,8 @@ export default function Screen() {
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
-  const [results, setResults] = useState(() => loadPersistedScreenState()?.results || []);
-  const [batchId, setBatchId] = useState(() => loadPersistedScreenState()?.batchId || null);
+  const [results, setResults] = useState([]);
+  const [batchId, setBatchId] = useState(null);
   const [savedMsg, setSavedMsg] = useState('');
   const [addedToPipeline, setAddedToPipeline] = useState(new Set());
   const [pipelineMsg, setPipelineMsg] = useState('');
