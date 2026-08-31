@@ -224,7 +224,6 @@ function SidePanel({ candidate, onClose, onChange }) {
 function Tabs({ active, setActive }) {
   const tabs = [
     ['candidates',  'All Candidates'],
-    ['searches',    'LinkedIn Searches'],
     ['screenings',  'Resume Screenings'],
   ];
   return (
@@ -594,13 +593,17 @@ const SCREENING_STATUS_FILTERS = ['All', 'Screened', 'In Pipeline'];
 
 
 function ScreeningsTab() {
+  const [searchParams] = useSearchParams();
   const [jobs, setJobs] = useState([]);
-  const [selectedJob, setSelectedJob] = useState('');
+  const [selectedJob, setSelectedJob] = useState(searchParams.get('job') || '');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // expanded row id → detail object
+  const [expanded, setExpanded] = useState({});
+  const [expandLoading, setExpandLoading] = useState({});
 
   useEffect(() => {
     api.get('/screen/jobs')
@@ -622,6 +625,53 @@ function ScreeningsTab() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [selectedJob, search, statusFilter]);
+
+  const toggleExpand = async (c) => {
+    if (expanded[c.id]) {
+      setExpanded(prev => { const n = { ...prev }; delete n[c.id]; return n; });
+      return;
+    }
+    setExpandLoading(prev => ({ ...prev, [c.id]: true }));
+    try {
+      const r = await api.get(`/screen/screening/${c.id}`);
+      setExpanded(prev => ({ ...prev, [c.id]: r.data.screening }));
+    } catch (_) {
+      setExpanded(prev => ({ ...prev, [c.id]: { error: 'Could not load results.' } }));
+    } finally {
+      setExpandLoading(prev => { const n = { ...prev }; delete n[c.id]; return n; });
+    }
+  };
+
+  const addToPipeline = async (c) => {
+    try {
+      await api.post('/candidates', {
+        name: c.name,
+        email: c.email,
+        job_title: c.jobTitle,
+        pipeline_stage: 'shortlisted',
+        source: 'resume_upload',
+      });
+      setCandidates(prev => prev.map(x => x.id === c.id ? { ...x, status: 'In Pipeline' } : x));
+    } catch (err) {
+      // If candidate already exists (duplicate email), patch their pipeline stage instead
+      if (err.response?.status === 409 || err.response?.data?.candidateId) {
+        const existingId = err.response?.data?.candidateId;
+        if (existingId) {
+          await api.patch(`/candidates/${existingId}`, { pipeline_stage: 'shortlisted' });
+          setCandidates(prev => prev.map(x => x.id === c.id ? { ...x, status: 'In Pipeline' } : x));
+        }
+      }
+    }
+  };
+
+  const recColor = (rec) => {
+    if (!rec) return 'bg-slate-100 text-slate-600';
+    const r = rec.toLowerCase();
+    if (r.includes('strong hire')) return 'bg-green-100 text-green-700';
+    if (r.includes('hire')) return 'bg-blue-100 text-blue-700';
+    if (r.includes('consider')) return 'bg-yellow-100 text-yellow-700';
+    return 'bg-red-100 text-red-700';
+  };
 
   const hasAnyJobs = jobs.length > 0;
 
@@ -686,23 +736,89 @@ function ScreeningsTab() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                {['Candidate', 'Match Score', 'Status', 'Screened On'].map(h => (
+                {['Candidate', 'Match Score', 'Status', 'Screened On', 'Actions'].map(h => (
                   <th key={h} className="text-left px-4 py-2 font-semibold text-slate-600 text-xs uppercase">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {candidates.map(c => (
-                <tr key={c.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-2 font-medium text-slate-800">{c.name}</td>
-                  <td className="px-4 py-2 text-slate-700 font-medium">{c.matchScore}%</td>
-                  <td className="px-4 py-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.status === 'In Pipeline' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'}`}>
-                      {c.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-xs text-slate-400">{new Date(c.screenedOn).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                </tr>
+                <React.Fragment key={c.id}>
+                  <tr className="hover:bg-slate-50">
+                    <td className="px-4 py-2 font-medium text-slate-800">{c.name}</td>
+                    <td className="px-4 py-2 text-slate-700 font-medium">{c.matchScore}%</td>
+                    <td className="px-4 py-2">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.status === 'In Pipeline' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'}`}>
+                        {c.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-xs text-slate-400">{new Date(c.screenedOn).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                    <td className="px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => toggleExpand(c)}
+                          className="text-xs px-2 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors font-medium"
+                        >
+                          {expandLoading[c.id] ? '…' : expanded[c.id] ? 'Hide Results' : 'View Results'}
+                        </button>
+                        {c.status === 'Screened' && (
+                          <button
+                            onClick={() => addToPipeline(c)}
+                            className="text-xs px-2 py-1 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 transition-colors font-medium whitespace-nowrap"
+                          >
+                            + Add to Pipeline
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                  {expanded[c.id] && (
+                    <tr className="bg-slate-50">
+                      <td colSpan={5} className="px-6 py-4">
+                        {expanded[c.id].error ? (
+                          <p className="text-sm text-red-600">{expanded[c.id].error}</p>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <span className="text-xs font-semibold text-slate-500">Job:</span>
+                              <span className="text-xs text-slate-700">{expanded[c.id].jobTitle || c.jobTitle}</span>
+                              {expanded[c.id].recommendation && (
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${recColor(expanded[c.id].recommendation)}`}>
+                                  {expanded[c.id].recommendation}
+                                </span>
+                              )}
+                            </div>
+                            {expanded[c.id].summary && (
+                              <p className="text-xs text-slate-600 leading-relaxed">{expanded[c.id].summary}</p>
+                            )}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              {expanded[c.id].strengths?.length > 0 && (
+                                <div>
+                                  <p className="text-xs font-semibold text-green-700 mb-1">✅ Strengths</p>
+                                  <ul className="space-y-0.5">
+                                    {expanded[c.id].strengths.map((s, i) => (
+                                      <li key={i} className="text-xs text-slate-600">• {s}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              {expanded[c.id].gaps?.length > 0 && (
+                                <div>
+                                  <p className="text-xs font-semibold text-red-600 mb-1">⚠️ Gaps</p>
+                                  <ul className="space-y-0.5">
+                                    {expanded[c.id].gaps.map((g, i) => (
+                                      <li key={i} className="text-xs text-slate-600">• {g}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>
@@ -715,7 +831,7 @@ function ScreeningsTab() {
 // ───────────────────────────────────────────────────────────────────────────────
 export default function History() {
   const [searchParams] = useSearchParams();
-  const validTabs = ['candidates', 'searches', 'screenings'];
+  const validTabs = ['candidates', 'screenings'];
   const initialTab = validTabs.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'candidates';
   const [tab, setTab] = useState(initialTab);
 
@@ -730,7 +846,6 @@ export default function History() {
       </div>
 
       {tab === 'candidates'  && <CandidatesTab />}
-      {tab === 'searches'    && <SearchesTab />}
       {tab === 'screenings'  && <ScreeningsTab />}
     </div>
   );

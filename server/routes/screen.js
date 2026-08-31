@@ -506,6 +506,15 @@ router.get('/jobs', (req, res) => {
   res.json({ jobs: rows.map(r => ({ jobTitle: r.job_title, candidateCount: r.candidate_count })) });
 });
 
+// ── GET /api/screen/screening/:id ────────────────────────────────────────────
+// Full detail for a single screening record — recommendation, summary,
+// strengths, gaps — used by the "View Results" expand in the Screenings tab.
+router.get('/screening/:id', (req, res) => {
+  const row = db.prepare('SELECT * FROM screenings WHERE id = ? AND created_by = ?').get(req.params.id, req.user.id);
+  if (!row) return res.status(404).json({ error: 'Screening not found.' });
+  res.json({ screening: shapeScreeningRow(row) });
+});
+
 // ── GET /api/screen/candidates ────────────────────────────────────────────────
 // Flat, filterable list of every screened candidate (across all batches/days),
 // used by the Screening History tab. Supports filtering by job title, a free-text
@@ -535,7 +544,10 @@ router.get('/candidates', (req, res) => {
       c.pipeline_stage
     FROM screenings s
     LEFT JOIN candidates c
-      ON c.created_by = s.created_by AND lower(trim(c.email)) = lower(trim(s.email)) AND s.email IS NOT NULL AND trim(s.email) <> ''
+      ON c.created_by = s.created_by AND (
+        (s.email IS NOT NULL AND trim(s.email) <> '' AND lower(trim(c.email)) = lower(trim(s.email)))
+        OR ((s.email IS NULL OR trim(s.email) = '') AND lower(trim(c.name)) = lower(trim(s.candidate_name)))
+      )
     WHERE ${clauses.join(' AND ')}
     ORDER BY s.created_at DESC
   `).all(...params);

@@ -75,7 +75,55 @@ router.get('/:id', (req, res) => {
     ORDER BY m.created_at DESC LIMIT 10
   `).all(req.params.id);
 
-  res.json({ candidate, applications, cvMatches });
+  // Latest completed screening for this candidate (matched by email, or name fallback)
+  const latestScreening = (() => {
+    if (candidate.email && candidate.email.trim()) {
+      return db.prepare(`
+        SELECT id, job_title, overall_score, recommendation, summary, raw_json, key_skills, created_at
+        FROM screenings
+        WHERE created_by = ? AND status = 'completed' AND lower(trim(email)) = lower(trim(?))
+        ORDER BY created_at DESC LIMIT 1
+      `).get(req.user.id, candidate.email.trim());
+    }
+    return db.prepare(`
+      SELECT id, job_title, overall_score, recommendation, summary, raw_json, key_skills, created_at
+      FROM screenings
+      WHERE created_by = ? AND status = 'completed' AND lower(trim(candidate_name)) = lower(trim(?))
+      ORDER BY created_at DESC LIMIT 1
+    `).get(req.user.id, candidate.name.trim());
+  })();
+
+  // Parse strengths/gaps from raw_json if available
+  let screeningDetail = null;
+  if (latestScreening) {
+    let strengths = [], gaps = [];
+    if (latestScreening.raw_json) {
+      try {
+        const raw = JSON.parse(latestScreening.raw_json);
+        strengths = (raw.strengths || []).map(s => s.replace(/^Matched:\s*/i, ''));
+        gaps = (raw.gaps || []).map(g => g.replace(/^Missing:\s*/i, ''));
+      } catch (_) {}
+    }
+    if (strengths.length === 0 && latestScreening.key_skills) {
+      try { strengths = JSON.parse(latestScreening.key_skills); } catch (_) {}
+    }
+    if (gaps.length === 0 && latestScreening.summary) {
+      const m = latestScreening.summary.match(/Key gaps?:\s*([^.]+)/i);
+      if (m) gaps = m[1].split(',').map(g => g.trim()).filter(Boolean);
+    }
+    screeningDetail = {
+      id: latestScreening.id,
+      jobTitle: latestScreening.job_title,
+      overallScore: latestScreening.overall_score,
+      recommendation: latestScreening.recommendation,
+      summary: latestScreening.summary,
+      strengths,
+      gaps,
+      screenedOn: latestScreening.created_at,
+    };
+  }
+
+  res.json({ candidate, applications, cvMatches, latestScreening: screeningDetail });
 });
 
 // Shared CV processing helper
