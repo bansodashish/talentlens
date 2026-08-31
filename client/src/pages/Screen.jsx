@@ -25,7 +25,6 @@ const SCORE_BARS = [
   { key: 'supplyChainScore', label: 'Skills Match', color: 'bg-blue-600' },
   { key: 'procurementScore', label: 'Experience',  color: 'bg-brand-600' },
   { key: 'logisticsScore',   label: 'Location',  color: 'bg-emerald-600' },
-  { key: 'technologyScore',  label: 'Role / Title', color: 'bg-amber-500' },
 ];
 
 function Bar({ label, value, color }) {
@@ -97,7 +96,7 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4">
         {c.status === 'pending'
           ? <div className="col-span-4 text-xs text-slate-400 italic">Waiting for model response…</div>
           : SCORE_BARS.map(b => <Bar key={b.key} label={b.label} value={c[b.key]} color={b.color} />)
@@ -631,7 +630,7 @@ export default function Screen() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Resume Screener</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Local JD matching across skills, experience, location and role fit</p>
+          <p className="text-slate-500 text-sm mt-0.5">Local JD matching across skills, experience and location</p>
         </div>
       </div>
 

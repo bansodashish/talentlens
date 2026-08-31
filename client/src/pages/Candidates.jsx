@@ -109,9 +109,6 @@ export default function Candidates() {
         />
         <select className="input w-40" value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}>
           <option value="">All Statuses</option>
-          {['new', 'screening', 'interview', 'offer', 'hired', 'rejected'].map(s => (
-            <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-          ))}
         </select>
         {(filters.status || filters.search) && (
           <button className="btn-secondary text-sm" onClick={() => setFilters({ role: '', status: '', search: '' })}>Clear filters</button>

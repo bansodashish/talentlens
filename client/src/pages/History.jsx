@@ -595,7 +595,7 @@ const SCREENING_STATUS_FILTERS = ['All', 'Screened', 'In Pipeline'];
 function ScreeningsTab() {
   const [searchParams] = useSearchParams();
   const [jobs, setJobs] = useState([]);
-  const [selectedJob, setSelectedJob] = useState(searchParams.get('job') || '');
+  const [selectedJob, setSelectedJob] = useState(searchParams.get('job') || null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [candidates, setCandidates] = useState([]);
@@ -691,7 +691,7 @@ function ScreeningsTab() {
             value={selectedJob}
             onChange={e => setSelectedJob(e.target.value)}
           >
-            <option value="">All jobs</option>
+            <option value="">— Select a job —</option>
             {jobs.map(j => (
               <option key={j.jobTitle} value={j.jobTitle}>
                 {j.jobTitle} ({j.candidateCount})
@@ -723,7 +723,12 @@ function ScreeningsTab() {
         </div>
       </div>
 
-      {loading ? (
+      {!selectedJob ? (
+        <div className="card p-10 text-center text-slate-400">
+          <p className="text-4xl mb-2">📋</p>
+          <p className="font-medium text-slate-600">Select a job above to view screening results.</p>
+        </div>
+      ) : loading ? (
         <div className="p-10 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div></div>
       ) : error ? (
         <div className="card p-4 bg-red-50 border-red-200 text-red-700 text-sm">{error}</div>
