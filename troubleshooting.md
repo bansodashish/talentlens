@@ -384,8 +384,7 @@ folder, so a bad `git pull`/`rm -rf` inside the repo can't touch backups. The la
 ```bash
 sudo -iu talentlens
 cd ~/talentlens
-bash scripts/backup-db.sh
-```
+bash scripts/backup-db.sh![1788152784377](image/troubleshooting/1788152784377.png)
 
 ### Restore from a backup
 ```bash
