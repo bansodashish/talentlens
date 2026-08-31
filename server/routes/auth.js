@@ -2,11 +2,13 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const db = require('../db');
 const { authMiddleware } = require('../middleware/auth');
 const { encrypt, decrypt } = require('../utils/encryption');
 const { PLAN_LIMITS, getUsage } = require('../middleware/planLimits');
+const { sendMail } = require('../utils/mailer');
 
 // Brute-force protection: cap login/register attempts per IP.
 const authLimiter = rateLimit({
@@ -16,6 +18,31 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many attempts. Please try again later.' },
 });
+
+// Per-account lockout (independent of the IP-based limiter above — this catches
+// distributed attempts against one account from many IPs).
+const MAX_FAILED_LOGINS = 5;
+const LOCKOUT_MINUTES = 15;
+
+// Password reset / email verification tokens: hashed at rest, single-use, short expiry.
+const RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
+const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+
+const appUrl = () => (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
+const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
+
+async function sendVerificationEmail(user) {
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + VERIFY_TOKEN_TTL_MS).toISOString();
+  db.prepare('INSERT INTO email_verifications (user_id, token_hash, expires_at) VALUES (?, ?, ?)')
+    .run(user.id, hashToken(token), expiresAt);
+  const link = `${appUrl()}/verify-email?token=${token}`;
+  await sendMail({
+    to: user.email,
+    subject: 'Verify your TalentLenses email',
+    html: `<p>Hi ${user.name},</p><p>Please verify your email address to finish setting up your TalentLenses account:</p><p><a href="${link}">${link}</a></p><p>This link expires in 24 hours.</p>`,
+  });
+}
 
 // ── POST /api/auth/register ──────────────────────────────────────────
 router.post('/register', authLimiter, async (req, res) => {
@@ -61,6 +88,10 @@ router.post('/register', authLimiter, async (req, res) => {
     );
   } catch (_) {}
 
+  // Soft-gate email verification: account is usable immediately, but we send a
+  // verification link the client can prompt the user to complete later.
+  sendVerificationEmail(user).catch((err) => console.error('[auth] verification email failed:', err.message));
+
   res.status(201).json({ token, user });
 });
 
@@ -75,8 +106,33 @@ router.post('/login', authLimiter, async (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE lower(email) = ?').get(normalizedEmail);
   if (!user) return res.status(401).json({ error: 'Invalid credentials.' });
 
+  // Per-account lockout — check before verifying the password so a locked
+  // account can't be brute-forced further while "locked".
+  if (user.locked_until && new Date(user.locked_until) > new Date()) {
+    const minutesLeft = Math.ceil((new Date(user.locked_until) - new Date()) / 60000);
+    return res.status(423).json({
+      error: `Too many failed attempts. Try again in ${minutesLeft} minute${minutesLeft === 1 ? '' : 's'}, or reset your password.`,
+    });
+  }
+
   const valid = await bcrypt.compare(password, user.password);
-  if (!valid) return res.status(401).json({ error: 'Invalid credentials.' });
+  if (!valid) {
+    const failedCount = (user.failed_login_count || 0) + 1;
+    if (failedCount >= MAX_FAILED_LOGINS) {
+      const lockedUntil = new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000).toISOString();
+      db.prepare('UPDATE users SET failed_login_count = 0, locked_until = ? WHERE id = ?').run(lockedUntil, user.id);
+      return res.status(423).json({
+        error: `Too many failed attempts. Account locked for ${LOCKOUT_MINUTES} minutes, or reset your password.`,
+      });
+    }
+    db.prepare('UPDATE users SET failed_login_count = ? WHERE id = ?').run(failedCount, user.id);
+    return res.status(401).json({ error: 'Invalid credentials.' });
+  }
+
+  // Successful login — clear any lockout state.
+  if (user.failed_login_count || user.locked_until) {
+    db.prepare('UPDATE users SET failed_login_count = 0, locked_until = NULL WHERE id = ?').run(user.id);
+  }
 
   // Designated admin account — auto-promote so there is always one admin login.
   // Set ADMIN_EMAIL in server/.env (e.g. ADMIN_EMAIL=admin@yourcompany.com).
@@ -211,6 +267,81 @@ router.put('/me', authMiddleware, async (req, res) => {
   updated.has_apollo_key = apollo_key !== undefined ? !!apollo_key : !!row.apollo_key_enc;
   updated.has_openai_key = openai_key !== undefined ? !!openai_key : !!row.openai_key_enc;
   res.json({ user: updated });
+});
+
+// ── POST /api/auth/forgot-password ── request a reset link ─────────────────
+router.post('/forgot-password', authLimiter, async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email is required.' });
+
+  const normalizedEmail = String(email).trim().toLowerCase();
+  const genericMessage = { message: 'If that email is registered, a reset link has been sent.' };
+
+  const user = db.prepare('SELECT id, name, email FROM users WHERE lower(email) = ?').get(normalizedEmail);
+  if (!user) return res.json(genericMessage); // never reveal whether the email exists
+
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS).toISOString();
+  db.prepare('INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, ?)')
+    .run(user.id, hashToken(token), expiresAt);
+
+  const link = `${appUrl()}/reset-password?token=${token}`;
+  await sendMail({
+    to: user.email,
+    subject: 'Reset your TalentLenses password',
+    html: `<p>Hi ${user.name},</p><p>Click the link below to reset your password. This link expires in 30 minutes and can only be used once.</p><p><a href="${link}">${link}</a></p><p>If you didn't request this, you can safely ignore this email.</p>`,
+  });
+
+  res.json(genericMessage);
+});
+
+// ── POST /api/auth/reset-password ── consume token, set new password ───────
+router.post('/reset-password', authLimiter, async (req, res) => {
+  const { token, new_password } = req.body;
+  if (!token || !new_password)
+    return res.status(400).json({ error: 'Token and new password are required.' });
+  if (new_password.length < 8)
+    return res.status(400).json({ error: 'New password must be at least 8 characters.' });
+
+  const tokenHash = hashToken(token);
+  const row = db.prepare(
+    "SELECT * FROM password_resets WHERE token_hash = ? AND used = 0 AND expires_at > CURRENT_TIMESTAMP"
+  ).get(tokenHash);
+  if (!row) return res.status(400).json({ error: 'This reset link is invalid or has expired.' });
+
+  const hashed = await bcrypt.hash(new_password, 12);
+  db.prepare('UPDATE users SET password = ?, failed_login_count = 0, locked_until = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+    .run(hashed, row.user_id);
+  db.prepare('UPDATE password_resets SET used = 1 WHERE id = ?').run(row.id);
+
+  res.json({ message: 'Password updated. You can now sign in with your new password.' });
+});
+
+// ── GET /api/auth/verify-email ── consume verification token ───────────────
+router.get('/verify-email', (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.status(400).json({ error: 'Verification token is required.' });
+
+  const tokenHash = hashToken(token);
+  const row = db.prepare(
+    "SELECT * FROM email_verifications WHERE token_hash = ? AND used = 0 AND expires_at > CURRENT_TIMESTAMP"
+  ).get(tokenHash);
+  if (!row) return res.status(400).json({ error: 'This verification link is invalid or has expired.' });
+
+  db.prepare('UPDATE users SET email_verified = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(row.user_id);
+  db.prepare('UPDATE email_verifications SET used = 1 WHERE id = ?').run(row.id);
+
+  res.json({ message: 'Email verified successfully.' });
+});
+
+// ── POST /api/auth/resend-verification ── re-send verification email ──────
+router.post('/resend-verification', authMiddleware, async (req, res) => {
+  const user = db.prepare('SELECT id, name, email, email_verified FROM users WHERE id = ?').get(req.user.id);
+  if (!user) return res.status(404).json({ error: 'User not found.' });
+  if (user.email_verified) return res.status(400).json({ error: 'Email is already verified.' });
+
+  await sendVerificationEmail(user);
+  res.json({ message: 'Verification email sent.' });
 });
 
 module.exports = router;

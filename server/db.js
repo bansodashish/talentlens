@@ -69,6 +69,38 @@ migrate('ALTER TABLE users ADD COLUMN onboarding_complete INTEGER DEFAULT 0');
 migrate("UPDATE users SET plan = 'pro' WHERE lower(plan) = 'enterprise'");
 migrate("UPDATE users SET plan = 'basic' WHERE plan IS NULL OR trim(plan) = '' OR lower(plan) NOT IN ('basic', 'pro')");
 
+// Account security — email verification + per-account login lockout
+migrate('ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0');
+migrate('ALTER TABLE users ADD COLUMN failed_login_count INTEGER DEFAULT 0');
+migrate('ALTER TABLE users ADD COLUMN locked_until DATETIME');
+
+// Password reset tokens — token itself is never stored, only a SHA-256 hash of it
+// (single-use, short expiry; see server/routes/auth.js forgot/reset-password).
+migrate(`
+  CREATE TABLE IF NOT EXISTS password_resets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    token_hash TEXT NOT NULL,
+    expires_at DATETIME NOT NULL,
+    used INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )
+`);
+
+// Email verification tokens — same hashed-token pattern as password_resets.
+migrate(`
+  CREATE TABLE IF NOT EXISTS email_verifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    token_hash TEXT NOT NULL,
+    expires_at DATETIME NOT NULL,
+    used INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )
+`);
+
 // Self-service plan-upgrade requests (admin-approved, no billing/email integration)
 migrate(`
   CREATE TABLE IF NOT EXISTS upgrade_requests (

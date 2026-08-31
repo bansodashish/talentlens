@@ -68,16 +68,16 @@ router.get('/:id', (req, res) => {
 
 // POST /api/jobs
 router.post('/', (req, res) => {
-  const { title, description, requirements, location, market, employment_type, salary_min, salary_max, salary_currency } = req.body;
+  const { title, description, requirements, location, market, employment_type, salary_min, salary_max, salary_currency, company } = req.body;
 
   if (!title || !location || !market) {
     return res.status(400).json({ error: 'Title, location and market are required.' });
   }
 
   const result = db.prepare(`
-    INSERT INTO jobs (title, description, requirements, location, market, employment_type, salary_min, salary_max, salary_currency, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(title, description, requirements, location, market, employment_type || 'Full-time', salary_min, salary_max, salary_currency || 'GBP', req.user.id);
+    INSERT INTO jobs (title, description, requirements, location, market, employment_type, salary_min, salary_max, salary_currency, company, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(title, description, requirements, location, market, employment_type || 'Full-time', salary_min, salary_max, salary_currency || 'GBP', company || null, req.user.id);
 
   const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(result.lastInsertRowid);
 
@@ -93,12 +93,12 @@ router.put('/:id', (req, res) => {
   const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
   if (!job || job.created_by !== req.user.id) return res.status(404).json({ error: 'Job not found.' });
 
-  const { title, description, requirements, location, market, employment_type, salary_min, salary_max, salary_currency, status } = req.body;
+  const { title, description, requirements, location, market, employment_type, salary_min, salary_max, salary_currency, status, company } = req.body;
 
   db.prepare(`
-    UPDATE jobs SET title=?, description=?, requirements=?, location=?, market=?, employment_type=?, salary_min=?, salary_max=?, salary_currency=?, status=?, updated_at=CURRENT_TIMESTAMP
+    UPDATE jobs SET title=?, description=?, requirements=?, location=?, market=?, employment_type=?, salary_min=?, salary_max=?, salary_currency=?, status=?, company=?, updated_at=CURRENT_TIMESTAMP
     WHERE id=?
-  `).run(title || job.title, description ?? job.description, requirements ?? job.requirements, location || job.location, market || job.market, employment_type || job.employment_type, salary_min ?? job.salary_min, salary_max ?? job.salary_max, salary_currency || job.salary_currency, status || job.status, req.params.id);
+  `).run(title || job.title, description ?? job.description, requirements ?? job.requirements, location || job.location, market || job.market, employment_type || job.employment_type, salary_min ?? job.salary_min, salary_max ?? job.salary_max, salary_currency || job.salary_currency, status || job.status, company !== undefined ? company : job.company, req.params.id);
 
   const updated = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
   res.json({ job: updated });

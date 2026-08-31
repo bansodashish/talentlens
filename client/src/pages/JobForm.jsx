@@ -11,7 +11,8 @@ export default function JobForm() {
   const [form, setForm] = useState({
     title: '', description: '', requirements: '',
     location: '', market: 'Global', employment_type: 'Full-time',
-    salary_min: '', salary_max: '', salary_currency: 'GBP', status: 'active'
+    salary_min: '', salary_max: '', salary_currency: 'GBP', status: 'active',
+    company: ''
   });
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export default function JobForm() {
     payload.location = payload.location || 'Remote';
     payload.employment_type = payload.employment_type || 'Full-time';
     payload.salary_currency = payload.salary_currency || 'GBP';
+    payload.company = (payload.company || '').trim() || null;
     if (payload.salary_min === '') payload.salary_min = null;
     else if (payload.salary_min != null) payload.salary_min = Number(payload.salary_min);
     if (payload.salary_max === '') payload.salary_max = null;
@@ -97,6 +99,10 @@ export default function JobForm() {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-2">
+            <label className="block text-sm font-medium text-slate-700 mb-1">Company</label>
+            <input type="text" className="input" placeholder="e.g. Acme Corp" {...f('company')} />
+          </div>
+          <div className="col-span-2">
             <label className="block text-sm font-medium text-slate-700 mb-1">Job Title *</label>
             <input type="text" required className="input" placeholder="e.g. Product Manager" {...f('title')} />
           </div>
@@ -117,12 +123,13 @@ export default function JobForm() {
         </div>
 
         <div className="flex gap-3 pt-2">
-          <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Job'}
-          </button>
-          {!isEdit && (
-            <button type="button" className="btn-secondary" onClick={handleStartScreening} disabled={loading}>
-              {loading ? 'Saving…' : 'Start Screening'}
+          {isEdit ? (
+            <button type="submit" className="btn-primary" disabled={loading}>
+              {loading ? 'Saving…' : 'Save Changes'}
+            </button>
+          ) : (
+            <button type="button" className="btn-primary" onClick={handleStartScreening} disabled={loading}>
+              {loading ? 'Saving…' : 'Create Job & Start Screening'}
             </button>
           )}
           <button type="button" className="btn-secondary" onClick={() => navigate('/jobs')}>Cancel</button>
