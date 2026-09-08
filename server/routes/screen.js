@@ -22,6 +22,7 @@ const { limitScreenings } = require('../middleware/planLimits');
 const { parseCV }        = require('../services/cvParser');
 const { screenResume, MODEL } = require('../services/claudeScreener');
 const { screenResume: screenOpenClawLocal, MODEL: OPENCLAW_LOCAL_MODEL } = require('../services/openclawLocalScreener');
+const { screenResume: screenLocalAi, MODEL: LOCALAI_MODEL } = require('../services/localAiScreener');
 const { scoreCandidate, detectRole, ALL_ROLES } = require('../services/scorer');
 const { extractJobTitle } = require('../utils/extractJobTitle');
 const { resolveUploadsDir } = require('../utils/storagePaths');
@@ -237,6 +238,15 @@ async function processScreeningsBackground({ batchId, mode, apiKey, jobDescripti
         });
         result = out.result;
         raw = { provider: 'openclaw-local', model: OPENCLAW_LOCAL_MODEL, ...out.raw };
+      } else if (mode === 'localai') {
+        const out = await screenLocalAi({
+          jobDescription,
+          filePath: file.path,
+          plainText,
+          fileName: file.originalname,
+        });
+        result = out.result;
+        raw = { provider: 'localai', model: LOCALAI_MODEL, ...out.raw };
       } else {
         const out = await screenResume({
           apiKey,
@@ -268,6 +278,10 @@ async function processScreeningsBackground({ batchId, mode, apiKey, jobDescripti
         if (/ECONNREFUSED|connect ECONNREFUSED|timed out|timeout/i.test(rawMsg)) {
           error = 'Local OpenClaw service is unavailable. Check OPENCLAW_LOCAL_BASE_URL and ensure the model server is running.';
         }
+      } else if (mode === 'localai') {
+        if (/ECONNREFUSED|connect ECONNREFUSED|timed out|timeout/i.test(rawMsg)) {
+          error = 'LocalAI service is unavailable. Check LOCALAI_BASE_URL and ensure the model server is running.';
+        }
       } else {
         if (code === 401 || /invalid.*api.?key|authentication/i.test(rawMsg)) {
           error = 'Invalid Claude API key. Save one under Profile → API Keys.';
@@ -295,7 +309,7 @@ async function processScreeningsBackground({ batchId, mode, apiKey, jobDescripti
     db.prepare(`
       INSERT INTO activities (type, description, entity_type, entity_id, user_id)
       VALUES ('resume_screened', ?, 'screening_batch', NULL, ?)
-    `).run(`Screened ${inserted.length} resume(s) (${mode === 'local' ? 'local scan' : mode === 'openclaw-local' ? 'OpenClaw local' : 'Claude'})`, userId);
+    `).run(`Screened ${inserted.length} resume(s) (${mode === 'local' ? 'local scan' : mode === 'openclaw-local' ? 'OpenClaw local' : mode === 'localai' ? 'LocalAI' : 'Claude'})`, userId);
   } catch (_) {}
 
   // Find-or-create a Job entry for this job title so it shows up in the Jobs tab.
@@ -325,7 +339,7 @@ router.post('/resume', limitScreenings, upload.array('files', 25), async (req, r
   const jobDescription = req.body.job_description || req.body.jobDescription || '';
   const jobTitleInput = String(req.body.job_title || req.body.jobTitle || '').trim();
   const requestedMode = String(req.body.mode || 'local').toLowerCase();
-  const mode = ['local', 'ai', 'openclaw-local'].includes(requestedMode) ? requestedMode : 'local';
+  const mode = ['local', 'ai', 'openclaw-local', 'localai'].includes(requestedMode) ? requestedMode : 'local';
   const files = req.files || [];
 
   if (!jobDescription.trim()) {
@@ -360,6 +374,14 @@ router.post('/resume', limitScreenings, upload.array('files', 25), async (req, r
       return res.status(503).json({
         error: 'Local OpenClaw mode is not configured.',
         hint: 'Set OPENCLAW_LOCAL_BASE_URL and OPENCLAW_LOCAL_MODEL in server/.env and restart the API.',
+      });
+    }
+  } else if (mode === 'localai') {
+    if (!process.env.LOCALAI_BASE_URL || !process.env.LOCALAI_MODEL) {
+      files.forEach(f => { try { fs.unlinkSync(f.path); } catch (_) {} });
+      return res.status(503).json({
+        error: 'LocalAI mode is not configured.',
+        hint: 'Set LOCALAI_BASE_URL and LOCALAI_MODEL in server/.env and restart the API.',
       });
     }
   }
@@ -419,7 +441,7 @@ router.post('/resume', limitScreenings, upload.array('files', 25), async (req, r
   res.status(202).json({
     batchId,
     mode,
-    model: mode === 'ai' ? MODEL : mode === 'openclaw-local' ? OPENCLAW_LOCAL_MODEL : 'local-scorer',
+    model: mode === 'ai' ? MODEL : mode === 'openclaw-local' ? OPENCLAW_LOCAL_MODEL : mode === 'localai' ? LOCALAI_MODEL : 'local-scorer',
     count: files.length,
     status: 'processing',
     results: []

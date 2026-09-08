@@ -1,18 +1,26 @@
 /**
- * OpenClaw Local Resume Screener Service
+ * LocalAI Resume Screener Service
  *
- * Calls a local OpenAI-compatible endpoint (for example Ollama/OpenClaw/vLLM)
- * to score resumes against a job description using the same output shape as
- * claudeScreener so the rest of the pipeline remains unchanged.
+ * Calls a self-hosted LocalAI instance (OpenAI-compatible API, typically
+ * backed by llama.cpp) to score resumes against a job description, using
+ * the same output shape as the other screeners so the rest of the
+ * pipeline remains unchanged. Runs alongside — not instead of — the
+ * OpenClaw/Ollama local mode.
  */
 const { parseCV } = require('./cvParser');
 const { extractJson, normalise } = require('./screenerUtils');
 
-const BASE_URL = process.env.OPENCLAW_LOCAL_BASE_URL || 'http://127.0.0.1:11434/v1';
-const MODEL = process.env.OPENCLAW_LOCAL_MODEL || 'qwen2.5:7b-instruct';
-const API_KEY = process.env.OPENCLAW_LOCAL_API_KEY || 'local-dev-key';
-const MAX_TOKENS = Number(process.env.OPENCLAW_LOCAL_MAX_TOKENS || 2048);
-const TIMEOUT_MS = Number(process.env.OPENCLAW_LOCAL_TIMEOUT_MS || 180000);
+const BASE_URL = process.env.LOCALAI_BASE_URL || 'http://127.0.0.1:8081/v1';
+const MODEL = process.env.LOCALAI_MODEL || '';
+const API_KEY = process.env.LOCALAI_API_KEY || 'local-dev-key';
+const MAX_TOKENS = Number(process.env.LOCALAI_MAX_TOKENS || 2048);
+const TIMEOUT_MS = Number(process.env.LOCALAI_TIMEOUT_MS || 180000);
+
+// Some LocalAI backends/models don't support strict JSON mode
+// (response_format: json_object). Default to omitting it since extractJson()
+// already tolerates fenced or plain JSON; set LOCALAI_JSON_MODE=true once
+// you've confirmed your backend supports it.
+const JSON_MODE = /^true$/i.test(process.env.LOCALAI_JSON_MODE || '');
 
 const SYSTEM_PROMPT =
   'You are an expert recruiter. Evaluate resumes against the provided job description objectively. Respond ONLY in valid JSON.';
@@ -93,7 +101,7 @@ async function screenResume({ jobDescription, filePath, plainText, fileName }) {
     ],
     temperature: 0.2,
     max_tokens: MAX_TOKENS,
-    response_format: { type: 'json_object' },
+    ...(JSON_MODE ? { response_format: { type: 'json_object' } } : {}),
   });
 
   const text = completion.choices?.[0]?.message?.content || '';
