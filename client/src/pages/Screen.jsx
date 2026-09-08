@@ -406,6 +406,7 @@ export default function Screen() {
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [scanMode, setScanMode] = useState(() => loadPersistedScreenState()?.scanMode || 'local');
   const [localAiAvailable, setLocalAiAvailable] = useState(false);
+  const [localAiEngineAvailable, setLocalAiEngineAvailable] = useState(false);
   const [files, setFiles] = useState([]);
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -455,8 +456,12 @@ export default function Screen() {
   useEffect(() => {
     let cancelled = false;
     api.get('/health')
-      .then(res => { if (!cancelled) setLocalAiAvailable(Boolean(res.data?.modules?.openclawLocal)); })
-      .catch(() => { if (!cancelled) setLocalAiAvailable(false); });
+      .then(res => {
+        if (cancelled) return;
+        setLocalAiAvailable(Boolean(res.data?.modules?.openclawLocal));
+        setLocalAiEngineAvailable(Boolean(res.data?.modules?.localAi));
+      })
+      .catch(() => { if (!cancelled) { setLocalAiAvailable(false); setLocalAiEngineAvailable(false); } });
     return () => { cancelled = true; };
   }, []);
 
@@ -769,6 +774,26 @@ export default function Screen() {
                 className="accent-brand-600"
               />
               Local AI Model <span className="text-xs text-slate-400">(self-hosted, private)</span>
+            </label>
+
+            <label
+              className={`flex items-center gap-2 border rounded-lg px-3 py-2 text-sm ${
+                localAiEngineAvailable
+                  ? (scanMode === 'localai' ? 'border-brand-600 bg-brand-50 text-brand-800 cursor-pointer' : 'border-slate-300 text-slate-600 cursor-pointer')
+                  : 'border-slate-200 text-slate-300 cursor-not-allowed'
+              }`}
+              title={localAiEngineAvailable ? '' : 'Not configured — set LOCALAI_BASE_URL and LOCALAI_MODEL on the server'}
+            >
+              <input
+                type="radio"
+                name="scanMode"
+                value="localai"
+                checked={scanMode === 'localai'}
+                disabled={!localAiEngineAvailable}
+                onChange={() => setScanMode('localai')}
+                className="accent-brand-600"
+              />
+              LocalAI <span className="text-xs text-slate-400">(self-hosted, private)</span>
             </label>
           </div>
         </div>

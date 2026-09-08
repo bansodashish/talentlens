@@ -107,6 +107,7 @@ app.get('/api/health', (req, res) => {
       googleSheets: Boolean(process.env.GOOGLE_SHEET_ID),
       openai: Boolean(process.env.OPENAI_API_KEY),
       openclawLocal: Boolean(process.env.OPENCLAW_LOCAL_BASE_URL && process.env.OPENCLAW_LOCAL_MODEL),
+      localAi: Boolean(process.env.LOCALAI_BASE_URL && process.env.LOCALAI_MODEL),
     },
     timestamp: new Date().toISOString(),
   });
