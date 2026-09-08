@@ -3,6 +3,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme, THEMES } from '../context/ThemeContext';
 
+// Update this with your Stripe Payment Link URL
+const STRIPE_UPGRADE_URL = process.env.REACT_APP_STRIPE_URL || 'https://buy.stripe.com/your-link-here';
+
 const mainNav = [
   { path: '/dashboard',  label: 'Dashboard' },
   { path: '/jobs',       label: 'Jobs' },
@@ -212,16 +215,17 @@ export default function Layout({ children }) {
                       <div className="text-xs font-bold capitalize" style={{ color: navText }}>{user?.plan || 'basic'}</div>
                     </div>
                     {(user?.plan || 'basic') !== 'pro' && (
-                      <Link to="/profile" onClick={() => setDropdownOpen(false)}
+                      <button
+                        onClick={() => { setDropdownOpen(false); window.open(STRIPE_UPGRADE_URL, '_blank'); }}
                         className="text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors"
                         style={{ background: `${navActive}22`, color: navActive }}>
                         Upgrade ↑
-                      </Link>
+                      </button>
                     )}
                   </div>
                   {user?.usage && (
                     <div className="mt-2 space-y-1.5">
-                      {[['Searches', user.usage.searches], ['Screenings', user.usage.screenings]].map(([label, u]) => u && (
+                      {[['Screenings', user.usage.screenings]].map(([label, u]) => u && (
                         <div key={label}>
                           <div className="flex justify-between text-[10px] mb-0.5" style={{ color: navText, opacity: 0.55 }}>
                             <span>{label}</span>

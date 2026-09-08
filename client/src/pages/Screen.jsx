@@ -404,7 +404,8 @@ export default function Screen() {
   const [selectedJobId, setSelectedJobId] = useState('');
   const [jobsList, setJobsList] = useState([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
-  const scanMode = 'local';
+  const [scanMode, setScanMode] = useState(() => loadPersistedScreenState()?.scanMode || 'local');
+  const [localAiAvailable, setLocalAiAvailable] = useState(false);
   const [files, setFiles] = useState([]);
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -445,6 +446,17 @@ export default function Screen() {
       .then(res => { if (!cancelled) setJobsList(res.data?.jobs || []); })
       .catch(() => { if (!cancelled) setJobsList([]); })
       .finally(() => { if (!cancelled) setLoadingJobs(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Check whether the self-hosted local AI model (Ollama/OpenClaw) is
+  // configured and reachable, so the "Local AI Model" option can be hidden
+  // instead of offering a mode that will always fail.
+  useEffect(() => {
+    let cancelled = false;
+    api.get('/health')
+      .then(res => { if (!cancelled) setLocalAiAvailable(Boolean(res.data?.modules?.openclawLocal)); })
+      .catch(() => { if (!cancelled) setLocalAiAvailable(false); });
     return () => { cancelled = true; };
   }, []);
 
@@ -718,6 +730,47 @@ export default function Screen() {
             onChange={e => setJobDescription(e.target.value)}
             required
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Screening Mode</label>
+          <div className="flex flex-wrap gap-2">
+            <label
+              className={`flex items-center gap-2 border rounded-lg px-3 py-2 text-sm cursor-pointer ${
+                scanMode === 'local' ? 'border-brand-600 bg-brand-50 text-brand-800' : 'border-slate-300 text-slate-600'
+              }`}
+            >
+              <input
+                type="radio"
+                name="scanMode"
+                value="local"
+                checked={scanMode === 'local'}
+                onChange={() => setScanMode('local')}
+                className="accent-brand-600"
+              />
+              Keyword Match <span className="text-xs text-slate-400">(fast, no AI)</span>
+            </label>
+
+            <label
+              className={`flex items-center gap-2 border rounded-lg px-3 py-2 text-sm ${
+                localAiAvailable
+                  ? (scanMode === 'openclaw-local' ? 'border-brand-600 bg-brand-50 text-brand-800 cursor-pointer' : 'border-slate-300 text-slate-600 cursor-pointer')
+                  : 'border-slate-200 text-slate-300 cursor-not-allowed'
+              }`}
+              title={localAiAvailable ? '' : 'Not configured — set OPENCLAW_LOCAL_BASE_URL and OPENCLAW_LOCAL_MODEL on the server'}
+            >
+              <input
+                type="radio"
+                name="scanMode"
+                value="openclaw-local"
+                checked={scanMode === 'openclaw-local'}
+                disabled={!localAiAvailable}
+                onChange={() => setScanMode('openclaw-local')}
+                className="accent-brand-600"
+              />
+              Local AI Model <span className="text-xs text-slate-400">(self-hosted, private)</span>
+            </label>
+          </div>
         </div>
 
         <div>

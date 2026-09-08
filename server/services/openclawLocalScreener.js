@@ -48,16 +48,17 @@ Read the job description above carefully. Identify the 4 most important requirem
 - currentRole = the candidate's OWN current/most-recent job title, taken from their résumé.
 - jobTitle = the position title being hired for, taken from the JOB DESCRIPTION above (e.g. "Principal DevOps Engineer") — NOT the candidate's résumé.
 
-Score mapping — map the 4 JD requirement areas you identified onto the 4 score fields in order:
-- supplyChainScore = score for JD requirement area 1
-- procurementScore = score for JD requirement area 2
-- logisticsScore   = score for JD requirement area 3
-- technologyScore  = score for JD requirement area 4
+Score mapping — map the 3 JD requirement areas onto the score fields:
+- supplyChainScore = score for JD requirement area 1 (skills match)
+- procurementScore = score for JD requirement area 2 (experience)
+- logisticsScore   = score for JD requirement area 3 (domain/location fit)
+- technologyScore  = always set to 0 (not displayed)
 
 Scoring rules:
 - All scores are integers from 0 to 100.
 - Base ALL scores solely on how well the candidate matches the job description — ignore any domain not mentioned in the JD.
-- overallScore = holistic fit against the JD (not necessarily the average of the 4 scores).
+- overallScore = holistic fit against the JD based on Skills Match, Experience and Domain Fit only.
+- technologyScore must always be 0.
 - recommendation: >=75 -> "Strong Hire", 55-74 -> "Consider", <55 -> "Reject".
 - summary: 2-3 sentences — what makes the candidate a good or poor fit for THIS specific role.
 - strengths: list of 3-6 specific skills or qualities the candidate HAS that match the JD requirements (short phrases, e.g. "5 years Terraform", "AWS certified").
