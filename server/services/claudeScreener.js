@@ -60,7 +60,7 @@ Evaluate the candidate against the job description above. Return ONLY a single J
   "supplyChainScore": number,   // Skills Match (how well core skills match the JD, 0–100)
   "procurementScore": number,   // Experience (depth & seniority match, 0–100)
   "logisticsScore": number,     // Domain Fit (industry & domain alignment, 0–100)
-  "technologyScore": number,    // Tools & Tech (tools/platforms/certifications, 0–100)
+  "technologyScore": number,    // Not displayed — set to 0
   "overallScore": number,
   "recommendation": "Strong Hire" | "Consider" | "Reject",
   "summary": string
@@ -71,7 +71,8 @@ Evaluate the candidate against the job description above. Return ONLY a single J
 
 Scoring rules:
 - All scores are integers from 0 to 100.
-- overallScore = your holistic fit assessment (not necessarily the average).
+- overallScore = your holistic fit assessment based on Skills Match, Experience and Domain Fit only.
+- technologyScore must always be 0 (it is not used).
 - recommendation should align with overallScore: >=75 → "Strong Hire", 55-74 → "Consider", <55 → "Reject".
 - summary: 2-3 sentences covering strengths, gaps, and overall fit.
 - Use "" for unknown strings and 0 for unknown numbers — never invent data.`,
