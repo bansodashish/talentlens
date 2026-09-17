@@ -2,8 +2,8 @@
  * OpenClaw Local Resume Screener Service
  *
  * Calls a local OpenAI-compatible endpoint (for example Ollama/OpenClaw/vLLM)
- * to score resumes against a job description using the same output shape as
- * claudeScreener so the rest of the pipeline remains unchanged.
+ * to score resumes against a job description, emitting the shared screening
+ * output shape produced by `screenerUtils.normalise()`.
  */
 const { parseCV } = require('./cvParser');
 const { extractJson, normalise } = require('./screenerUtils');

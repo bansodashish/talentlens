@@ -20,7 +20,7 @@ export default function Profile() {
   const { user, updateUser } = useAuth();
 
   const [profile, setProfile] = useState({ name: '', company: '', market: 'Both' });
-  const [keys, setKeys] = useState({ apify_key: '', claude_key: '', apollo_key: '', openai_key: '' });
+  const [keys, setKeys] = useState({ apify_key: '', apollo_key: '', openai_key: '' });
   const [passwords, setPasswords] = useState({ current_password: '', new_password: '', confirm_password: '' });
 
   const [saving, setSaving] = useState(false);
@@ -46,7 +46,6 @@ export default function Profile() {
       const res = await api.get('/auth/me/keys');
       setKeys({
         apify_key: res.data.apify_key || '',
-        claude_key: res.data.claude_key || '',
         apollo_key: res.data.apollo_key || '',
         openai_key: res.data.openai_key || '',
       });
@@ -186,14 +185,6 @@ export default function Profile() {
               onChange={e => setKeys({ ...keys, apify_key: e.target.value })} />
             {user?.has_apify_key && <p className="text-xs text-green-600 mt-1">✅ Key saved</p>}
           </Field>
-          <Field label="Claude / Anthropic API Key">
-            <input type={keysLoaded ? 'text' : 'password'} className="input font-mono text-sm"
-              placeholder={user?.has_claude_key ? '••••••••••••••••••••' : 'sk-ant-...'}
-              value={keys.claude_key}
-              onFocus={loadKeys}
-              onChange={e => setKeys({ ...keys, claude_key: e.target.value })} />
-            {user?.has_claude_key && <p className="text-xs text-green-600 mt-1">✅ Key saved</p>}
-          </Field>
           <Field label="OpenAI (ChatGPT) API Key">
             <input type={keysLoaded ? 'text' : 'password'} className="input font-mono text-sm"
               placeholder={user?.has_openai_key ? '••••••••••••••••••••' : 'sk-...'}
@@ -201,7 +192,6 @@ export default function Profile() {
               onFocus={loadKeys}
               onChange={e => setKeys({ ...keys, openai_key: e.target.value })} />
             {user?.has_openai_key && <p className="text-xs text-green-600 mt-1">✅ Key saved</p>}
-            <p className="text-xs text-slate-400 mt-1">Used for AI Scan (resume screening).</p>
           </Field>
           <Field label="Apollo API Key">
             <input type={keysLoaded ? 'text' : 'password'} className="input font-mono text-sm"
@@ -214,10 +204,12 @@ export default function Profile() {
           </Field>
           <div className="flex items-center gap-3">
             <button type="submit" className="btn-primary" disabled={savingKeys}>{savingKeys ? 'Saving…' : 'Save keys'}</button>
-            {keys.apify_key || keys.claude_key || keys.apollo_key || keys.openai_key ? (
+            {keys.apify_key || keys.apollo_key || keys.openai_key ? (
               <button type="button" className="btn-secondary text-sm"
                 onClick={() => {
-                  setKeys({ apify_key: '', claude_key: '', apollo_key: '', openai_key: '' });
+                  setKeys({ apify_key: '', apollo_key: '', openai_key: '' });
+                  // claude_key is no longer collected, but is still cleared here so
+                  // any key saved before the Claude screener was removed gets wiped.
                   updateUser({ apify_key: '', claude_key: '', apollo_key: '', openai_key: '' }).catch(() => {});
                 }}>
                 Clear keys
