@@ -384,7 +384,8 @@ folder, so a bad `git pull`/`rm -rf` inside the repo can't touch backups. The la
 ```bash
 sudo -iu talentlens
 cd ~/talentlens
-bash scripts/backup-db.sh![1788152784377](image/troubleshooting/1788152784377.png)
+bash scripts/backup-db.sh
+```
 
 ### Restore from a backup
 ```bash
@@ -463,6 +464,99 @@ given column must be checked independently when a field silently fails to save.
 
 ---
 
+## Incident: `NET::ERR_CERT_DATE_INVALID` — Expired Let's Encrypt Certificate
+
+### Symptoms
+- Browser shows **"Your connection is not private"** with `NET::ERR_CERT_DATE_INVALID`
+  on `https://talentlenses.leedscrownbridge.co.uk`.
+- The app itself is fine — nginx and PM2 are up; only the TLS certificate is past its
+  `notAfter` date (Let's Encrypt certs are valid for 90 days).
+
+### Diagnosis (run as root on the VPS)
+```bash
+# 1. Check the validity window of the cert nginx is actually serving
+echo | openssl s_client -servername talentlenses.leedscrownbridge.co.uk \
+  -connect talentlenses.leedscrownbridge.co.uk:443 2>/dev/null \
+  | openssl x509 -noout -dates -subject
+
+# 2. Check what certbot thinks it manages
+certbot certificates
+
+# 3. Check whether auto-renewal is alive (this is the usual root cause)
+systemctl status certbot.timer
+systemctl list-timers | grep certbot
+journalctl -u certbot --since "45 days ago" | tail -50
+```
+
+### Fix
+```bash
+# Dry run first — proves the HTTP-01 challenge can reach /.well-known/acme-challenge/
+certbot renew --dry-run
+
+# Real renewal
+certbot renew
+
+# If certbot reports "no renewals were attempted" / the cert isn't tracked, reissue:
+certbot --nginx -d talentlenses.leedscrownbridge.co.uk -d leedscrownbridge.co.uk
+
+# Reload nginx to pick up the new cert (certbot usually does this itself)
+nginx -t && systemctl reload nginx
+
+# Re-verify the new expiry date
+echo | openssl s_client -servername talentlenses.leedscrownbridge.co.uk \
+  -connect talentlenses.leedscrownbridge.co.uk:443 2>/dev/null \
+  | openssl x509 -noout -dates
+```
+
+### If renewal fails
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `Timeout during connect` / 404 on the challenge | Port 80 closed, or the ACME location block is missing | Confirm the `location /.well-known/acme-challenge/ { root /var/www/html; }` block exists in the port-80 server (it does in [nginx.conf](nginx.conf)) and that `ufw allow 80` is set |
+| `DNS problem: NXDOMAIN` / `no valid A records found` | A SAN on the cert has no DNS record | **Renewal is all-or-nothing per cert** — one dead SAN fails the whole cert. Reissue without it: `certbot certonly --nginx --cert-name talentlenses.leedscrownbridge.co.uk -d talentlenses.leedscrownbridge.co.uk` and answer **(U)pdate** at the prompt |
+| `Another instance of Certbot is already running` | Stale lock | `rm -f /var/lib/letsencrypt/.certbot.lock`, then retry |
+| Challenge 404s although the directory exists | `/var/www/html` not readable by nginx | `mkdir -p /var/www/html/.well-known/acme-challenge && chown -R www-data:www-data /var/www/html` |
+
+### Permanent fix (do this once, after renewing)
+
+Let's Encrypt certs are **always 90 days** — there is no 1-year option, and browser
+max lifetimes are shrinking industry-wide (200 days in 2026 → 47 days in 2029). The
+permanent fix is therefore automation, not a longer cert.
+
+**1. Enable the renewal timer** — this is the actual root cause when a cert expires.
+Certbot checks twice daily and renews at 30 days before expiry, giving a 30-day retry
+window.
+```bash
+systemctl enable --now certbot.timer
+systemctl list-timers certbot.timer    # NEXT must be within ~12h
+certbot renew --dry-run                # must report "simulated renewal ... succeeded"
+```
+
+**2. Guarantee nginx reloads after renewal** — a renewed cert on disk does nothing
+until nginx picks it up.
+```bash
+mkdir -p /etc/letsencrypt/renewal-hooks/deploy
+cat > /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh <<'EOF'
+#!/bin/sh
+nginx -t && systemctl reload nginx
+EOF
+chmod +x /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
+```
+
+**3. Alert before expiry, not after** — so a silent renewal failure reaches you rather
+than users. Add to root's crontab:
+```bash
+0 9 * * * /usr/bin/openssl x509 -checkend 1814400 -noout \
+  -in /etc/letsencrypt/live/talentlenses.leedscrownbridge.co.uk/fullchain.pem \
+  || echo "TalentLenses TLS cert expires in <21 days" | mail -s "Cert expiry warning" you@example.com
+```
+
+Certbot, `systemctl` and `nginx` all run as **root** — that's expected. The "never
+run as root" rule applies only to the app directory (`/home/talentlens/talentlens`)
+and PM2.
+
+---
+
 ## What Each User Is Responsible For
 
 | Task | User |
@@ -471,4 +565,5 @@ given column must be checked independently when a field silently fails to save.
 | `./deploy.sh` | `talentlens` |
 | `git pull`, `npm install` inside `/home/talentlens/` | `talentlens` |
 | `systemctl` (nginx, pm2 unit) | `root` |
+| `certbot renew` / `certbot.timer` (SSL) | `root` |
 | `apt install`, SSL certs, nginx config | `root` |
