@@ -17,16 +17,15 @@ export default function Onboarding() {
   const navigate = useNavigate();
 
   // Recruiters never manage API keys — they use the shared workspace keys.
-  // Admins get the full setup including the Apify + Claude key steps.
+  // Admins get the full setup including the Apify key step.
   const isAdmin = user?.role === 'admin';
   const STEP_DEFS = isAdmin
-    ? [{ key: 'region', label: 'Region' }, { key: 'apify', label: 'Apify key' }, { key: 'claude', label: 'Claude key' }]
+    ? [{ key: 'region', label: 'Region' }, { key: 'apify', label: 'Apify key' }]
     : [{ key: 'region', label: 'Region' }];
 
   const [step, setStep]   = useState(0);
   const [market, setMarket]       = useState(user?.market || 'Global');
   const [apifyKey, setApifyKey]   = useState('');
-  const [claudeKey, setClaudeKey] = useState('');
   const [testJob, setTestJob]     = useState('Product Manager');
   const [testLoc, setTestLoc]     = useState('');
   const [testResult, setTestResult] = useState(null);
@@ -48,17 +47,11 @@ export default function Onboarding() {
     setBusy(true); setError('');
     try {
       if (apifyKey.trim()) await updateUser({ apify_key: apifyKey.trim() });
+      // Apify is the final step for admins — complete onboarding rather than
+      // advancing to a step that doesn't exist.
+      if (step >= STEP_DEFS.length - 1) { await finish(); return; }
       next();
     } catch (e) { setError(e.response?.data?.error || 'Failed to save Apify key.'); }
-    finally   { setBusy(false); }
-  };
-
-  const saveClaude = async () => {
-    setBusy(true); setError('');
-    try {
-      if (claudeKey.trim()) await updateUser({ claude_key: claudeKey.trim() });
-      next();
-    } catch (e) { setError(e.response?.data?.error || 'Failed to save Claude key.'); }
     finally   { setBusy(false); }
   };
 
@@ -151,26 +144,6 @@ export default function Onboarding() {
                 <button onClick={prev} className="btn-secondary">← Back</button>
                 <button onClick={saveApify} disabled={busy} className="btn-primary">
                   {apifyKey ? 'Save & continue →' : 'Skip for now →'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {current === 'claude' && (
-            <div>
-              <h2 className="font-display font-bold text-xl text-slate-800 mb-1">Add your Claude API key</h2>
-              <p className="text-sm text-slate-500 mb-2">
-                Claude scores resumes against your job descriptions. You can also use Local Scan instead.{' '}
-                <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer"
-                   className="text-blue-600 hover:underline font-medium">Get your key →</a>
-              </p>
-              <p className="text-xs text-slate-400 mb-4">Optional \u2014 you can also use the shared workspace key, or stick with Local Scan.</p>
-              <input className="input font-mono" placeholder="sk-ant-..." value={claudeKey}
-                onChange={e => setClaudeKey(e.target.value)} />
-              <div className="mt-6 flex justify-between">
-                <button onClick={prev} className="btn-secondary">← Back</button>
-                <button onClick={saveClaude} disabled={busy} className="btn-primary">
-                  {claudeKey ? 'Save & continue →' : 'Skip for now →'}
                 </button>
               </div>
             </div>

@@ -14,17 +14,18 @@ graph TB
         Apollo["🚀 Apollo.io\napi.apollo.io/api/v1"]
         Apify["🕷️ Apify\napi.apify.com/v2"]
         Reed["🔴 Reed.co.uk\nreed.co.uk/recruiter/api"]
-        Claude["🤖 Anthropic Claude\napi.anthropic.com/v1"]
         OpenAI["🧠 OpenAI\napi.openai.com"]
         Sheets["📊 Google Sheets\nsheets.googleapis.com"]
     end
+
+    OpenClaw["🔒 OpenClaw / Ollama\n127.0.0.1:11434/v1 (self-hosted)"]
 
     Browser -->|"JWT in headers"| Server
     Server <--> SQLite
     Server --> Apollo
     Server --> Apify
     Server --> Reed
-    Server --> Claude
+    Server --> OpenClaw
     Server --> OpenAI
     Server --> Sheets
 ```
@@ -197,38 +198,42 @@ sequenceDiagram
 
 ---
 
-## 8. AI Resume Screener Flow (Claude / Local)
+## 8. AI Resume Screener Flow (Keyword Match / OpenClaw Local)
 
 ```mermaid
 sequenceDiagram
     participant U as Browser
     participant S as Express /api/screen/resume
     participant DB as SQLite
-    participant C as Anthropic API<br/>api.anthropic.com/v1/messages
-    participant Loc as Local Scorer<br/>(openaiScorer.js)
+    participant OC as OpenClaw / Ollama<br/>127.0.0.1:11434/v1/chat/completions
+    participant Loc as Keyword Scorer<br/>(scorer.js)
 
-    U->>S: POST /screen/resume (multipart)<br/>files: [cv1.pdf, cv2.pdf, ...]<br/>fields: { jobDescription, targetRole }
+    U->>S: POST /screen/resume (multipart)<br/>files: [cv1.pdf, cv2.pdf, ...]<br/>fields: { job_description, job_title, mode }
     S->>S: authMiddleware + limitScreenings
-    S->>DB: SELECT claude_key_enc FROM users
-    S->>S: decrypt OR env.ANTHROPIC_API_KEY
-    S->>S: parseCV(file) → extract plain text<br/>(mammoth for docx, pdf-parse for pdf)
-    S->>S: batchId = uuid()
+    S->>S: mode = ['local','openclaw-local'].includes(mode) ? mode : 'local'
+    S->>S: if mode='openclaw-local' and OPENCLAW_LOCAL_* unset → 503
+    S->>S: batchId = randomBytes(8)
+    S->>DB: INSERT screenings (status='pending') for each file
+    S-->>U: { batchId } (client polls /screen/batch/:batchId)
 
-    loop Each uploaded CV
-        alt Claude key available
-            S->>C: POST /messages<br/>model: claude-sonnet-4-20250514<br/>{ system: recruiter prompt,<br/>  content: [PDF doc + JD text] }
-            C-->>S: { supply_chain_score, procurement_score,<br/>logistics_score, technology_score,<br/>overall_score, recommendation, summary }
-        else No Claude key
-            S->>Loc: scoreCandidate(cvText, jd, role)
+    loop Each uploaded CV (sequential — SQLite has no concurrent writes)
+        S->>S: parseCV(file) → plain text<br/>(mammoth for docx, pdf-parse for pdf)
+        alt mode = 'local'
+            S->>Loc: scoreCandidate(cvText, jd, detectedRole)
             Loc-->>S: { score_pct, strengths, gaps, ... }
-            S->>S: map to screening shape (local)
+            S->>S: toScreeningShape(...) → raw = { mode: 'local', ... }
+        else mode = 'openclaw-local'
+            S->>OC: POST /chat/completions<br/>model: $OPENCLAW_LOCAL_MODEL<br/>response_format: json_object
+            OC-->>S: { must_have, nice_to_have, title_match,<br/>experience, overall_score, recommendation, summary }
+            S->>S: raw = { provider: 'openclaw-local', model, ... }
         end
-        S->>DB: INSERT screenings (batch_id, scores, summary)
+        S->>DB: UPDATE screenings SET scores, summary, raw_json, status='completed'
     end
-
-    S->>DB: SELECT screenings WHERE batch_id=? ORDER BY overall_score DESC
-    S-->>U: { batchId, results: [...ranked screenings] }
 ```
+
+> Cloud screening (Anthropic Claude) and the LocalAI embedding screener were
+> removed on 2026-09-17. `mode` now accepts only `local` and `openclaw-local`;
+> anything else is coerced to `local`.
 
 ---
 
@@ -415,7 +420,7 @@ erDiagram
 | POST | `/api/scraper/export-sheets` | JWT | sheetsService | Google Sheets API |
 | GET | `/api/scraper/platforms` | JWT | — | — |
 | GET | `/api/scraper/test-connection` | JWT | apifyService | Apify |
-| POST | `/api/screen/resume` | JWT + plan | claudeScreener / scorer | Anthropic Claude |
+| POST | `/api/screen/resume` | JWT + plan | scorer / openclawLocalScreener | OpenClaw (self-hosted) |
 | GET | `/api/screen/history` | JWT | — | — |
 | GET | `/api/history` | JWT | — | — |
 | GET | `/api/dashboard` | JWT | — | — |
@@ -434,7 +439,11 @@ erDiagram
 | `APIFY_LINKEDIN_ACTOR_ID` | for LinkedIn | Apify actor for LinkedIn profiles |
 | `APIFY_CVLIBRARY_ACTOR_ID` | for CV-Lib | Apify actor for CV-Library |
 | `REED_API_KEY` | for Reed | Reed Recruiter API |
-| `ANTHROPIC_API_KEY` | fallback | Claude resume screener |
+| `OPENCLAW_LOCAL_BASE_URL` | for local AI scan | OpenClaw/Ollama OpenAI-compatible endpoint |
+| `OPENCLAW_LOCAL_MODEL` | for local AI scan | Model name served by OpenClaw/Ollama |
+| `OPENCLAW_LOCAL_API_KEY` | optional | Placeholder token for the local endpoint |
+| `OPENCLAW_LOCAL_TIMEOUT_MS` | optional | Per-file screening timeout (default 180000) |
+| `OPENCLAW_LOCAL_MAX_TOKENS` | optional | Response cap (default 2048) |
 | `OPENAI_API_KEY` | optional | CV/job match scoring |
 | `GOOGLE_SHEET_ID` | optional | Google Sheets export |
 | `GOOGLE_SERVICE_ACCOUNT_BASE64` | optional | Google Sheets auth |

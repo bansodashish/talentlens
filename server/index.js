@@ -75,7 +75,7 @@ app.use('/api/dashboard',    require('./routes/dashboard'));
 // ── Integrated module routes ─────────────────────────────────────────────────
 app.use('/api/scraper',      require('./routes/scraper'));   // Candidate sourcing (Apify)
 app.use('/api/search',       require('./routes/search'));    // LinkedIn search (harvestapi)
-app.use('/api/screen',       require('./routes/screen'));    // AI Resume Screener (Claude)
+app.use('/api/screen',       require('./routes/screen'));    // AI Resume Screener (keyword + OpenClaw local)
 app.use('/api/history',      require('./routes/history'));   // CRM history (searches + screenings)
 app.use('/api/users',        require('./routes/users'));     // Admin: user management
 app.use('/api/tasks',        require('./routes/tasks'));     // Recruitment tasks
@@ -107,7 +107,6 @@ app.get('/api/health', (req, res) => {
       googleSheets: Boolean(process.env.GOOGLE_SHEET_ID),
       openai: Boolean(process.env.OPENAI_API_KEY),
       openclawLocal: Boolean(process.env.OPENCLAW_LOCAL_BASE_URL && process.env.OPENCLAW_LOCAL_MODEL),
-      localAi: Boolean(process.env.LOCALAI_BASE_URL && process.env.LOCALAI_MODEL),
     },
     timestamp: new Date().toISOString(),
   });

@@ -5,8 +5,8 @@
 TalentLens is a self-hosted recruitment SaaS that combines:
 
 - 🔎 **LinkedIn search** via Apify's `harvestapi/linkedin-profile-search` actor
-- 🤖 **AI resume screening** powered by Claude Sonnet 4 (`claude-sonnet-4-20250514`)
-- 🔒 **OpenClaw local model mode** (privacy-first, runs on your VPS)
+- � **Resume screening** with two modes: fast keyword matching, or a self-hosted AI model
+- 🔒 **OpenClaw local model mode** (privacy-first, runs on your VPS — no data leaves the box)
 - ⚡ **Local keyword scoring** — free offline alternative with zero API costs
 - 👥 **Candidate CRM** with statuses, HR notes, filters and side-panel profiles
 - ⬇️ **CSV / Excel export** for shortlists and hand-offs
@@ -85,17 +85,20 @@ TalentLens uses two third-party services. Each user can save their own keys in *
    APIFY_TOKEN=apify_api_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
    ```
 
-### Claude (Resume screening)
+### Resume screening (no third-party key required)
 
-1. Create an Anthropic account at <https://console.anthropic.com>
-2. Go to <https://console.anthropic.com/settings/keys> and create a key (format: `sk-ant-…`)
-3. Make sure your account has billing enabled — Claude is **not free**
-4. Paste it in **TalentLens → Onboarding → Step 3** *or* set:
-   ```env
-   CLAUDE_API_KEY=sk-ant-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-   ```
+Screening runs entirely on your own infrastructure. Two modes are available:
 
-> 💡 **Bring-your-own-key** is the recommended model: each recruiter pays Apify/Anthropic directly for usage, and TalentLens only charges for the workspace seat.
+| Mode | What it does | Setup |
+|------|--------------|-------|
+| **Keyword Match** | Deterministic scoring against the JD. No AI, no network calls. | None — always available |
+| **Local AI Model** | Scores each CV with a self-hosted LLM over an OpenAI-compatible API. | Set `OPENCLAW_LOCAL_BASE_URL` + `OPENCLAW_LOCAL_MODEL`, see §6 |
+
+The **Local AI Model** radio stays disabled in the UI until both env vars are set
+— `/api/health` reports this as `modules.openclawLocal`.
+
+> 💡 **Bring-your-own-key** applies to sourcing only: each recruiter pays Apify
+> directly for LinkedIn sourcing. Resume screening has no per-token cost.
 
 ---
 
@@ -110,18 +113,17 @@ NODE_ENV=development
 JWT_SECRET=replace-me-with-a-long-random-string
 JWT_EXPIRES_IN=7d
 
-# Used to encrypt per-user Apify / Claude keys at rest (AES-256-CBC).
+# Used to encrypt per-user Apify / Apollo keys at rest (AES-256-CBC).
 # Generate one: `openssl rand -hex 32`
 ENCRYPTION_KEY=replace-me-with-a-64-char-hex-string
 
-# ── DB ───────────────────────────────────────────────────────
+# ── DB ───────────────────────────────────────────────────
 DB_PATH=../db/talentlens.db
 
-# ── Workspace fallbacks (optional) ───────────────────────────
+# ── Workspace fallbacks (optional) ───────────────────────
 APIFY_TOKEN=
-CLAUDE_API_KEY=
 
-# ── Local model mode (optional) ──────────────────────────────
+# ── Local model mode ("Local AI Model" screening) ────────────
 # OpenAI-compatible local endpoint (OpenClaw/Ollama/vLLM)
 OPENCLAW_LOCAL_BASE_URL=http://127.0.0.1:11434/v1
 OPENCLAW_LOCAL_MODEL=qwen2.5:7b-instruct
@@ -184,7 +186,7 @@ talentlens/
 │   └── src/pages/           # Landing, Onboarding, Dashboard, Search, Screen, History…
 ├── server/                  # Node.js + Express + better-sqlite3
 │   ├── routes/              # auth, search, screen, candidates, history, dashboard…
-│   ├── services/            # linkedinSearchService, claudeScreener, cvParser…
+│   ├── services/            # linkedinSearchService, openclawLocalScreener, cvParser…
 │   ├── middleware/          # auth, planLimits
 │   └── utils/               # encryption (AES-256-CBC)
 ├── db/
@@ -201,12 +203,13 @@ talentlens/
 | Symptom                                           | Fix                                                                                            |
 | ------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | `Invalid Apify API key`                           | Re-copy from <https://console.apify.com/account/integrations>. The whole token starts with `apify_api_`. |
-| `Invalid Claude API key`                          | Generate a new key at <https://console.anthropic.com/settings/keys> and ensure billing is enabled. |
+| `Local OpenClaw service is unavailable`           | The model server isn't reachable. Check `OPENCLAW_LOCAL_BASE_URL` and that the endpoint is running (`curl $OPENCLAW_LOCAL_BASE_URL/models`). |
+| "Local AI Model" option greyed out                 | `OPENCLAW_LOCAL_BASE_URL` and/or `OPENCLAW_LOCAL_MODEL` are unset. Set both, restart the API, confirm via `/api/health`. |
 | `Monthly limit reached on the starter plan`       | Upgrade the user's plan in `users.plan` (see §5).                                              |
 | `EADDRINUSE: 5001`                                | Another nodemon is running. Kill with `lsof -ti:5001 \| xargs kill -9`.                        |
 | Client won't start / `react-scripts not found`    | `cd client && npm install --legacy-peer-deps`                                                  |
 | `Cannot find module 'ajv/dist/compile/codegen'`   | `cd client && npm install ajv@^8 --legacy-peer-deps`                                           |
-| Resume parsed but "Email not available"           | Claude couldn't extract it — the candidate is still saved; add manually in the side panel.     |
+| Resume parsed but "Email not available"           | The screener couldn't extract it — the candidate is still saved; add manually in the side panel. |
 
 ---
 
