@@ -9,10 +9,10 @@ const { parseCV } = require('./cvParser');
 const { extractJson, normalise } = require('./screenerUtils');
 
 const BASE_URL = process.env.OPENCLAW_LOCAL_BASE_URL || 'http://127.0.0.1:11434/v1';
-const MODEL = process.env.OPENCLAW_LOCAL_MODEL || 'qwen2.5:7b-instruct';
+const MODEL = process.env.OPENCLAW_LOCAL_MODEL || 'qwen2.5:1.5b-instruct';
 const API_KEY = process.env.OPENCLAW_LOCAL_API_KEY || 'local-dev-key';
-const MAX_TOKENS = Number(process.env.OPENCLAW_LOCAL_MAX_TOKENS || 2048);
-const TIMEOUT_MS = Number(process.env.OPENCLAW_LOCAL_TIMEOUT_MS || 180000);
+const MAX_TOKENS = Number(process.env.OPENCLAW_LOCAL_MAX_TOKENS || 1024);
+const TIMEOUT_MS = Number(process.env.OPENCLAW_LOCAL_TIMEOUT_MS || 60000);
 
 const SYSTEM_PROMPT =
   'You are an expert recruiter. Evaluate resumes against the provided job description objectively. Respond ONLY in valid JSON.';
