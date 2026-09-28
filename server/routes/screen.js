@@ -21,6 +21,7 @@ const { authMiddleware } = require('../middleware/auth');
 const { limitScreenings } = require('../middleware/planLimits');
 const { parseCV }        = require('../services/cvParser');
 const { screenResume: screenOpenClawLocal, MODEL: OPENCLAW_LOCAL_MODEL } = require('../services/openclawLocalScreener');
+const { scoreWithOpenAI } = require('../services/openaiScorer');
 const { scoreCandidate, detectRole, ALL_ROLES, extractContact, extractYears } = require('../services/scorer');
 const { extractJobTitle } = require('../utils/extractJobTitle');
 const { resolveUploadsDir } = require('../utils/storagePaths');
@@ -168,6 +169,11 @@ async function processScreeningsBackground({ batchId, mode, jobDescription, jobT
         const contact = extractContact(plainText);
         result = toScreeningShape(local, contact, detectedRole, plainText, jobDescription);
         raw = { mode: 'local', detectedRole, ...local };
+      } else if (mode === 'openai') {
+        const scored = await scoreWithOpenAI(plainText, jobDescription);
+        const contact = extractContact(plainText);
+        result = toScreeningShape(scored, contact, null, plainText, jobDescription);
+        raw = { provider: 'openai', model: process.env.OPENAI_MODEL || 'gpt-6-luna', ...scored };
       } else {
         const out = await screenOpenClawLocal({
           jobDescription,
@@ -194,6 +200,8 @@ async function processScreeningsBackground({ batchId, mode, jobDescription, jobT
       let error = rawMsg;
       if (mode === 'openclaw-local' && /ECONNREFUSED|connect ECONNREFUSED|timed out|timeout/i.test(rawMsg)) {
         error = 'Local OpenClaw service is unavailable. Check OPENCLAW_LOCAL_BASE_URL and ensure the model server is running.';
+      } else if (mode === 'openai' && /401|incorrect api key|invalid api key|authentication/i.test(rawMsg)) {
+        error = 'OpenAI authentication failed. Check OPENAI_API_KEY in server/.env and restart the API.';
       }
 
       failStmt.run(error, `Screening failed: ${error}`, file.id);
@@ -243,7 +251,7 @@ router.post('/resume', limitScreenings, upload.array('files', 25), async (req, r
   const jobDescription = req.body.job_description || req.body.jobDescription || '';
   const jobTitleInput = String(req.body.job_title || req.body.jobTitle || '').trim();
   const requestedMode = String(req.body.mode || 'local').toLowerCase();
-  const mode = ['local', 'openclaw-local'].includes(requestedMode) ? requestedMode : 'local';
+  const mode = ['local', 'openclaw-local', 'openai'].includes(requestedMode) ? requestedMode : 'local';
   const files = req.files || [];
 
   if (!jobDescription.trim()) {
@@ -267,6 +275,14 @@ router.post('/resume', limitScreenings, upload.array('files', 25), async (req, r
         hint: 'Set OPENCLAW_LOCAL_BASE_URL and OPENCLAW_LOCAL_MODEL in server/.env and restart the API.',
       });
     }
+  }
+
+  if (mode === 'openai' && !process.env.OPENAI_API_KEY) {
+    files.forEach(f => { try { fs.unlinkSync(f.path); } catch (_) {} });
+    return res.status(503).json({
+      error: 'OpenAI Luna mode is not configured.',
+      hint: 'Set OPENAI_API_KEY and OPENAI_MODEL=gpt-6-luna in server/.env, then restart the API.',
+    });
   }
 
   const batchId = crypto.randomBytes(8).toString('hex');
@@ -323,7 +339,11 @@ router.post('/resume', limitScreenings, upload.array('files', 25), async (req, r
   res.status(202).json({
     batchId,
     mode,
-    model: mode === 'openclaw-local' ? OPENCLAW_LOCAL_MODEL : 'local-scorer',
+    model: mode === 'openclaw-local'
+      ? OPENCLAW_LOCAL_MODEL
+      : mode === 'openai'
+        ? (process.env.OPENAI_MODEL || 'gpt-6-luna')
+        : 'local-scorer',
     count: files.length,
     status: 'processing',
     results: []
