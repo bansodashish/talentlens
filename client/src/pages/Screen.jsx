@@ -8,7 +8,7 @@ const SCREEN_STATE_KEY = 'tl_screen_state';
 
 // Screening modes the API accepts. A stale value persisted by an older build
 // (e.g. a removed AI mode) must not be resubmitted — fall back to 'local'.
-const SCAN_MODES = ['local', 'openclaw-local'];
+const SCAN_MODES = ['local', 'openclaw-local', 'openai'];
 
 function loadPersistedScreenState() {
   try {
@@ -413,6 +413,7 @@ export default function Screen() {
     return SCAN_MODES.includes(persisted) ? persisted : 'local';
   });
   const [localAiAvailable, setLocalAiAvailable] = useState(false);
+  const [openAiAvailable, setOpenAiAvailable] = useState(false);
   const [files, setFiles] = useState([]);
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -465,8 +466,14 @@ export default function Screen() {
       .then(res => {
         if (cancelled) return;
         setLocalAiAvailable(Boolean(res.data?.modules?.openclawLocal));
+        setOpenAiAvailable(Boolean(res.data?.modules?.openai));
       })
-      .catch(() => { if (!cancelled) setLocalAiAvailable(false); });
+      .catch(() => {
+        if (!cancelled) {
+          setLocalAiAvailable(false);
+          setOpenAiAvailable(false);
+        }
+      });
     return () => { cancelled = true; };
   }, []);
 
@@ -779,6 +786,26 @@ export default function Screen() {
                 className="accent-brand-600"
               />
               Local AI Model <span className="text-xs text-slate-400">(self-hosted, private)</span>
+            </label>
+
+            <label
+              className={`flex items-center gap-2 border rounded-lg px-3 py-2 text-sm ${
+                openAiAvailable
+                  ? (scanMode === 'openai' ? 'border-brand-600 bg-brand-50 text-brand-800 cursor-pointer' : 'border-slate-300 text-slate-600 cursor-pointer')
+                  : 'border-slate-200 text-slate-300 cursor-not-allowed'
+              }`}
+              title={openAiAvailable ? '' : 'Not configured — set OPENAI_API_KEY and OPENAI_MODEL=gpt-6-luna on the server'}
+            >
+              <input
+                type="radio"
+                name="scanMode"
+                value="openai"
+                checked={scanMode === 'openai'}
+                disabled={!openAiAvailable}
+                onChange={() => setScanMode('openai')}
+                className="accent-brand-600"
+              />
+              OpenAI Luna <span className="text-xs text-slate-400">(AI-assisted review)</span>
             </label>
           </div>
         </div>
