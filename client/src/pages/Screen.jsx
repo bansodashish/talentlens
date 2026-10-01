@@ -564,7 +564,11 @@ export default function Screen() {
             clearInterval(interval);
             setLoading(false);
             setProgress(0);
-            if (batch.status === 'completed') autoSaveToHistory(bId, batch.results || []);
+            if (batch.status === 'completed') {
+              autoSaveToHistory(bId, batch.results || []);
+            } else {
+              setError('Screening is taking longer than expected and stopped updating. Open History to check this batch once it finishes.');
+            }
           }
         } catch (pollErr) {
           clearInterval(interval);

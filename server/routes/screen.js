@@ -26,6 +26,10 @@ const { scoreCandidate, detectRole, ALL_ROLES, extractContact, extractYears } = 
 const { extractJobTitle } = require('../utils/extractJobTitle');
 const { resolveUploadsDir } = require('../utils/storagePaths');
 
+// Hard ceiling for a single OpenAI Luna call, so a stalled request can't keep
+// the whole batch (and the UI spinner) in `processing` forever.
+const OPENAI_TIMEOUT_MS = Number(process.env.OPENAI_TIMEOUT_MS || 120000);
+
 // Convert local-scorer output into the same shape the UI / DB expects.
 function toScreeningShape(scored, contact, role, text, jobDescription) {
   const recMap = { 5: 'Strong Hire', 4: 'Strong Hire', 3: 'Consider', 2: 'Reject', 1: 'Reject' };
@@ -170,7 +174,11 @@ async function processScreeningsBackground({ batchId, mode, jobDescription, jobT
         result = toScreeningShape(local, contact, detectedRole, plainText, jobDescription);
         raw = { mode: 'local', detectedRole, ...local };
       } else if (mode === 'openai') {
-        const scored = await scoreWithOpenAI(plainText, jobDescription);
+        const scored = await withTimeout(
+          scoreWithOpenAI(plainText, jobDescription),
+          OPENAI_TIMEOUT_MS,
+          `OpenAI Luna scoring of ${file.originalname}`
+        );
         const contact = extractContact(plainText);
         result = toScreeningShape(scored, contact, null, plainText, jobDescription);
         raw = { provider: 'openai', model: process.env.OPENAI_MODEL || 'gpt-6-luna', ...scored };
@@ -202,6 +210,8 @@ async function processScreeningsBackground({ batchId, mode, jobDescription, jobT
         error = 'Local OpenClaw service is unavailable. Check OPENCLAW_LOCAL_BASE_URL and ensure the model server is running.';
       } else if (mode === 'openai' && /401|incorrect api key|invalid api key|authentication/i.test(rawMsg)) {
         error = 'OpenAI authentication failed. Check OPENAI_API_KEY in server/.env and restart the API.';
+      } else if (mode === 'openai' && /timed out|timeout|ECONNRESET|ETIMEDOUT/i.test(rawMsg)) {
+        error = `OpenAI Luna did not respond within ${OPENAI_TIMEOUT_MS / 1000}s. Check OPENAI_MODEL and network access, or retry with fewer files.`;
       }
 
       failStmt.run(error, `Screening failed: ${error}`, file.id);

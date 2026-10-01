@@ -4,9 +4,15 @@
  * Returns the same structure as scorer.js for consistency.
  */
 
+const TIMEOUT_MS = Number(process.env.OPENAI_TIMEOUT_MS || 120000);
+
 async function scoreWithOpenAI(resumeText, jobDescription, targetRole = null) {
   const { OpenAI } = require('openai');
-  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const client = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+    timeout: TIMEOUT_MS,
+    maxRetries: 2,
+  });
 
   const systemPrompt = `You are an expert recruitment consultant.
 Analyse the provided CV and job description, then return a structured JSON scoring response.`;
@@ -43,8 +49,7 @@ Return ONLY valid JSON with this exact structure:
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },
     ],
-    temperature: 0.2,
-    max_tokens: 1000,
+    max_completion_tokens: 1000,
     response_format: { type: 'json_object' },
   });
 

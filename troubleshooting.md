@@ -383,7 +383,7 @@ folder, so a bad `git pull`/`rm -rf` inside the repo can't touch backups. The la
 ### Manual backup
 ```bash
 sudo -iu talentlens
-cd ~/talentlens
+![1790830254209](image/troubleshooting/1790830254209.png)
 bash scripts/backup-db.sh
 ```
 
