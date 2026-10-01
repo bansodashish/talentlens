@@ -8,7 +8,7 @@ const SCREEN_STATE_KEY = 'tl_screen_state';
 
 // Screening modes the API accepts. A stale value persisted by an older build
 // (e.g. a removed AI mode) must not be resubmitted — fall back to 'local'.
-const SCAN_MODES = ['local', 'openclaw-local', 'openai'];
+const SCAN_MODES = ['local', 'openai'];
 
 function loadPersistedScreenState() {
   try {
@@ -412,7 +412,6 @@ export default function Screen() {
     const persisted = loadPersistedScreenState()?.scanMode;
     return SCAN_MODES.includes(persisted) ? persisted : 'local';
   });
-  const [localAiAvailable, setLocalAiAvailable] = useState(false);
   const [openAiAvailable, setOpenAiAvailable] = useState(false);
   const [files, setFiles] = useState([]);
   const [progress, setProgress] = useState(0);
@@ -457,20 +456,16 @@ export default function Screen() {
     return () => { cancelled = true; };
   }, []);
 
-  // Check whether the self-hosted local AI model (Ollama/OpenClaw) is
-  // configured and reachable, so the "Local AI Model" option can be hidden
-  // instead of offering a mode that will always fail.
+  // Check whether OpenAI is configured before enabling its screening option.
   useEffect(() => {
     let cancelled = false;
     api.get('/health')
       .then(res => {
         if (cancelled) return;
-        setLocalAiAvailable(Boolean(res.data?.modules?.openclawLocal));
         setOpenAiAvailable(Boolean(res.data?.modules?.openai));
       })
       .catch(() => {
         if (!cancelled) {
-          setLocalAiAvailable(false);
           setOpenAiAvailable(false);
         }
       });
@@ -770,26 +765,6 @@ export default function Screen() {
                 className="accent-brand-600"
               />
               Keyword Match <span className="text-xs text-slate-400">(fast, no AI)</span>
-            </label>
-
-            <label
-              className={`flex items-center gap-2 border rounded-lg px-3 py-2 text-sm ${
-                localAiAvailable
-                  ? (scanMode === 'openclaw-local' ? 'border-brand-600 bg-brand-50 text-brand-800 cursor-pointer' : 'border-slate-300 text-slate-600 cursor-pointer')
-                  : 'border-slate-200 text-slate-300 cursor-not-allowed'
-              }`}
-              title={localAiAvailable ? '' : 'Not configured — set OPENCLAW_LOCAL_BASE_URL and OPENCLAW_LOCAL_MODEL on the server'}
-            >
-              <input
-                type="radio"
-                name="scanMode"
-                value="openclaw-local"
-                checked={scanMode === 'openclaw-local'}
-                disabled={!localAiAvailable}
-                onChange={() => setScanMode('openclaw-local')}
-                className="accent-brand-600"
-              />
-              Local AI Model <span className="text-xs text-slate-400">(self-hosted, private)</span>
             </label>
 
             <label
