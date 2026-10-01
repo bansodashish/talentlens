@@ -50,7 +50,7 @@ function toScreeningShape(scored, contact, role, text, jobDescription) {
   const gapNote = scored.gaps?.length
     ? ` Key gaps: ${scored.gaps.slice(0, 3).map(g => g.replace(/^Missing:\s*/i, '')).join(', ')}.`
     : '';
-  const summary = `Local JD match — ${scored.label}. ${scored.recommendation}.${locationNote}${gapNote}`;
+  const summary = `JD match — ${scored.label}. ${scored.recommendation}.${locationNote}${gapNote}`;
 
   return {
     name: contact.name || '',
