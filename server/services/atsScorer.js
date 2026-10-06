@@ -216,12 +216,29 @@ function parseJdSections(jd) {
 
 // ───── Contact / metadata extraction (kept identical to local scorer) ──────
 
+// Document headers and CV section headings that should never be extracted as names
+const CV_SECTION_HEADERS = new Set([
+  'CONTACT','CONTACTS','EDUCATION','EXPERIENCE','SKILLS','SUMMARY','PROFILE',
+  'OBJECTIVE','REFERENCES','AWARDS','CERTIFICATIONS','CERTIFICATION','LANGUAGES',
+  'PROJECTS','VOLUNTEER','ACTIVITIES','HOBBIES','INTERESTS','ACHIEVEMENTS',
+  'COMPETENCIES','OVERVIEW','TECHNICAL','PROFESSIONAL','WORK','CORE','CAREER',
+  'QUALIFICATIONS','ACCOMPLISHMENTS','STRENGTHS','ABOUT','DETAILS','PERSONAL',
+  'EMPLOYMENT','BACKGROUND','EXPERTISE','HIGHLIGHTS','HISTORY','PUBLICATIONS',
+  'TRAINING','MEMBERSHIPS','AFFILIATIONS','PORTFOLIO','DECLARATION',
+  // Document header keywords that should never be extracted as names
+  'RESUME','RÉSUMÉ','CURRICULUM','VITAE','CURRICULUM VITAE','CV','C.V.',
+  'BIO','BIODATA',
+]);
+
 function extractContact(text) {
   const emailMatch = text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
   const phoneMatch = text.match(/(?:\+?\d[\d\s().-]{7,}\d)/);
   const lines = text.split(/\n/).map(l => l.trim()).filter(Boolean);
   const name = lines.find(l =>
-    l.length < 60 && !/@|\d{4,}|http/i.test(l) && /[A-Za-z]/.test(l)
+    l.length < 60 && 
+    !/@|\d{4,}|http/i.test(l) && 
+    /[A-Za-z]/.test(l) &&
+    !CV_SECTION_HEADERS.has(l.trim().toUpperCase())
   ) || '';
   return {
     email: emailMatch ? emailMatch[0] : '',
