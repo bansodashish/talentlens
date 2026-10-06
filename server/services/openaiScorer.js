@@ -17,31 +17,46 @@ async function scoreWithOpenAI(resumeText, jobDescription, targetRole = null) {
   const systemPrompt = `You are an expert recruitment consultant.
 Analyse the provided CV and job description, then return a structured JSON scoring response.`;
 
-  const userPrompt = `Score this candidate's CV against the job description.
+  const userPrompt = `
+You are an expert recruitment consultant analyzing how well a resume matches a job description.
 
-JOB DESCRIPTION:
-${jobDescription}
+**IMPORTANT: Focus ONLY on skills matching. Do NOT factor in years of experience or location in your scoring.**
 
-${targetRole ? `TARGET ROLE: ${targetRole}\n` : ''}
-CANDIDATE CV:
-${resumeText.substring(0, 4000)}
+Job Description:
+${jobDescription.slice(0, 3000)}
 
-Return ONLY valid JSON with this exact structure:
+Resume:
+${resumeText.slice(0, 4000)}
+
+Target Role: ${targetRole || 'Not specified'}
+
+Analyze the resume against the job description and return ONLY valid JSON (no markdown, no commentary):
+
 {
   "score": 0.0-1.0,
   "score_pct": 0-100,
   "rating": 1-5,
   "label": "Excellent match|Strong match|Good match|Moderate match|Weak match",
   "recommendation": "one sentence recommendation",
-  "strengths": ["strength1", "strength2", "strength3"],
-  "gaps": ["gap1", "gap2", "gap3"],
+  "strengths": ["strength 1", "strength 2", ...],
+  "gaps": ["gap 1", "gap 2", ...],
   "details": {
     "skills": 0.0-1.0,
-    "experience": 0.0-1.0,
-    "title": 0.0-1.0,
-    "summary": "2-3 sentence analysis"
+    "experience": 0,
+    "location": 0,
+    "title": 0.0-1.0
   }
-}`;
+}
+
+**Scoring criteria (SKILLS ONLY):**
+- Compare the resume's demonstrated skills against the JD's required skills
+- Score reflects percentage of required skills that are present
+- Experience years and location should NOT affect the score
+- Set details.experience and details.location to 0
+- Overall score = skills match only
+
+Extract 3-6 key strengths (matched skills) and 3-6 gaps (missing skills).
+`.trim();
 
   const response = await client.chat.completions.create({
     model: process.env.OPENAI_MODEL || 'gpt-6-luna',

@@ -32,21 +32,20 @@ Target Role: ${targetRole || "Infer from the job description"}
 Instructions:
 1. Extract the explicit required skills, tools, and technologies from the JOB DESCRIPTION (e.g. Python, AWS, Kubernetes, SQL, React, Spring Boot).
 2. Check the RESUME for each required skill. Treat closely related items (e.g. "Postgres" matches "PostgreSQL") as matched.
-3. Compare overall years of experience, seniority, and domain alignment.
+3. **Focus ONLY on skills matching. Do NOT consider years of experience or location in your rating/score.**
 4. When analyzing the resume, ignore document header lines like "Resume", "Curriculum Vitae", "CV", "Bio", or similar formatting headers.
 5. Return ONLY a JSON object - no commentary, no markdown fences.
 
 JSON schema:
 {
-  "rating": <integer 1-5>,
-  "score": <float 0.0-1.0>,
+  "rating": <integer 1-5 based ONLY on skills match>,
+  "score": <float 0.0-1.0 representing skills match percentage>,
   "label": "<strong match|good match|fair match|poor match>",
   "recommendation": "<shortlist for interview|schedule interview|consider for future|reject>",
-  "strengths": [<short bullet strings>],
-  "gaps": [<short bullet strings>],
+  "strengths": [<skills-focused bullet strings>],
+  "gaps": [<missing skill bullet strings>],
   "matchedSkills": [<skills present in BOTH resume and JD>],
-  "missingSkills": [<skills required by JD but NOT found in resume>],
-  "experienceAssessment": "<one-sentence summary of experience fit>"
+  "missingSkills": [<skills required by JD but NOT found in resume>]
 }`;
 
   type ChatParams = Parameters<typeof client.chat.completions.create>[0];
