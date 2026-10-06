@@ -383,7 +383,7 @@ function scoreCandidate({ resumeText, jobDescription, mustHave, niceToHave }) {
   else if (overall >= 55) recommendation = 'Consider';
   else                    recommendation = 'Reject';
 
-  // Summary
+  // Summary - SKILLS FOCUSED ONLY
   const summaryParts = [];
   summaryParts.push(
     `ATS keyword match: ${mustResult.matched.length}/${mustHave.length} must-have, ` +
@@ -394,13 +394,6 @@ function scoreCandidate({ resumeText, jobDescription, mustHave, niceToHave }) {
       titleResult.resumeMatch
         ? `Title alignment with "${titleResult.jdTitle}" is strong.`
         : `Title "${titleResult.jdTitle}" not clearly reflected in the CV.`
-    );
-  }
-  if (expResult.required) {
-    summaryParts.push(
-      expResult.actual >= expResult.required
-        ? `Experience: ${expResult.actual} yrs meets the ${expResult.required}+ required.`
-        : `Experience: ${expResult.actual} yrs vs ${expResult.required}+ required.`
     );
   }
   if (mustResult.missing.length) {
@@ -419,11 +412,9 @@ function scoreCandidate({ resumeText, jobDescription, mustHave, niceToHave }) {
     currentRole:     extractCurrentRole(resumeText),
     yearsExperience: expResult.actual,
     keySkills:       mustResult.matched.slice(0, 12),
-    // Map to existing DB columns
-    supplyChainScore: mustResult.pct,
-    procurementScore: niceResult.pct,
-    logisticsScore:   titleResult.score,
-    technologyScore:  expResult.score,
+    // Map to existing DB columns - SKILLS ONLY
+    supplyChainScore: mustResult.pct,    // Must-have match
+    technologyScore:  titleResult.score, // Title match
     overallScore:     overall,
     recommendation,
     summary: summaryParts.join(' '),
@@ -433,7 +424,6 @@ function scoreCandidate({ resumeText, jobDescription, mustHave, niceToHave }) {
     matchedNiceToHave:  niceResult.matched,
     missingNiceToHave:  niceResult.missing,
     jdTitle:            titleResult.jdTitle,
-    requiredYears:      expResult.required,
   };
 }
 
