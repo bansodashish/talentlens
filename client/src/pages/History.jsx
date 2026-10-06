@@ -51,7 +51,6 @@ function toCandidate(row) {
     linkedinUrl:   row.linkedin_url || '',
     currentRole:   row.current_title || row.headline || '',
     company:       row.current_company || '',
-    location:      row.location || '',
     market:        row.market || 'Global',
     source:        row.source || 'manual',
     overallScore:  row.ai_score || 0,
@@ -181,7 +180,6 @@ function SidePanel({ candidate, onClose, onChange }) {
             <dl className="text-sm space-y-1">
               {candidate.email && <div><span className="text-slate-500">Email:</span> <a href={`mailto:${candidate.email}`} className="text-blue-600 hover:underline ml-1">{candidate.email}</a></div>}
               {candidate.phone && <div><span className="text-slate-500">Phone:</span> <span className="ml-1">{candidate.phone}</span></div>}
-              {candidate.location && <div><span className="text-slate-500">Location:</span> <span className="ml-1">{candidate.location}</span></div>}
               {candidate.linkedinUrl && <div><span className="text-slate-500">LinkedIn:</span> <a href={candidate.linkedinUrl} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline ml-1">View profile →</a></div>}
             </dl>
           </section>
@@ -333,7 +331,7 @@ function CandidatesTab() {
       const score = c.overallScore || 0;
       if (score < minScore || score > maxScore) return false;
       if (q) {
-        const hay = [c.name, c.email, c.currentRole, c.company, c.location].filter(Boolean).join(' ').toLowerCase();
+        const hay = [c.name, c.email, c.currentRole, c.company].filter(Boolean).join(' ').toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -357,7 +355,7 @@ function CandidatesTab() {
     const list = which === 'selected' ? filtered.filter(c => selectedIds.has(c.id)) : filtered;
     const data = list.map(c => ({
       id: c.id, name: c.name, email: c.email, phone: c.phone, role: c.currentRole, company: c.company,
-      location: c.location, market: c.market, source: SOURCE_LABEL[c.source] || c.source,
+      market: c.market, source: SOURCE_LABEL[c.source] || c.source,
       overallScore: c.overallScore, status: c.status, linkedin: c.linkedinUrl, createdAt: c.createdAt,
     }));
     (fmt === 'xls' ? downloadExcel : downloadCsv)(
@@ -479,7 +477,6 @@ function CandidatesTab() {
                   <th className="px-3 py-2 w-8"><input type="checkbox" checked={allOnPageSelected} onChange={toggleAll} /></th>
                   <th className="text-left px-3 py-2 font-semibold text-slate-600">Name</th>
                   <th className="text-left px-3 py-2 font-semibold text-slate-600">Role</th>
-                  <th className="text-left px-3 py-2 font-semibold text-slate-600">Location</th>
                   <th className="text-left px-3 py-2 font-semibold text-slate-600">Email</th>
                   <th className="text-left px-3 py-2 font-semibold text-slate-600">Source</th>
                   <th className="text-left px-3 py-2 font-semibold text-slate-600">Score</th>
@@ -503,7 +500,6 @@ function CandidatesTab() {
                       <div className="text-slate-700">{c.currentRole || '—'}</div>
                       <div className="text-slate-400">{c.company || ''}</div>
                     </td>
-                    <td className="px-3 py-2 text-xs text-slate-600">{c.location || '—'}</td>
                     <td className="px-3 py-2 text-xs text-slate-600 truncate max-w-[180px]">{c.email || '—'}</td>
                     <td className="px-3 py-2 text-xs text-slate-500">{SOURCE_LABEL[c.source] || c.source}</td>
                     <td className="px-3 py-2">

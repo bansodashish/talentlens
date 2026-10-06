@@ -124,9 +124,9 @@ router.post('/import', (req, res) => {
 
   const insertStmt = db.prepare(`
     INSERT INTO candidates
-      (name, email, phone, location, market, current_title, current_company,
-       experience_years, skills, linkedin_url, source, source_url, notes, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (name, email, phone, market, current_title, current_company,
+       skills, linkedin_url, source, source_url, notes, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const importMany = db.transaction((list) => {
@@ -141,9 +141,9 @@ router.post('/import', (req, res) => {
         if (dup) { skipped.push(c.name); continue; }
       }
       insertStmt.run(
-        c.name, c.email || null, c.phone || null, c.location || null,
+        c.name, c.email || null, c.phone || null,
         c.market || 'UK', c.current_title || null, c.current_company || null,
-        c.experience_years || null, c.skills || null, c.linkedin_url || null,
+        c.skills || null, c.linkedin_url || null,
         c.source || 'search', c.source_url || null,
         c.summary ? `Imported from ${c.source || 'search'}. ${c.summary}` : `Imported from ${c.source || 'search'}.`,
         req.user.id

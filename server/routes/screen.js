@@ -180,7 +180,7 @@ async function processScreeningsBackground({ batchId, mode, jobDescription, jobT
       updateStmt.run(
         result.name, result.email, result.phone, result.currentRole, result.yearsExperience,
         JSON.stringify(result.keySkills),
-        result.supplyChainScore, 0, 0, result.technologyScore,  // Only skills & title, zero out nice_to_have and title_match
+        result.supplyChainScore, result.procurementScore, result.logisticsScore, result.technologyScore,
         result.overallScore, result.recommendation, result.summary, plainText || null, JSON.stringify(raw),
         result.jobTitle || null,
         file.id
@@ -391,6 +391,8 @@ function shapeScreeningRow(r) {
     yearsExperience: r.years_experience,
     keySkills: keySkillsParsed,
     supplyChainScore: r.must_have_score,
+    procurementScore: r.nice_to_have_score,
+    logisticsScore:   r.title_match_score,
     technologyScore:  r.experience_score,
     overallScore:     r.overall_score,
     recommendation:   r.recommendation,

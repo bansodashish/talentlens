@@ -346,8 +346,6 @@ export default function CandidateSearch() {
                           )}
                         </div>
                         <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-xs text-slate-400">
-                          {c.location && <span>📍 {c.location}</span>}
-                          {c.experience_years && <span>⏱ {c.experience_years} yrs</span>}
                           {c.email && <span>✉️ {c.email}</span>}
                           {c.phone && <span>📞 {c.phone}</span>}
                           {(c.linkedin_url || c.profileUrl) && (

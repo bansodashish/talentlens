@@ -533,12 +533,21 @@ function scoreCandidate(resumeText, jobDescription, targetRole = null) {
     gaps,
     details: {
       skills: Math.round(skillsScore * 100) / 100,
+      experience: 0,  // Not scored
+      location: 0,    // Not scored
       title: Math.round(titleScore * 100) / 100,
       matchedKeywords: matchedKeywords.length,
       totalKeywords: allKeywords.length,
       matchedSkills: matchedKeywords,
       missingSkills: missedKeywords,
       requiredSkills: allKeywords,
+      requiredYears: extractYearsRequirement(jobDescription || ''),
+      candidateYears: extractMaxYears(resumeText),
+      jdLocations: location.jdLocations || [],
+      candidateLocations: location.resumeLocations || [],
+      jdLocationMode: location.jdMode || '',
+      candidateLocationMode: location.resumeMode || '',
+      locationExplanation: location.explanation || '',
     },
   };
 }

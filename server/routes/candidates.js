@@ -151,8 +151,8 @@ async function processCV(filePath, currentTitle, originalName = '') {
 
 // POST /api/candidates
 router.post('/', upload.single('cv'), async (req, res) => {
-  const { name, email, phone, location, market, current_title, current_company,
-    experience_years, skills, linkedin_url, notes, pipeline_stage, source, job_title,
+  const { name, email, phone, market, current_title, current_company,
+    skills, linkedin_url, notes, pipeline_stage, source, job_title,
     ai_score, ai_summary } = req.body;
 
   if (!name) return res.status(400).json({ error: 'Candidate name is required.' });
@@ -177,14 +177,13 @@ router.post('/', upload.single('cv'), async (req, res) => {
 
   const result = db.prepare(`
     INSERT INTO candidates
-      (name, email, phone, location, market, current_title, current_company,
-       experience_years, skills, linkedin_url, cv_filename, cv_path, cv_text, cv_parsed_at,
+      (name, email, phone, market, current_title, current_company,
+       skills, linkedin_url, cv_filename, cv_path, cv_text, cv_parsed_at,
        ai_score, ai_summary, notes, pipeline_stage, source, job_title, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
-    name, email || null, phone || null, location || null,
+    name, email || null, phone || null,
     market || 'Global', current_title || null, current_company || null,
-    experience_years ? Number(experience_years) : null,
     skills || null, linkedin_url || null,
     req.file ? req.file.originalname : null,
     req.file ? req.file.filename : null,
@@ -205,8 +204,8 @@ router.put('/:id', upload.single('cv'), async (req, res) => {
   const existing = db.prepare('SELECT * FROM candidates WHERE id = ?').get(req.params.id);
   if (!existing || existing.created_by !== req.user.id) return res.status(404).json({ error: 'Candidate not found.' });
 
-  const { name, email, phone, location, market, current_title, current_company,
-    experience_years, skills, linkedin_url, status, notes } = req.body;
+  const { name, email, phone, market, current_title, current_company,
+    skills, linkedin_url, status, notes } = req.body;
 
   let cvText = existing.cv_text;
   let aiScore = existing.ai_score;
@@ -224,15 +223,14 @@ router.put('/:id', upload.single('cv'), async (req, res) => {
   }
 
   db.prepare(`
-    UPDATE candidates SET name=?, email=?, phone=?, location=?, market=?, current_title=?,
-    current_company=?, experience_years=?, skills=?, linkedin_url=?, status=?, notes=?,
+    UPDATE candidates SET name=?, email=?, phone=?, market=?, current_title=?,
+    current_company=?, skills=?, linkedin_url=?, status=?, notes=?,
     cv_filename=?, cv_path=?, cv_text=?, cv_parsed_at=?, ai_score=?, ai_summary=?,
     updated_at=CURRENT_TIMESTAMP WHERE id=?
   `).run(
     name || existing.name, email ?? existing.email, phone ?? existing.phone,
-    location ?? existing.location, market || existing.market,
+    market || existing.market,
     current_title ?? existing.current_title, current_company ?? existing.current_company,
-    experience_years ? Number(experience_years) : existing.experience_years,
     skills ?? existing.skills, linkedin_url ?? existing.linkedin_url,
     status || existing.status, notes ?? existing.notes,
     req.file ? req.file.originalname : existing.cv_filename,
@@ -259,8 +257,8 @@ router.patch('/:id', (req, res) => {
   if (!existing || existing.created_by !== req.user.id) return res.status(404).json({ error: 'Candidate not found.' });
 
   const ALLOWED = [
-    'name', 'email', 'phone', 'location', 'market', 'current_title', 'current_company',
-    'experience_years', 'skills', 'linkedin_url', 'status', 'notes', 'pipeline_stage', 'job_title',
+    'name', 'email', 'phone', 'market', 'current_title', 'current_company',
+    'skills', 'linkedin_url', 'status', 'notes', 'pipeline_stage', 'job_title',
   ];
   const sets = [];
   const params = [];
