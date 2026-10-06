@@ -498,21 +498,21 @@ function scoreCandidate(resumeText, jobDescription, targetRole = null) {
   const missedKeywords = allKeywords.filter(kw => !findInText(kw, resumeText));
   const skillsScore = allKeywords.length > 0 ? matchedKeywords.length / allKeywords.length : 0.5;
 
-  // Experience match
+  // Experience match (extracted for display only, not scored)
   const expScore = scoreExperience(resumeText, jobDescription || '');
 
-  // Location match
+  // Location match (extracted for display only, not scored)
   const location = scoreLocation(resumeText, jobDescription || '');
 
   // Title match
   const titleScore = scoreTitleMatch(resumeText, targetRole);
 
-  // Weighted final score
-  const finalScore = Math.min(1, (skillsScore * 0.60) + (expScore * 0.25) + (location.score * 0.15));
+  // Weighted final score - SKILLS ONLY (100%)
+  const finalScore = Math.min(1, skillsScore * 1.0);
   const rating = Math.max(1, Math.min(5, Math.round(finalScore * 5)));
   const scorePct = Math.round(finalScore * 100);
 
-  // Build human-readable strengths/gaps
+  // Build human-readable strengths/gaps (SKILLS FOCUSED)
   const strengths = matchedKeywords
     .slice(0, 8)
     .map(kw => `Matched: ${kw}`);
@@ -521,13 +521,7 @@ function scoreCandidate(resumeText, jobDescription, targetRole = null) {
     .slice(0, 6)
     .map(kw => `Missing: ${kw}`);
 
-  if (location.score < 0.5 && location.explanation) {
-    gaps.push(location.explanation);
-  }
-
-  if (location.score >= 0.7 && location.explanation) {
-    strengths.push(location.explanation);
-  }
+  // Note: Location info removed from strengths/gaps for skills-only focus
 
   return {
     score: Math.round(finalScore * 100) / 100,
@@ -539,8 +533,8 @@ function scoreCandidate(resumeText, jobDescription, targetRole = null) {
     gaps,
     details: {
       skills: Math.round(skillsScore * 100) / 100,
-      experience: Math.round(expScore * 100) / 100,
-      location: Math.round(location.score * 100) / 100,
+      experience: 0,  // Not scored
+      location: 0,    // Not scored
       title: Math.round(titleScore * 100) / 100,
       matchedKeywords: matchedKeywords.length,
       totalKeywords: allKeywords.length,

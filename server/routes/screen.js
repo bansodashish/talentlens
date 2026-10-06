@@ -34,8 +34,9 @@ function toScreeningShape(scored, contact, role, text, jobDescription) {
   const recMap = { 5: 'Strong Hire', 4: 'Strong Hire', 3: 'Consider', 2: 'Reject', 1: 'Reject' };
   const overall = scored.score_pct;
   const skills  = Math.round((scored.details.skills || 0) * 100);
-  const exp     = Math.round((scored.details.experience || 0) * 100);
-  const location = Math.round((scored.details.location || 0) * 100);
+  // Experience and Location NOT scored (skills-only focus)
+  const exp     = 0;
+  const location = 0;
   const title   = Math.round((scored.details.title || 0) * 100);
 
   // Pull matched JD skills as keySkills. Local mode no longer needs manual profile keywords.
@@ -43,13 +44,12 @@ function toScreeningShape(scored, contact, role, text, jobDescription) {
     .slice(0, 12);
 
   const roleTitle = role && ALL_ROLES[role] ? ALL_ROLES[role].title : '';
-  const locationNote = scored.details.locationExplanation
-    ? ` Location: ${scored.details.locationExplanation}.`
-    : '';
+  
+  // Summary focuses ONLY on skills match
   const gapNote = scored.gaps?.length
-    ? ` Key gaps: ${scored.gaps.slice(0, 3).map(g => g.replace(/^Missing:\s*/i, '')).join(', ')}.`
+    ? ` Key skill gaps: ${scored.gaps.slice(0, 3).map(g => g.replace(/^Missing:\s*/i, '')).join(', ')}.`
     : '';
-  const summary = `JD match — ${scored.label}. ${scored.recommendation}.${locationNote}${gapNote}`;
+  const summary = `Skills-based screening — ${scored.label}. ${scored.recommendation}.${gapNote}`;
 
   return {
     name: contact.name || '',
@@ -59,11 +59,11 @@ function toScreeningShape(scored, contact, role, text, jobDescription) {
     jobTitle: extractJobTitle(jobDescription),
     yearsExperience: extractYears(text),
     keySkills,
-    supplyChainScore: skills,
-    procurementScore: exp,
-    logisticsScore:   location,
+    supplyChainScore: skills,    // Skills Match
+    procurementScore: exp,        // Not used (0)
+    logisticsScore:   location,   // Not used (0)
     technologyScore:  title,
-    overallScore:     overall,
+    overallScore:     overall,    // = Skills Match %
     recommendation:   recMap[scored.rating] || 'Consider',
     summary,
   };
