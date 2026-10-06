@@ -33,7 +33,8 @@ Instructions:
 1. Extract the explicit required skills, tools, and technologies from the JOB DESCRIPTION (e.g. Python, AWS, Kubernetes, SQL, React, Spring Boot).
 2. Check the RESUME for each required skill. Treat closely related items (e.g. "Postgres" matches "PostgreSQL") as matched.
 3. Compare overall years of experience, seniority, and domain alignment.
-4. Return ONLY a JSON object - no commentary, no markdown fences.
+4. When analyzing the resume, ignore document header lines like "Resume", "Curriculum Vitae", "CV", "Bio", or similar formatting headers.
+5. Return ONLY a JSON object - no commentary, no markdown fences.
 
 JSON schema:
 {
