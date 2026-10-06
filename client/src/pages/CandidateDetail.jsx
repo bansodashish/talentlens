@@ -103,9 +103,7 @@ export default function CandidateDetail() {
               {[
                 ['Email', candidate?.email],
                 ['Phone', candidate?.phone],
-                ['Location', candidate?.location],
                 ['Region', candidate?.market || 'Global'],
-                ['Experience', candidate?.experience_years ? `${candidate.experience_years} yrs` : null],
                 ['Source', candidate?.source],
               ].map(([label, val]) => val ? (
                 <div key={label}>

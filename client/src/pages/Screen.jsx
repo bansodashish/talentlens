@@ -79,7 +79,7 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
               }
             </div>
             <p className="text-xs text-slate-500 mt-0.5 truncate">
-              {c.currentRole || '—'} · {Number(c.yearsExperience) || 0} yrs experience
+              {c.currentRole || '—'}
             </p>
             <p className="text-xs text-slate-400 mt-0.5 truncate">
               {c.email && <span>✉ {c.email}</span>}
@@ -582,14 +582,14 @@ export default function Screen() {
   const exportCsv = () => {
     if (!results.length) return;
     const headers = [
-      'rank','fileName','name','email','phone','currentRole','yearsExperience',
-      'overallScore','skillsMatchScore','experienceScore','locationScore','roleTitleScore',
-      'recommendation','keySkills','summary',
+      'rank','fileName','name','email','phone','currentRole',
+      'overallScore','supplyChainScore','technologyScore',
+      'recommendation','summary','strengths','gaps','keySkills'
     ];
     const rows = results.map((c, i) => [
-      i + 1, c.fileName, c.name, c.email, c.phone, c.currentRole, c.yearsExperience,
-      c.overallScore, c.supplyChainScore, c.procurementScore, c.logisticsScore, c.technologyScore,
-      c.recommendation, (c.keySkills || []).join('; '), c.summary,
+      i + 1, c.fileName, c.name, c.email, c.phone, c.currentRole,
+      c.overallScore, c.supplyChainScore, c.technologyScore,
+      c.recommendation, c.summary, c.strengths, c.gaps, c.keySkills,
     ]);
     const esc = v => {
       const s = (v ?? '').toString();
@@ -657,7 +657,7 @@ export default function Screen() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Resume Screener</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Local JD matching across skills, experience and location</p>
+          <p className="text-slate-500 text-sm mt-0.5">Local JD matching based on skills only</p>
         </div>
       </div>
 
@@ -740,7 +740,7 @@ export default function Screen() {
           <label className="block text-sm font-medium text-slate-700 mb-1">Job Description *</label>
           <textarea
             className="input min-h-[160px] font-mono text-xs"
-            placeholder="Paste the full job description here (role, responsibilities, must-haves, location)…"
+            placeholder="Paste the full job description here (role, responsibilities, must-haves, required skills)…"
             value={jobDescription}
             onChange={e => setJobDescription(e.target.value)}
             required

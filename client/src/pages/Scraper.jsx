@@ -197,7 +197,6 @@ export default function Scraper() {
                       <th className="px-4 py-3 w-8"></th>
                       <th className="text-left px-4 py-3 font-semibold text-slate-600">Candidate</th>
                       <th className="text-left px-4 py-3 font-semibold text-slate-600">Role / Company</th>
-                      <th className="text-left px-4 py-3 font-semibold text-slate-600">Location</th>
                       <th className="text-left px-4 py-3 font-semibold text-slate-600">Market</th>
                       <th className="text-left px-4 py-3 font-semibold text-slate-600">Contact</th>
                       <th className="text-left px-4 py-3 font-semibold text-slate-600">Profile</th>
@@ -223,7 +222,6 @@ export default function Scraper() {
                           <div className="font-medium text-slate-700 text-xs">{c.current_title || '—'}</div>
                           <div className="text-xs text-slate-400">{c.current_company || '—'}</div>
                         </td>
-                        <td className="px-4 py-3 text-xs text-slate-600">{c.location || '—'}</td>
                         <td className="px-4 py-3">
                           <span className="badge badge-blue">
                             {MARKET_FLAG[c.market] || '🌍'} {c.market}

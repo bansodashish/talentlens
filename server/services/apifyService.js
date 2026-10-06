@@ -105,7 +105,6 @@ const normaliseLinkedIn = (raw) => ({
   source:          'linkedin',
   source_url:      raw.linkedInUrl || raw.profileUrl || raw.url || raw.linkedinUrl || '',
   summary:         raw.summary || raw.about || raw.description || '',
-  experience_years: raw.yearsOfExperience || raw.totalExperienceInYears || null,
 });
 
 const searchLinkedIn = async ({ query, location, maxItems = 25 }) => {
@@ -175,7 +174,6 @@ const normaliseCVLibrary = (raw) => ({
   source:          'cv-library',
   source_url:      raw.profileUrl || raw.url || raw.cvUrl || `https://www.cv-library.co.uk/candidate/${raw.candidateId || raw.id || ''}`,
   summary:         raw.summary || raw.description || raw.profileSummary || raw.about || '',
-  experience_years: raw.experience || raw.yearsOfExperience || raw.experienceYears || null,
 });
 
 const searchCVLibrary = async ({ query, location, maxItems = 25 }) => {
@@ -230,7 +228,6 @@ const normaliseCandidate = (raw) => ({
   source:          'apify',
   source_url:      raw.linkedInUrl || raw.profileUrl || '',
   summary:         raw.summary || '',
-  experience_years: null,
 });
 
 const searchCandidates = async ({ query, location, maxItems = 25, sources }) => {

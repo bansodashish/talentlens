@@ -112,7 +112,7 @@ export default function Search() {
 
   const exportCsv = () => {
     if (!filtered.length) return;
-    const headers = ['rank','source','name','headline','current_title','current_company','location','email','phone','skills','profileUrl'];
+    const headers = ['rank','source','name','headline','current_title','current_company','email','phone','skills','profileUrl'];
     const rows = filtered.map((c, i) => [
       i + 1,
       c.source || form.source,
@@ -120,7 +120,6 @@ export default function Search() {
       c.headline,
       c.current_title,
       c.current_company,
-      c.location,
       c.email,
       c.phone,
       (c.skills || []).join('; '),
@@ -314,7 +313,6 @@ export default function Search() {
                   <th className="text-left px-4 py-3 font-semibold text-slate-600 w-12">#</th>
                   <th className="text-left px-4 py-3 font-semibold text-slate-600">Name</th>
                   <th className="text-left px-4 py-3 font-semibold text-slate-600">Current Role</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-600">Location</th>
                   <th className="text-left px-4 py-3 font-semibold text-slate-600">Email</th>
                   <th className="text-left px-4 py-3 font-semibold text-slate-600">Phone</th>
                   <th className="text-left px-4 py-3 font-semibold text-slate-600">Skills</th>
@@ -344,7 +342,6 @@ export default function Search() {
                       <div className="font-medium text-slate-700 text-xs">{c.current_title || '—'}</div>
                       <div className="text-xs text-slate-400">{c.current_company || ''}</div>
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{c.location || '—'}</td>
                     <td className="px-4 py-3 text-xs">
                       {c.email
                         ? (showEmails

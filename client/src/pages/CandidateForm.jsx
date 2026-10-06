@@ -9,8 +9,8 @@ export default function CandidateForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
-    name: '', email: '', phone: '', location: '', market: 'Global',
-    current_title: '', current_company: '', experience_years: '',
+    name: '', email: '', phone: '', market: 'Global',
+    current_title: '', current_company: '',
     skills: '', linkedin_url: '', notes: '', status: 'new'
   });
   const [cvFile, setCvFile] = useState(null);
@@ -73,7 +73,7 @@ export default function CandidateForm() {
             <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
             <input type="text" className="input" placeholder="+44 7700 000000" {...f('phone')} />
           </div>
-          <div>
+          <div className="col-span-2">
             <label className="block text-sm font-medium text-slate-700 mb-1">Market *</label>
             <select className="input" {...f('market')}>
               <option value="Global">🌍 Global</option>
@@ -85,20 +85,12 @@ export default function CandidateForm() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
-            <input type="text" className="input" placeholder="London, UK" {...f('location')} />
-          </div>
-          <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Current Title</label>
             <input type="text" className="input" placeholder="e.g. Product Manager" {...f('current_title')} />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Current Company</label>
             <input type="text" className="input" placeholder="Acme Logistics" {...f('current_company')} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Years of Experience</label>
-            <input type="number" min="0" max="50" className="input" placeholder="5" {...f('experience_years')} />
           </div>
           {isEdit && (
             <div>
@@ -110,14 +102,6 @@ export default function CandidateForm() {
               </select>
             </div>
           )}
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Skills (comma-separated)</label>
-            <input type="text" className="input" placeholder="Supply Planning, SAP, Demand Forecasting, Logistics" {...f('skills')} />
-          </div>
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">LinkedIn URL</label>
-            <input type="url" className="input" placeholder="https://linkedin.com/in/johnsmith" {...f('linkedin_url')} />
-          </div>
           <div className="col-span-2">
             <label className="block text-sm font-medium text-slate-700 mb-1">Upload CV (PDF, DOC, DOCX)</label>
             <input

@@ -1,0 +1,78 @@
+-- Migration: Remove location and experience_years from candidates table
+-- SQLite 3.35.0+ supports ALTER TABLE DROP COLUMN
+-- For older versions, a table recreation is needed
+
+-- Check your SQLite version with: SELECT sqlite_version();
+-- If version >= 3.35.0, use these statements:
+
+ALTER TABLE candidates DROP COLUMN location;
+ALTER TABLE candidates DROP COLUMN experience_years;
+
+-- If version < 3.35.0, uncomment and use this approach instead:
+-- 
+-- PRAGMA foreign_keys=off;
+-- 
+-- BEGIN TRANSACTION;
+-- 
+-- -- Create new candidates table without location and experience_years
+-- CREATE TABLE candidates_new (
+--   id INTEGER PRIMARY KEY AUTOINCREMENT,
+--   name TEXT NOT NULL,
+--   email TEXT,
+--   phone TEXT,
+--   market TEXT,
+--   current_title TEXT,
+--   current_company TEXT,
+--   skills TEXT,
+--   linkedin_url TEXT,
+--   cv_filename TEXT,
+--   cv_path TEXT,
+--   cv_text TEXT,
+--   cv_parsed_at DATETIME,
+--   source TEXT DEFAULT 'manual',
+--   source_url TEXT,
+--   headline TEXT,
+--   experience_json TEXT,
+--   education_json TEXT,
+--   skills_json TEXT,
+--   notes TEXT,
+--   status TEXT DEFAULT 'new',
+--   job_title TEXT,
+--   pipeline_stage TEXT,
+--   search_id INTEGER,
+--   ai_score INTEGER,
+--   ai_analysis TEXT,
+--   created_by INTEGER NOT NULL,
+--   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+--   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+--   FOREIGN KEY (created_by) REFERENCES users(id),
+--   FOREIGN KEY (search_id) REFERENCES search_history(id)
+-- );
+-- 
+-- -- Copy data from old table (excluding location and experience_years)
+-- INSERT INTO candidates_new 
+--   (id, name, email, phone, market, current_title, current_company, 
+--    skills, linkedin_url, cv_filename, cv_path, cv_text, cv_parsed_at,
+--    source, source_url, headline, experience_json, education_json, skills_json,
+--    notes, status, job_title, pipeline_stage, search_id, ai_score, ai_analysis,
+--    created_by, created_at, updated_at)
+-- SELECT 
+--   id, name, email, phone, market, current_title, current_company,
+--   skills, linkedin_url, cv_filename, cv_path, cv_text, cv_parsed_at,
+--   source, source_url, headline, experience_json, education_json, skills_json,
+--   notes, status, job_title, pipeline_stage, search_id, ai_score, ai_analysis,
+--   created_by, created_at, updated_at
+-- FROM candidates;
+-- 
+-- -- Drop old table
+-- DROP TABLE candidates;
+-- 
+-- -- Rename new table
+-- ALTER TABLE candidates_new RENAME TO candidates;
+-- 
+-- -- Recreate indexes if any existed on candidates table
+-- -- (Add CREATE INDEX statements here if needed)
+-- 
+-- COMMIT;
+-- 
+-- PRAGMA foreign_keys=on;

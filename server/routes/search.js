@@ -296,11 +296,11 @@ router.post('/save', (req, res) => {
 
   const insertStmt = db.prepare(`
     INSERT INTO candidates
-      (name, email, phone, location, market, current_title, current_company,
+      (name, email, phone, market, current_title, current_company,
        headline, linkedin_url, source, source_url,
        experience_json, education_json, skills_json,
        search_id, status, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?)
   `);
 
   const inserted = [];
@@ -325,7 +325,6 @@ router.post('/save', (req, res) => {
         c.name || 'Unknown',
         c.email || null,
         c.phone || null,
-        c.location || null,
         market,
         c.current_title   || c.headline || null,
         c.current_company || null,
