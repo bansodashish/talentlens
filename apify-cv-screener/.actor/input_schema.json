@@ -1,0 +1,31 @@
+{
+  "title": "TalentLenses CV Screener",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "batchId": {
+      "title": "TalentLenses batch ID",
+      "type": "string",
+      "description": "Internal batch identifier supplied by TalentLenses."
+    },
+    "jobTitle": {
+      "title": "Job title",
+      "type": "string"
+    },
+    "jobDescription": {
+      "title": "Job description",
+      "type": "string",
+      "editor": "textarea",
+      "isRequired": true
+    },
+    "screenings": {
+      "title": "CVs to screen",
+      "type": "array",
+      "description": "Provided programmatically by TalentLenses.",
+      "editor": "json",
+      "isRequired": true,
+      "prefill": []
+    }
+  },
+  "required": ["jobDescription", "screenings"]
+}

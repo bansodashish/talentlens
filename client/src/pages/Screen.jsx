@@ -8,7 +8,7 @@ const SCREEN_STATE_KEY = 'tl_screen_state';
 
 // Screening modes the API accepts. A stale value persisted by an older build
 // (e.g. a removed AI mode) must not be resubmitted — fall back to 'local'.
-const SCAN_MODES = ['local', 'openai'];
+const SCAN_MODES = ['local', 'openai', 'apify'];
 
 function loadPersistedScreenState() {
   try {
@@ -412,6 +412,7 @@ export default function Screen() {
     return SCAN_MODES.includes(persisted) ? persisted : 'local';
   });
   const [openAiAvailable, setOpenAiAvailable] = useState(false);
+  const [apifyAvailable, setApifyAvailable] = useState(false);
   const [files, setFiles] = useState([]);
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -462,10 +463,12 @@ export default function Screen() {
       .then(res => {
         if (cancelled) return;
         setOpenAiAvailable(Boolean(res.data?.modules?.openai));
+        setApifyAvailable(Boolean(res.data?.modules?.apifyCvScreening));
       })
       .catch(() => {
         if (!cancelled) {
           setOpenAiAvailable(false);
+          setApifyAvailable(false);
         }
       });
     return () => { cancelled = true; };
@@ -784,6 +787,26 @@ export default function Screen() {
                 className="accent-brand-600"
               />
               OpenAI Luna <span className="text-xs text-slate-400">(AI-assisted review)</span>
+            </label>
+
+            <label
+              className={`flex items-center gap-2 border rounded-lg px-3 py-2 text-sm ${
+                apifyAvailable
+                  ? (scanMode === 'apify' ? 'border-brand-600 bg-brand-50 text-brand-800 cursor-pointer' : 'border-slate-300 text-slate-600 cursor-pointer')
+                  : 'border-slate-200 text-slate-300 cursor-not-allowed'
+              }`}
+              title={apifyAvailable ? '' : 'Not configured — set APIFY_TOKEN, APIFY_CV_SCREENING_ACTOR_ID, and APP_URL on the server'}
+            >
+              <input
+                type="radio"
+                name="scanMode"
+                value="apify"
+                checked={scanMode === 'apify'}
+                disabled={!apifyAvailable}
+                onChange={() => setScanMode('apify')}
+                className="accent-brand-600"
+              />
+              Apify / OpenRouter <span className="text-xs text-slate-400">(async AI review)</span>
             </label>
           </div>
         </div>

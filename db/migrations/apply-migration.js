@@ -4,8 +4,22 @@
  * Run: node db/migrations/apply-migration.js
  */
 
-const Database = require('better-sqlite3');
 const path = require('path');
+
+// Try to load better-sqlite3 from server directory first
+let Database;
+try {
+  Database = require('../../server/node_modules/better-sqlite3');
+} catch (err) {
+  try {
+    Database = require('better-sqlite3');
+  } catch (err2) {
+    console.error('❌ Error: better-sqlite3 not found.');
+    console.error('Run: cd server && npm install');
+    console.error('Or:  npm install (from project root)');
+    process.exit(1);
+  }
+}
 
 const dbPath = path.join(__dirname, '..', 'talentlenses.db');
 console.log('🔄 Opening database:', dbPath);
