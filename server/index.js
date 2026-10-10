@@ -75,7 +75,6 @@ app.use('/api/dashboard',    require('./routes/dashboard'));
 // ── Integrated module routes ─────────────────────────────────────────────────
 app.use('/api/scraper',      require('./routes/scraper'));   // Candidate sourcing (Apify)
 app.use('/api/search',       require('./routes/search'));    // LinkedIn search (harvestapi)
-app.use('/api/apify-screening', require('./routes/apifyScreeningWebhook'));
 app.use('/api/screen',       require('./routes/screen'));    // AI Resume Screener (keyword + OpenClaw local)
 app.use('/api/history',      require('./routes/history'));   // CRM history (searches + screenings)
 app.use('/api/users',        require('./routes/users'));     // Admin: user management
@@ -107,7 +106,6 @@ app.get('/api/health', (req, res) => {
       apolloSearch: Boolean(process.env.APOLLO_API_KEY),
       googleSheets: Boolean(process.env.GOOGLE_SHEET_ID),
       openai: Boolean(process.env.OPENAI_API_KEY),
-      apifyCvScreening: Boolean(process.env.APIFY_TOKEN && process.env.APIFY_CV_SCREENING_ACTOR_ID && process.env.APP_URL),
     },
     timestamp: new Date().toISOString(),
   });

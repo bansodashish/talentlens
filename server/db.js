@@ -184,24 +184,6 @@ migrate('ALTER TABLE screenings RENAME COLUMN technology_score TO experience_sco
 // candidate's OWN current/most-recent job title from their résumé.
 migrate('ALTER TABLE screenings ADD COLUMN job_title TEXT');
 
-// Async Apify CV-screening runs. This is kept separate from screenings because
-// one Actor run represents a batch of multiple screening records.
-migrate(`
-  CREATE TABLE IF NOT EXISTS apify_screening_runs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    batch_id TEXT NOT NULL UNIQUE,
-    apify_run_id TEXT UNIQUE,
-    dataset_id TEXT,
-    callback_secret_hash TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'starting',
-    processed_at DATETIME,
-    error_message TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )
-`);
-migrate('CREATE INDEX IF NOT EXISTS idx_apify_screening_runs_run_id ON apify_screening_runs(apify_run_id)');
-
 // Company field on jobs (added 2026-08-31)
 migrate('ALTER TABLE jobs ADD COLUMN company TEXT');
 
