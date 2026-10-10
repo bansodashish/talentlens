@@ -21,7 +21,6 @@ const { authMiddleware } = require('../middleware/auth');
 const { limitScreenings } = require('../middleware/planLimits');
 const { parseCV }        = require('../services/cvParser');
 const { scoreWithOpenAI } = require('../services/openaiScorer');
-const { startScreeningRun } = require('../services/apifyScreener');
 const { scoreCandidate, detectRole, ALL_ROLES, extractContact, extractYears } = require('../services/scorer');
 const { extractJobTitle } = require('../utils/extractJobTitle');
 const { resolveUploadsDir } = require('../utils/storagePaths');
@@ -109,10 +108,6 @@ try {
         error_message = 'Screening was interrupted by a server restart. Please run it again.',
         summary       = 'Screening was interrupted by a server restart. Please run it again.'
     WHERE status = 'pending'
-      AND NOT EXISTS (
-        SELECT 1 FROM apify_screening_runs ar
-        WHERE ar.batch_id = screenings.batch_id AND ar.processed_at IS NULL
-      )
   `).run();
   if (recovered.changes > 0) {
     console.log(`[screen] recovered ${recovered.changes} orphaned pending screening(s) from a previous restart`);
@@ -149,65 +144,6 @@ async function processScreeningsBackground({ batchId, mode, jobDescription, jobT
     SET status = 'failed', error_message = ?, summary = ?
     WHERE id = ?
   `);
-
-  if (mode === 'apify') {
-    const actorScreenings = [];
-
-    for (const file of inserted) {
-      try {
-        const resumeText = await withTimeout(
-          Promise.resolve().then(() => parseCV(file.path, file.originalname)),
-          60_000,
-          `Parsing ${file.originalname}`
-        );
-        if (!resumeText || resumeText.trim().length < 20) {
-          throw new Error('Could not extract readable text from file.');
-        }
-        actorScreenings.push({ screeningId: file.id, fileName: file.originalname, resumeText });
-      } catch (error) {
-        const message = error.message || 'Could not prepare this CV for Apify screening.';
-        failStmt.run(message, `Screening failed: ${message}`, file.id);
-      } finally {
-        try { fs.unlinkSync(file.path); } catch (_) {}
-      }
-    }
-
-    if (!actorScreenings.length) return;
-
-    const callbackSecret = crypto.randomBytes(32).toString('hex');
-    const callbackSecretHash = crypto.createHash('sha256').update(callbackSecret).digest('hex');
-    const createRun = db.prepare(`
-      INSERT INTO apify_screening_runs (batch_id, callback_secret_hash, status)
-      VALUES (?, ?, 'starting')
-    `);
-
-    try {
-      createRun.run(batchId, callbackSecretHash);
-      const run = await startScreeningRun({
-        batchId,
-        jobTitle,
-        jobDescription,
-        screenings: actorScreenings,
-        callbackSecret,
-      });
-      db.prepare(`
-        UPDATE apify_screening_runs
-        SET apify_run_id = ?, dataset_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE batch_id = ?
-      `).run(run.runId, run.datasetId, run.status || 'RUNNING', batchId);
-    } catch (error) {
-      const message = error.message || 'Apify screening could not start.';
-      db.transaction(() => {
-        failPendingInBatch(batchId, message);
-        db.prepare(`
-          UPDATE apify_screening_runs
-          SET status = 'FAILED_TO_START', error_message = ?, processed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-          WHERE batch_id = ?
-        `).run(message, batchId);
-      })();
-    }
-    return;
-  }
 
   // Process each file from its extracted plain text.
   const processFile = async (file) => {
@@ -307,7 +243,7 @@ router.post('/resume', limitScreenings, upload.array('files', 25), async (req, r
   const jobDescription = req.body.job_description || req.body.jobDescription || '';
   const jobTitleInput = String(req.body.job_title || req.body.jobTitle || '').trim();
   const requestedMode = String(req.body.mode || 'local').toLowerCase();
-  const mode = ['local', 'openai', 'apify'].includes(requestedMode) ? requestedMode : 'local';
+  const mode = ['local', 'openai'].includes(requestedMode) ? requestedMode : 'local';
   const files = req.files || [];
 
   if (!jobDescription.trim()) {
@@ -327,14 +263,6 @@ router.post('/resume', limitScreenings, upload.array('files', 25), async (req, r
     return res.status(503).json({
       error: 'OpenAI Luna mode is not configured.',
       hint: 'Set OPENAI_API_KEY and OPENAI_MODEL=gpt-6-luna in server/.env, then restart the API.',
-    });
-  }
-
-  if (mode === 'apify' && (!process.env.APIFY_TOKEN || !process.env.APIFY_CV_SCREENING_ACTOR_ID || !process.env.APP_URL)) {
-    files.forEach(f => { try { fs.unlinkSync(f.path); } catch (_) {} });
-    return res.status(503).json({
-      error: 'Apify screening mode is not configured.',
-      hint: 'Set APIFY_TOKEN, APIFY_CV_SCREENING_ACTOR_ID, and APP_URL in server/.env, then restart the API.',
     });
   }
 
@@ -392,8 +320,8 @@ router.post('/resume', limitScreenings, upload.array('files', 25), async (req, r
   res.status(202).json({
     batchId,
     mode,
-    model: mode === 'apify'
-      ? 'apify-openrouter'
+    model: mode === 'openclaw-local'
+      ? OPENCLAW_LOCAL_MODEL
       : mode === 'openai'
         ? (process.env.OPENAI_MODEL || 'gpt-6-luna')
         : 'local-scorer',

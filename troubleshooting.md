@@ -557,108 +557,6 @@ and PM2.
 
 ---
 
-## Apify / OpenRouter CV Screening
-
-TalentLenses can submit an uploaded CV batch to a custom Apify Actor. The Actor uses
-OpenRouter to score the CVs, then Apify calls back to TalentLenses when the run
-finishes. The existing Resume Screener page continues polling its normal batch API.
-
-### Credential ownership
-
-| Credential | Where it comes from | Where it belongs |
-|------------|---------------------|------------------|
-| `APIFY_TOKEN` | Apify Console → Settings → Integrations | `server/.env` on the VPS only |
-| `OPENROUTER_API_KEY` | OpenRouter account | Apify Actor Secrets only |
-| Apify callback secret | Generated per screening run by TalentLenses | Stored hashed in SQLite only |
-| ngrok authtoken | ngrok dashboard | Local developer machine only |
-
-**ngrok does not create Apify tokens.** It only gives a temporary public URL that
-Apify can call while the API is running on a local machine.
-
-### Deploy the Actor
-
-The Actor source is in [apify-cv-screener](apify-cv-screener). Create a private Actor
-in Apify Console from this directory or a connected private Git repository, then set
-these Actor Secrets in the Apify Console:
-
-```text
-OPENROUTER_API_KEY=<your OpenRouter key>
-OPENROUTER_MODEL=openai/gpt-4o-mini
-```
-
-Copy the deployed Actor ID. Do not put `OPENROUTER_API_KEY` in the TalentLenses
-repository, `server/.env`, browser storage, or Actor input.
-
-### Configure the Hostinger VPS
-
-Run these commands as the application user:
-
-```bash
-sudo -iu talentlens
-cd ~/talentlens
-nano server/.env
-```
-
-Set or update these values, then deploy through the standard script:
-
-```dotenv
-APP_URL=https://talentlenses.leedscrownbridge.co.uk
-APIFY_TOKEN=apify_api_...
-APIFY_CV_SCREENING_ACTOR_ID=your_actor_id
-```
-
-```bash
-./deploy.sh
-pm2 list
-curl -s https://talentlenses.leedscrownbridge.co.uk/api/health
-```
-
-The health response must include `"apifyCvScreening":true`. Nginx already forwards
-all `/api/` paths to the Node server, so no port-5001 firewall rule or nginx location
-is required for the callback route.
-
-### Local webhook test with ngrok
-
-On a development machine, configure a development `server/.env` with the local
-Apify token, Actor ID, and the temporary forwarding URL:
-
-```bash
-cd ~/talentlens/server
-npm run dev
-
-# In another terminal, from any directory:
-ngrok http 5001
-```
-
-Copy the HTTPS forwarding URL that ngrok prints and set:
-
-```dotenv
-APP_URL=https://your-temporary-subdomain.ngrok-free.app
-```
-
-Restart the local API, run an Apify-mode screening, and inspect delivery in ngrok's
-request inspector. TalentLenses attaches a one-time completion/failure webhook to
-each Actor run; no manual webhook needs to be created in Apify Console. Restore the
-production `APP_URL` before deploying. Never use an ngrok URL in production.
-
-### Diagnose a failed run
-
-```bash
-sudo -u talentlens pm2 logs talentlenses --lines 100 --nostream
-curl -s https://talentlenses.leedscrownbridge.co.uk/api/health
-```
-
-- `apifyCvScreening: false`: one of `APIFY_TOKEN`, `APIFY_CV_SCREENING_ACTOR_ID`, or
-  `APP_URL` is absent from `server/.env`.
-- Actor run starts but a CV fails: inspect that run's default dataset in Apify Console;
-  each item includes its `screeningId` and either `result` or `error`.
-- Apify does not deliver a callback: confirm `APP_URL` is public HTTPS and that the
-  deployed Actor is the expected one. Apify retries non-2xx webhook responses.
-- Callback returns `401`: the run is unknown, the secret is wrong, or the callback
-  has already been replaced by a different deployment. Do not disable the check.
-
----
-
 ## What Each User Is Responsible For
 
 | Task | User |
@@ -666,8 +564,6 @@ curl -s https://talentlenses.leedscrownbridge.co.uk/api/health
 | `pm2` commands | `talentlens` |
 | `./deploy.sh` | `talentlens` |
 | `git pull`, `npm install` inside `/home/talentlens/` | `talentlens` |
-| `server/.env` Apify configuration | `talentlens` |
-| Apify Actor Secrets (`OPENROUTER_API_KEY`) | Apify Console account owner |
 | `systemctl` (nginx, pm2 unit) | `root` |
 | `certbot renew` / `certbot.timer` (SSL) | `root` |
 | `apt install`, SSL certs, nginx config | `root` |
