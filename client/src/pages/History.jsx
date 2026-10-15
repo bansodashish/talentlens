@@ -743,7 +743,7 @@ function ScreeningsTab() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                {['Candidate', 'Match Score', 'Status', 'Screened On', 'Actions'].map(h => (
+                {['Candidate', 'Recommendation', 'Status', 'Screened On', 'Actions'].map(h => (
                   <th key={h} className="text-left px-4 py-2 font-semibold text-slate-600 text-xs uppercase">{h}</th>
                 ))}
               </tr>
@@ -753,7 +753,11 @@ function ScreeningsTab() {
                 <React.Fragment key={c.id}>
                   <tr className="hover:bg-slate-50">
                     <td className="px-4 py-2 font-medium text-slate-800">{c.name}</td>
-                    <td className="px-4 py-2 text-slate-700 font-medium">{c.matchScore}%</td>
+                    <td className="px-4 py-2">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${recColor(c.recommendation)}`}>
+                        {c.recommendation || 'Not available'}
+                      </span>
+                    </td>
                     <td className="px-4 py-2">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.status === 'In Pipeline' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'}`}>
                         {c.status}

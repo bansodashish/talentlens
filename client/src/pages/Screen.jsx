@@ -35,10 +35,7 @@ function Bar({ label, value, color }) {
   const v = Math.max(0, Math.min(100, Number(value) || 0));
   return (
     <div>
-      <div className="flex justify-between text-[11px] text-slate-500 mb-0.5">
-        <span>{label}</span>
-        <span className="font-medium text-slate-700">{v}</span>
-      </div>
+      <div className="text-[11px] text-slate-500 mb-0.5">{label}</div>
       <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
         <div className={`${color} h-full rounded-full transition-all`} style={{ width: `${v}%` }} />
       </div>
@@ -144,25 +141,31 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
 
       {/* Add to Pipeline */}
       {c.status !== 'pending' && !c.error && (
-        <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
-          <p className="text-xs text-slate-400">
-            Add this candidate to your recruitment pipeline
-          </p>
-          {isAdded ? (
-            <span className="flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-lg">
-              <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              Added to Pipeline
-            </span>
-          ) : (
-            <button
-              onClick={() => onAddToPipeline?.(c)}
-              className="flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded-lg transition-colors"
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-              Add to Pipeline
-            </button>
-          )}
-        </div>
+        <>
+          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+            <p className="text-xs text-slate-400">
+              Add this candidate to your recruitment pipeline
+            </p>
+            {isAdded ? (
+              <span className="flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-lg">
+                <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                Added to Pipeline
+              </span>
+            ) : (
+              <button
+                onClick={() => onAddToPipeline?.(c)}
+                className="flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                Add to Pipeline
+              </button>
+            )}
+          </div>
+          <aside className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 leading-relaxed" aria-label="AI-assisted assessment disclaimer">
+            <p className="font-semibold text-slate-600">AI-assisted assessment</p>
+            <p className="mt-1">This assessment reflects information available in the CV and the requirements provided for this role. It is intended to support recruiter review, not determine hiring outcomes.</p>
+          </aside>
+        </>
       )}
     </div>
   );
