@@ -390,7 +390,6 @@ bash scripts/backup-db.sh
 ### Restore from a backup
 ```bash
 sudo -iu talentlens
-![1792043522297](image/troubleshooting/1792043522297.png)
 bash scripts/restore-db.sh --list        # see available snapshots
 bash scripts/restore-db.sh               # restore the most recent one
 bash scripts/restore-db.sh 20260801_0300 # restore a specific snapshot
