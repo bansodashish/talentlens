@@ -5,6 +5,7 @@ import api from '../utils/api';
 // Persist in-progress/completed screening state across page navigation —
 // results and the JD are otherwise lost the moment this component unmounts.
 const SCREEN_STATE_KEY = 'tl_screen_state';
+const MAX_CV_FILES = 20;
 
 // Screening modes the API accepts. A stale value persisted by an older build
 // (e.g. a removed AI mode) must not be resubmitted — fall back to 'local'.
@@ -58,11 +59,6 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
     );
   }
 
-  const overall = Number(c.overallScore) || 0;
-  const overallColor =
-    overall >= 75 ? 'text-green-700' :
-    overall >= 55 ? 'text-amber-700' : 'text-red-700';
-
   return (
     <div className="card p-5">
       <div className="flex items-start justify-between gap-4">
@@ -71,13 +67,7 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
             {rank}
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-semibold text-slate-800 truncate">{c.name || c.fileName}</h3>
-              {c.status === 'pending'
-                ? <span className="text-[11px] px-2 py-0.5 rounded-full border font-medium bg-slate-100 text-slate-400 border-slate-200">Analysing…</span>
-                : <span className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${REC_STYLE[c.recommendation] || 'bg-slate-100 text-slate-700'}`}>{c.recommendation}</span>
-              }
-            </div>
+            <h3 className="font-semibold text-slate-800 truncate">{c.name || c.fileName}</h3>
             <p className="text-xs text-slate-500 mt-0.5 truncate">
               {c.currentRole || '—'}
             </p>
@@ -88,13 +78,10 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
             </p>
           </div>
         </div>
-        <div className="text-right flex-shrink-0">
+        <div className="flex-shrink-0">
           {c.status === 'pending'
-            ? <div className="text-sm text-slate-400 italic">Processing…</div>
-            : <>
-                <div className={`text-3xl font-bold ${overallColor}`}>{overall}</div>
-                <div className="text-[10px] text-slate-400 uppercase tracking-wide">Overall</div>
-              </>
+            ? <span className="text-[11px] px-2 py-0.5 rounded-full border font-medium bg-slate-100 text-slate-400 border-slate-200">Analysing…</span>
+            : <span className={`inline-flex text-[11px] px-2 py-0.5 rounded-full border font-semibold ${REC_STYLE[c.recommendation] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>{c.recommendation}</span>
           }
         </div>
       </div>
@@ -303,7 +290,7 @@ function ScreeningHistory({ jobFilter, onClearJobFilter }) {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                {['Candidate', 'Match Score', 'Status', 'Screened On', 'Actions'].map(h => (
+                {['Candidate', 'Recommendation', 'Status', 'Screened On', 'Actions'].map(h => (
                   <th key={h} className="text-left px-4 py-2 font-semibold text-slate-600 text-xs uppercase">{h}</th>
                 ))}
               </tr>
@@ -313,7 +300,11 @@ function ScreeningHistory({ jobFilter, onClearJobFilter }) {
                 <React.Fragment key={c.id}>
                   <tr className="hover:bg-slate-50">
                     <td className="px-4 py-2 font-medium text-slate-800">{c.name}</td>
-                    <td className="px-4 py-2 text-slate-700 font-medium">{c.matchScore}%</td>
+                    <td className="px-4 py-2">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${recColor(c.recommendation)}`}>
+                        {c.recommendation || 'Not available'}
+                      </span>
+                    </td>
                     <td className="px-4 py-2">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.status === 'In Pipeline' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'}`}>
                         {c.status}
@@ -487,13 +478,24 @@ export default function Screen() {
     return { hires, consider, rejects };
   }, [results]);
 
-  const handleFilesChange = (e) => {
-    const picked = Array.from(e.target.files || []);
+  const addFiles = (incomingFiles) => {
+    const picked = Array.from(incomingFiles || []);
     setFiles(prev => {
       // dedupe by name + size
       const seen = new Set(prev.map(f => `${f.name}:${f.size}`));
-      return [...prev, ...picked.filter(f => !seen.has(`${f.name}:${f.size}`))];
+      const additions = picked.filter(f => !seen.has(`${f.name}:${f.size}`));
+      const next = [...prev, ...additions];
+      if (next.length > MAX_CV_FILES) {
+        setError(`You can upload up to ${MAX_CV_FILES} CVs per batch.`);
+        return next.slice(0, MAX_CV_FILES);
+      }
+      setError('');
+      return next;
     });
+  };
+
+  const handleFilesChange = (e) => {
+    addFiles(e.target.files);
     e.target.value = '';
   };
 
@@ -789,17 +791,25 @@ export default function Screen() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            CV Files <span className="text-slate-400 font-normal">(PDF, DOCX, TXT — up to 25)</span>
-          </label>
+          <div className="mb-3">
+            <h2 className="text-base font-semibold text-slate-800">Upload Candidate CVs</h2>
+            <p className="text-sm text-slate-500 mt-1">Upload CVs to assess how closely candidates match your job requirements.</p>
+          </div>
+          <div className="border border-slate-200 bg-slate-50 rounded-lg px-4 py-3 mb-3 flex gap-3">
+            <svg className="w-5 h-5 mt-0.5 flex-shrink-0 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M7 10H5a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h5M17 10h2a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-5"/></svg>
+            <div>
+              <p className="text-sm font-semibold text-slate-700">Upload up to {MAX_CV_FILES} CVs per batch</p>
+              <p className="text-xs text-slate-500 mt-0.5">Run additional batches for the same job. Your screening history is saved automatically.</p>
+            </div>
+          </div>
+          <p className="text-sm text-slate-500 mb-3">Supported formats: PDF, DOCX, DOC and TXT. Maximum 15 MB per file.</p>
           <div
-            className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:bg-slate-50 cursor-pointer"
+            className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 cursor-pointer transition-colors"
             onClick={() => fileInputRef.current?.click()}
             onDragOver={e => { e.preventDefault(); }}
             onDrop={e => {
               e.preventDefault();
-              const dropped = Array.from(e.dataTransfer.files || []);
-              setFiles(prev => [...prev, ...dropped]);
+              addFiles(e.dataTransfer.files);
             }}
           >
             <input
@@ -810,9 +820,9 @@ export default function Screen() {
               onChange={handleFilesChange}
               className="hidden"
             />
-            <div className="text-3xl mb-1">📎</div>
-            <p className="text-sm text-slate-600">Click or drop CV files here</p>
-            <p className="text-xs text-slate-400 mt-1">Max 15 MB per file</p>
+            <svg className="w-8 h-8 mx-auto mb-3 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M12 16V4M8 8l4-4 4 4M5 20h14a2 2 0 0 0 2-2v-3M3 15v3a2 2 0 0 0 2 2"/></svg>
+            <p className="text-base font-medium text-slate-700">Drag and drop CVs here</p>
+            <p className="text-sm text-slate-500 mt-1">Or browse files on your device</p>
           </div>
         </div>
 

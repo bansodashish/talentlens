@@ -24,18 +24,26 @@ const CV_SECTION_HEADERS = new Set([
   'BIO','BIODATA',
 ]);
 
+const NON_NAME_WORDS = new Set([
+  'ACCOUNT','ADMINISTRATOR','ANALYST','ARCHITECT','ASSISTANT','ASSOCIATE','CONSULTANT',
+  'COORDINATOR','CURRICULUM','CV','DEVELOPER','DIRECTOR','ENGINEER','EXPERIENCE',
+  'INFORMATION','LEAD','MANAGER','OFFICER','OPERATIONS','PROFILE','PROFESSIONAL',
+  'RESUME','SPECIALIST','SUMMARY','SUPERVISOR','TECHNICIAN','TITLE','VITAE',
+]);
+
 function looksLikeName(line) {
-  if (line.length > 60) return false;
-  if (!/ /.test(line)) return false;                            // needs at least 2 words
-  if (/@|\d{4,}|http/i.test(line)) return false;               // no email/long numbers/urls
-  if (!/[A-Za-z]/.test(line)) return false;
-  if (/[^A-Za-z\u00C0-\u017E\s'\-.]/.test(line)) return false; // only name-safe characters
-  const upper = line.trim().toUpperCase();
+  const candidate = line.trim().replace(/^(?:name|candidate)\s*[:\-]\s*/i, '');
+  if (candidate.length > 60) return false;
+  if (!/ /.test(candidate)) return false;                       // needs at least 2 words
+  if (/@|\d|http/i.test(candidate)) return false;              // no email, numbers or urls
+  if (!/[A-Za-z]/.test(candidate)) return false;
+  if (/[^A-Za-z\u00C0-\u017E\s'\-.]/.test(candidate)) return false; // only name-safe characters
+  const upper = candidate.toUpperCase();
   if (CV_SECTION_HEADERS.has(upper)) return false;
-  // Single all-caps token (e.g. "SKILLS") — not a name
-  const words = line.trim().split(/\s+/);
-  if (words.length === 1 && line === line.toUpperCase()) return false;
-  return true;
+  const words = candidate.split(/\s+/);
+  if (words.length < 2 || words.length > 5) return false;
+  if (words.some(word => NON_NAME_WORDS.has(word.replace(/[^A-Za-z]/g, '').toUpperCase()))) return false;
+  return words.every(word => /^[A-ZÀ-ÖØ-Þ][A-Za-zÀ-ÖØ-öø-ÿ'\-.]*$/.test(word) || /^[A-Z]\.$/.test(word));
 }
 
 function extractContact(text) {
@@ -43,18 +51,10 @@ function extractContact(text) {
   const phoneMatch = text.match(/(?:\+?\d[\d\s().-]{7,}\d)/);
   const lines = text.split(/\n/).map(l => l.trim()).filter(Boolean);
 
-  // Pass 1: find a line that looks like a real person's name (2+ words, no section keywords)
-  let name = lines.find(looksLikeName) || '';
-
-  // Pass 2 (fallback): original logic but skip known section headers
-  if (!name) {
-    name = lines.find(l =>
-      l.length < 60 &&
-      !/@|\d{4,}|http/i.test(l) &&
-      /[A-Za-z]/.test(l) &&
-      !CV_SECTION_HEADERS.has(l.trim().toUpperCase())
-    ) || '';
-  }
+  // Use only a standalone plausible full name. Falling back to arbitrary CV
+  // text caused job titles and profile summaries before the name to be saved.
+  const nameLine = lines.find(looksLikeName) || '';
+  const name = nameLine.replace(/^(?:name|candidate)\s*[:\-]\s*/i, '').trim();
 
   return {
     email: emailMatch ? emailMatch[0] : '',

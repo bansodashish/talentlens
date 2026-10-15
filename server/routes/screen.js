@@ -28,6 +28,7 @@ const { resolveUploadsDir } = require('../utils/storagePaths');
 // Hard ceiling for a single OpenAI Luna call, so a stalled request can't keep
 // the whole batch (and the UI spinner) in `processing` forever.
 const OPENAI_TIMEOUT_MS = Number(process.env.OPENAI_TIMEOUT_MS || 120000);
+const MAX_CV_FILES = 20;
 
 // Convert local-scorer output into the same shape the UI / DB expects.
 function toScreeningShape(scored, contact, role, text, jobDescription) {
@@ -70,7 +71,7 @@ if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 
 const upload = multer({
   dest: tmpDir,
-  limits: { fileSize: 15 * 1024 * 1024, files: 25 },
+  limits: { fileSize: 15 * 1024 * 1024, files: MAX_CV_FILES },
   fileFilter: (req, file, cb) => {
     const ok = ['.pdf', '.txt', '.docx', '.doc'].includes(
       path.extname(file.originalname).toLowerCase()
@@ -239,7 +240,7 @@ async function processScreeningsBackground({ batchId, mode, jobDescription, jobT
 }
 
 // ── POST /api/screen/resume ──────────────────────────────────────────────────
-router.post('/resume', limitScreenings, upload.array('files', 25), async (req, res) => {
+router.post('/resume', limitScreenings, upload.array('files', MAX_CV_FILES), async (req, res) => {
   const jobDescription = req.body.job_description || req.body.jobDescription || '';
   const jobTitleInput = String(req.body.job_title || req.body.jobTitle || '').trim();
   const requestedMode = String(req.body.mode || 'local').toLowerCase();
