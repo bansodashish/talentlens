@@ -20,6 +20,7 @@ export default function ScreeningResult() {
   const [screening, setScreening] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [pipelineLoading, setPipelineLoading] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -29,6 +30,19 @@ export default function ScreeningResult() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [screeningId]);
+
+  const addToPipeline = async () => {
+    setPipelineLoading(true);
+    setError('');
+    try {
+      const response = await api.patch(`/screen/screening/${screeningId}/decision`, { decision: 'shortlisted' });
+      setScreening(response.data.screening);
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || 'Could not add this candidate to the pipeline.');
+    } finally {
+      setPipelineLoading(false);
+    }
+  };
 
   if (loading) return <div className="p-10 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent" /></div>;
   if (error && !screening) return <div className="card p-5 text-red-700 bg-red-50 border-red-200">{error}</div>;
@@ -52,6 +66,7 @@ export default function ScreeningResult() {
         <div className="flex items-center gap-2">
           <span className={`px-3 py-1.5 rounded-full border text-sm font-semibold ${RECOMMENDATION_STYLE[screening.recommendation] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>{screening.recommendation || 'Review needed'}</span>
           {screening.reviewDecision && <span className="px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 text-sm font-medium">{decisionLabels[screening.reviewDecision]}</span>}
+          {screening.reviewDecision !== 'shortlisted' && <button disabled={pipelineLoading} onClick={addToPipeline} className="btn-primary text-sm disabled:opacity-60">{pipelineLoading ? 'Adding...' : 'Add to Pipeline'}</button>}
         </div>
       </div>
 
@@ -60,8 +75,9 @@ export default function ScreeningResult() {
       <section className="card overflow-hidden">
         <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100">
           <div className="p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Candidate profile</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Recruiter summary</p>
             <p className="text-sm text-slate-700 leading-relaxed mt-2">{screening.summary || 'No summary is available for this screening.'}</p>
+            <p className="text-sm text-slate-500 mt-3"><span className="font-medium text-slate-700">Role:</span> {screening.jobTitle || 'Not specified'}</p>
           </div>
           <div className="p-5">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Job description</p>
