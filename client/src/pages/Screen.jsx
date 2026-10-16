@@ -353,16 +353,17 @@ export default function Screen() {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [persistedState] = useState(loadPersistedScreenState);
   const [activeTab, setActiveTab]   = useState(() => searchParams.get('tab') === 'history' ? 'history' : 'screen');
   const [jobFilter, setJobFilter] = useState(() => searchParams.get('job') || '');
-  const [jobDescription, setJobDescription] = useState('');
-  const [jobTitle, setJobTitle] = useState('');
-  const [jobMode, setJobMode] = useState('existing');
-  const [selectedJobId, setSelectedJobId] = useState('');
+  const [jobDescription, setJobDescription] = useState(() => persistedState?.jobDescription || '');
+  const [jobTitle, setJobTitle] = useState(() => persistedState?.jobTitle || '');
+  const [jobMode, setJobMode] = useState(() => persistedState?.jobMode || 'existing');
+  const [selectedJobId, setSelectedJobId] = useState(() => persistedState?.selectedJobId || '');
   const [jobsList, setJobsList] = useState([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [scanMode, setScanMode] = useState(() => {
-    const persisted = loadPersistedScreenState()?.scanMode;
+    const persisted = persistedState?.scanMode;
     return SCAN_MODES.includes(persisted) ? persisted : 'local';
   });
   const [openAiAvailable, setOpenAiAvailable] = useState(false);
@@ -370,8 +371,8 @@ export default function Screen() {
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
-  const [results, setResults] = useState([]);
-  const [batchId, setBatchId] = useState(null);
+  const [results, setResults] = useState(() => Array.isArray(persistedState?.results) ? persistedState.results : []);
+  const [batchId, setBatchId] = useState(() => persistedState?.batchId || null);
   const [savedMsg, setSavedMsg] = useState('');
   const [addedToPipeline, setAddedToPipeline] = useState(new Set());
   const [pipelineMsg, setPipelineMsg] = useState('');
