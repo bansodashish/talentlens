@@ -169,14 +169,23 @@ async function processScreeningsBackground({ batchId, mode, jobDescription, jobT
         result = toScreeningShape(local, contact, detectedRole, plainText, jobDescription);
         raw = { mode: 'local', detectedRole, ...local };
       } else if (mode === 'openai') {
-        const scored = await withTimeout(
-          scoreWithOpenAI(plainText, jobDescription),
-          OPENAI_TIMEOUT_MS,
-          `OpenAI Luna scoring of ${file.originalname}`
-        );
         const contact = extractContact(plainText);
-        result = toScreeningShape(scored, contact, null, plainText, jobDescription);
-        raw = { provider: 'openai', model: process.env.OPENAI_MODEL || 'gpt-6-luna', ...scored };
+        try {
+          const scored = await withTimeout(
+            scoreWithOpenAI(plainText, jobDescription),
+            OPENAI_TIMEOUT_MS,
+            `OpenAI Luna scoring of ${file.originalname}`
+          );
+          result = toScreeningShape(scored, contact, null, plainText, jobDescription);
+          raw = { provider: 'openai', model: process.env.OPENAI_MODEL || 'gpt-6-luna', ...scored };
+        } catch (err) {
+          if (err.code !== 'OPENAI_INVALID_RESPONSE') throw err;
+          const detectedRole = detectRole(plainText);
+          const local = scoreCandidate(plainText, jobDescription, detectedRole);
+          result = toScreeningShape(local, contact, detectedRole, plainText, jobDescription);
+          raw = { mode: 'local', fallbackFrom: 'openai_invalid_response', detectedRole, ...local };
+          console.warn(`[background screen] ${file.originalname}: OpenAI returned invalid JSON; used local scoring fallback`);
+        }
       }
 
       updateStmt.run(

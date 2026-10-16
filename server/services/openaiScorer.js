@@ -5,6 +5,25 @@
  */
 
 const TIMEOUT_MS = Number(process.env.OPENAI_TIMEOUT_MS || 120000);
+const MAX_COMPLETION_TOKENS = Number(process.env.OPENAI_MAX_COMPLETION_TOKENS || 2000);
+
+function parseScoringResponse(response) {
+  const choice = response?.choices?.[0];
+  const content = choice?.message?.content;
+  if (typeof content !== 'string' || !content.trim()) {
+    const error = new Error('OpenAI returned an empty scoring response.');
+    error.code = 'OPENAI_INVALID_RESPONSE';
+    throw error;
+  }
+  try {
+    return JSON.parse(content);
+  } catch (err) {
+    const reason = choice?.finish_reason === 'length' ? ' The response was truncated; please retry the screening.' : '';
+    const error = new Error(`OpenAI returned an invalid scoring response.${reason}`);
+    error.code = 'OPENAI_INVALID_RESPONSE';
+    throw error;
+  }
+}
 
 async function scoreWithOpenAI(resumeText, jobDescription, targetRole = null) {
   const { OpenAI } = require('openai');
@@ -72,11 +91,11 @@ Extract 3-6 key strengths (matched skills) and 3-6 gaps (missing skills).
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },
     ],
-    max_completion_tokens: 1000,
+    max_completion_tokens: MAX_COMPLETION_TOKENS,
     response_format: { type: 'json_object' },
   });
 
-  const result = JSON.parse(response.choices[0].message.content);
+  const result = parseScoringResponse(response);
   // Normalise to ensure all required fields exist
   return {
     score: result.score || 0,
@@ -111,4 +130,4 @@ function normaliseAssessment(assessment) {
   };
 }
 
-module.exports = { scoreWithOpenAI };
+module.exports = { scoreWithOpenAI, parseScoringResponse };
