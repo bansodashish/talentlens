@@ -378,6 +378,7 @@ export default function Screen() {
   const [pipelineMsg, setPipelineMsg] = useState('');
   const fileInputRef = useRef(null);
   const consumedNavPrefill = useRef(false);
+  const restoredBatchId = useRef(persistedState?.batchId || null);
 
   useEffect(() => {
     if (consumedNavPrefill.current) return;
@@ -433,6 +434,36 @@ export default function Screen() {
       sessionStorage.setItem(SCREEN_STATE_KEY, JSON.stringify({ jobDescription, jobTitle, jobMode, selectedJobId, scanMode, results, batchId }));
     } catch (_) { /* ignore quota/serialization errors */ }
   }, [jobDescription, jobTitle, jobMode, selectedJobId, scanMode, results, batchId]);
+
+  useEffect(() => {
+    const pendingBatchId = restoredBatchId.current;
+    const restoredResults = persistedState?.results || [];
+    if (!pendingBatchId || !restoredResults.some(result => result.status === 'pending')) return undefined;
+
+    let active = true;
+    let interval;
+
+    const refreshBatch = async () => {
+      try {
+        const response = await api.get(`/screen/batch/${pendingBatchId}`);
+        if (!active) return;
+
+        const batch = response.data;
+        setResults(batch.results || []);
+        if (batch.status === 'completed') clearInterval(interval);
+      } catch (refreshError) {
+        if (active) setError(refreshError.response?.data?.error || 'Could not refresh the screening result.');
+        clearInterval(interval);
+      }
+    };
+
+    refreshBatch();
+    interval = setInterval(refreshBatch, 2000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [persistedState]);
 
   const stats = useMemo(() => {
     const done     = results.filter(r => r.status !== 'pending');
