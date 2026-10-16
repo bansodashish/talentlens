@@ -40,6 +40,12 @@ Analyze the resume against the job description and return ONLY valid JSON (no ma
   "recommendation": "one sentence recommendation",
   "strengths": ["strength 1", "strength 2", ...],
   "gaps": ["gap 1", "gap 2", ...],
+  "assessment": {
+    "requirements": [{"requirement": "string", "fit": "strong|partial|not_met", "evidence": "CV-grounded evidence"}],
+    "reasons": [{"claim": "string", "evidence": "CV-grounded evidence"}],
+    "useCases": [{"capability": "string", "useCase": "string"}],
+    "interviewQuestions": [{"question": "string", "gap": "string"}]
+  },
   "details": {
     "skills": 0.0-1.0,
     "experience": 0,
@@ -54,6 +60,8 @@ Analyze the resume against the job description and return ONLY valid JSON (no ma
 - Experience years and location should NOT affect the score
 - Set details.experience and details.location to 0
 - Overall score = skills match only
+- assessment evidence must be explicitly supported by the CV. Do not invent experience, achievements, employers, or qualifications.
+- Use empty arrays when evidence is unavailable. Keep requirements and reasons focused on the job description.
 
 Extract 3-6 key strengths (matched skills) and 3-6 gaps (missing skills).
 `.trim();
@@ -78,7 +86,28 @@ Extract 3-6 key strengths (matched skills) and 3-6 gaps (missing skills).
     recommendation: result.recommendation || '',
     strengths: result.strengths || [],
     gaps: result.gaps || [],
+    assessment: normaliseAssessment(result.assessment),
     details: result.details || {},
+  };
+}
+
+function normaliseAssessment(assessment) {
+  const safeArray = value => Array.isArray(value) ? value.filter(item => item && typeof item === 'object') : [];
+  return {
+    requirements: safeArray(assessment?.requirements).map(item => ({
+      requirement: String(item.requirement || '').trim(),
+      fit: ['strong', 'partial', 'not_met'].includes(item.fit) ? item.fit : 'partial',
+      evidence: String(item.evidence || '').trim(),
+    })).filter(item => item.requirement),
+    reasons: safeArray(assessment?.reasons).map(item => ({
+      claim: String(item.claim || '').trim(), evidence: String(item.evidence || '').trim(),
+    })).filter(item => item.claim),
+    useCases: safeArray(assessment?.useCases).map(item => ({
+      capability: String(item.capability || '').trim(), useCase: String(item.useCase || '').trim(),
+    })).filter(item => item.capability),
+    interviewQuestions: safeArray(assessment?.interviewQuestions).map(item => ({
+      question: String(item.question || '').trim(), gap: String(item.gap || '').trim(),
+    })).filter(item => item.question),
   };
 }
 

@@ -466,6 +466,35 @@ function getRecommendation(rating) {
   return 'Not recommended — significant skill gaps';
 }
 
+function buildAssessment({ matchedSkills, missingSkills, requiredSkills, resumeText, roleTitle }) {
+  const evidenceFor = (skill) => {
+    const line = resumeText.split(/\r?\n/).find(candidate => candidate.toLowerCase().includes(skill.toLowerCase()));
+    return line ? line.trim().slice(0, 180) : `CV references ${skill}.`;
+  };
+  const requirements = requiredSkills.slice(0, 8).map(skill => {
+    const matched = matchedSkills.includes(skill);
+    return {
+      requirement: skill,
+      fit: matched ? 'strong' : 'not_met',
+      evidence: matched ? evidenceFor(skill) : `No evidence of ${skill} was found in the CV.`,
+    };
+  });
+  const reasons = matchedSkills.slice(0, 4).map(skill => ({
+    claim: `Demonstrates ${skill}`,
+    evidence: evidenceFor(skill),
+  }));
+  const useCases = matchedSkills.slice(0, 3).map(skill => ({
+    capability: skill,
+    useCase: roleTitle ? `Apply ${skill} in the ${roleTitle} role.` : `Apply ${skill} to the role's core responsibilities.`,
+  }));
+  const interviewQuestions = missingSkills.slice(0, 4).map(skill => ({
+    question: `Tell us about a time you used ${skill}, including the problem, your contribution, and the outcome.`,
+    gap: `No evidence of ${skill} was found in the CV.`,
+  }));
+
+  return { requirements, reasons, useCases, interviewQuestions };
+}
+
 // ─── Main Scoring Function ───────────────────────────────────────────────────
 
 /**
@@ -521,6 +550,14 @@ function scoreCandidate(resumeText, jobDescription, targetRole = null) {
     .slice(0, 6)
     .map(kw => `Missing: ${kw}`);
 
+  const assessment = buildAssessment({
+    matchedSkills: matchedKeywords,
+    missingSkills: missedKeywords,
+    requiredSkills: allKeywords,
+    resumeText,
+    roleTitle: roleData?.title || '',
+  });
+
   // Note: Location info removed from strengths/gaps for skills-only focus
 
   return {
@@ -531,6 +568,7 @@ function scoreCandidate(resumeText, jobDescription, targetRole = null) {
     recommendation: getRecommendation(rating),
     strengths,
     gaps,
+    assessment,
     details: {
       skills: Math.round(skillsScore * 100) / 100,
       experience: 0,  // Not scored
