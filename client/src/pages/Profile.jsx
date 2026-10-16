@@ -19,7 +19,7 @@ const Field = ({ label, children }) => (
 export default function Profile() {
   const { user, updateUser } = useAuth();
 
-  const [profile, setProfile] = useState({ name: '', company: '', market: 'Both' });
+  const [profile, setProfile] = useState({ name: '', company: '', market: 'Global' });
   const [keys, setKeys] = useState({ apify_key: '', apollo_key: '', openai_key: '' });
   const [passwords, setPasswords] = useState({ current_password: '', new_password: '', confirm_password: '' });
 
@@ -36,7 +36,7 @@ export default function Profile() {
 
   useEffect(() => {
     if (user) {
-      setProfile({ name: user.name || '', company: user.company || '', market: user.market || 'Both' });
+      setProfile({ name: user.name || '', company: user.company || '', market: user.market === 'Both' ? 'Global' : user.market || 'Global' });
     }
   }, [user]);
 
@@ -148,7 +148,7 @@ export default function Profile() {
               <option value="Americas">🌎 Americas</option>
               <option value="Europe">🌍 Europe</option>
               <option value="Asia Pacific">🌏 Asia Pacific</option>
-              <option value="MENA">🕌 MENA</option>
+              <option value="MENA">📍 MENA</option>
               <option value="Africa">🌍 Africa</option>
             </select>
           </Field>

@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 
 const roleColors = { admin: 'badge-purple', recruiter: 'badge-blue', viewer: 'badge-slate' };
-const marketLabel = { UK: '🇬🇧', Dubai: '🇦🇪', Both: '🌍', Global: '🌍', Americas: '🌎', Europe: '🌍', 'Asia Pacific': '🌏', MENA: '🕌', Africa: '🌍' };
+const marketLabel = { UK: '🇬🇧', Dubai: '🇦🇪', Both: '🌍', Global: '🌍', Americas: '🌎', Europe: '🌍', 'Asia Pacific': '🌏', MENA: '📍', Africa: '🌍' };
 
 export default function Admin() {
   const { user } = useAuth();

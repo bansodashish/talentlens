@@ -26,6 +26,12 @@ const REC_STYLE = {
   'Reject':      'bg-red-100 text-red-700 border-red-300',
 };
 
+const EVIDENCE_SOURCE_LABEL = {
+  cv_excerpt: 'CV excerpt',
+  model_assessment: 'AI assessment',
+  generated_fallback: 'Generated guidance',
+};
+
 function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
   if (c.status === 'failed' || c.error) {
     return (
@@ -82,7 +88,7 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
           <section className="border border-slate-100 rounded-lg p-4">
             <h4 className="text-sm font-semibold text-slate-900">Why we recommend</h4>
             <div className="mt-3 space-y-3">
-              {reasons.length ? reasons.slice(0, 3).map((item, index) => <div key={`${item.claim}-${index}`}><p className="text-sm font-medium text-slate-800">{item.claim}</p><p className="mt-1 text-xs text-slate-500">{item.evidence}</p></div>) : <p className="text-sm text-slate-500">No evidence summary was captured.</p>}
+              {reasons.length ? reasons.slice(0, 3).map((item, index) => <div key={`${item.claim}-${index}`}><p className="text-sm font-medium text-slate-800">{item.claim}</p><p className="mt-1 text-xs text-slate-500">{item.evidence}</p><p className="mt-1 text-[10px] font-medium text-slate-400">{EVIDENCE_SOURCE_LABEL[item.evidenceSource] || 'Assessment guidance'}</p></div>) : <p className="text-sm text-slate-500">No evidence summary was captured.</p>}
             </div>
           </section>
           <section className="border border-slate-100 rounded-lg p-4">
@@ -95,7 +101,7 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
 
         <section className="mt-4 border border-slate-100 rounded-lg overflow-hidden">
           <div className="px-4 py-3 bg-slate-50 border-b border-slate-100"><h4 className="text-sm font-semibold text-slate-900">Requirement by requirement</h4></div>
-          {requirements.length ? requirements.slice(0, 6).map((item, index) => <div key={`${item.requirement}-${index}`} className="px-4 py-3 border-b last:border-b-0 border-slate-100 flex gap-3 items-start"><span className={`mt-0.5 shrink-0 px-2 py-0.5 rounded-full text-[11px] font-semibold ${fitStyle[item.fit] || fitStyle.partial}`}>{(item.fit || 'partial').replace('_', ' ')}</span><div><p className="text-sm font-medium text-slate-800">{item.requirement}</p><p className="text-xs text-slate-500 mt-1">{item.evidence}</p></div></div>) : <p className="p-4 text-sm text-slate-500">No requirement evidence was captured.</p>}
+          {requirements.length ? requirements.slice(0, 6).map((item, index) => <div key={`${item.requirement}-${index}`} className="px-4 py-3 border-b last:border-b-0 border-slate-100 flex gap-3 items-start"><span className={`mt-0.5 shrink-0 px-2 py-0.5 rounded-full text-[11px] font-semibold ${fitStyle[item.fit] || fitStyle.partial}`}>{(item.fit || 'partial').replace('_', ' ')}</span><div><p className="text-sm font-medium text-slate-800">{item.requirement}</p><p className="text-xs text-slate-500 mt-1">{item.evidence}</p><p className="mt-1 text-[10px] font-medium text-slate-400">{EVIDENCE_SOURCE_LABEL[item.evidenceSource] || 'Assessment guidance'}</p></div></div>) : <p className="p-4 text-sm text-slate-500">No requirement evidence was captured.</p>}
         </section>
 
         <section className="mt-4 border border-slate-100 rounded-lg p-4">

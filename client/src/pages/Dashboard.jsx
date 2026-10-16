@@ -438,7 +438,7 @@ export default function Dashboard() {
                   Getting Started
                 </span>
               </div>
-              <h3 className="text-lg font-bold text-slate-800 mb-1">Start Recruiting your next Candidate</h3>
+              <h3 className="text-lg font-bold text-slate-800 mb-1">Start recruiting your next candidate</h3>
               <p className="text-sm text-slate-500">
                 Create a new job, screen CVs and identify the strongest candidates based on your requirements. Build your pipeline and manage candidates from application through to offer.
               </p>
@@ -519,7 +519,7 @@ export default function Dashboard() {
             <EmptyState
               icon="📌"
               title="No active vacancies yet"
-              description="Create an active job or run resume screening with a JD to auto-populate vacancies here."
+              description="Create a job or screen CVs against a job description to populate vacancies here."
               action={
                 <div className="flex gap-2">
                   <Link to="/jobs/new" className="btn-primary text-xs px-3 py-1.5">📋 Create Job</Link>

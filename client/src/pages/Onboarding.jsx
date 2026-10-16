@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 
@@ -8,12 +8,12 @@ const REGIONS = [
   { key: 'Americas',     label: 'Americas',      icon: '🌎' },
   { key: 'Europe',       label: 'Europe',        icon: '🌍' },
   { key: 'Asia Pacific', label: 'Asia Pacific',  icon: '🌏' },
-  { key: 'MENA',         label: 'MENA',          icon: '🕌' },
+  { key: 'MENA',         label: 'MENA',          icon: '📍' },
   { key: 'Africa',       label: 'Africa',        icon: '🌍' },
 ];
 
 export default function Onboarding() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, refreshUser } = useAuth();
   const navigate = useNavigate();
 
   // Recruiters never manage API keys — they use the shared workspace keys.
@@ -24,7 +24,7 @@ export default function Onboarding() {
     : [{ key: 'region', label: 'Region' }];
 
   const [step, setStep]   = useState(0);
-  const [market, setMarket]       = useState(user?.market || 'Global');
+  const [market, setMarket]       = useState(user?.market === 'Both' ? 'Global' : user?.market || 'Global');
   const [apifyKey, setApifyKey]   = useState('');
   const [testJob, setTestJob]     = useState('Product Manager');
   const [testLoc, setTestLoc]     = useState('');
@@ -36,11 +36,27 @@ export default function Onboarding() {
   const prev = () => setStep(s => Math.max(s - 1, 0));
   const current = STEP_DEFS[step]?.key;
 
+  const finish = async () => {
+    setBusy(true);
+    try {
+      await api.post('/auth/onboarding/complete');
+      await refreshUser();
+      navigate('/dashboard');
+    } catch (e) { setError(e.response?.data?.error || 'Failed.'); }
+    finally { setBusy(false); }
+  };
+
   const saveMarket = async () => {
     setBusy(true); setError('');
-    try { await updateUser({ market }); next(); }
-    catch (e) { setError(e.response?.data?.error || 'Failed to save.'); }
-    finally   { setBusy(false); }
+    try {
+      await updateUser({ market });
+      if (step >= STEP_DEFS.length - 1) {
+        await finish();
+        return;
+      }
+      next();
+    } catch (e) { setError(e.response?.data?.error || 'Failed to save.'); }
+    finally { setBusy(false); }
   };
 
   const saveApify = async () => {
@@ -65,18 +81,6 @@ export default function Onboarding() {
     } catch (e) {
       setTestResult({ ok: false, error: e.response?.data?.error || e.message, hint: e.response?.data?.hint });
     } finally { setBusy(false); }
-  };
-
-  const finish = async () => {
-    setBusy(true);
-    try {
-      await api.post('/auth/onboarding/complete');
-      try {
-        const me = await api.get('/auth/me');
-        localStorage.setItem('tl_user', JSON.stringify(me.data.user));
-      } catch (_) {}
-      navigate('/dashboard');
-    } catch (e) { setError(e.response?.data?.error || 'Failed.'); setBusy(false); }
   };
 
   return (
@@ -113,7 +117,7 @@ export default function Onboarding() {
           {current === 'region' && (
             <div>
               <h2 className="font-display font-bold text-xl text-slate-800 mb-1">Which region do you primarily recruit for?</h2>
-              <p className="text-sm text-slate-500 mb-5">This sets the default for searches and candidate filters \u2014 you can change it anytime.</p>
+              <p className="text-sm text-slate-500 mb-5">This sets the default for searches and candidate filters. You can change it later in Profile under Market focus.</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {REGIONS.map(r => (
                   <button key={r.key} onClick={() => setMarket(r.key)}
@@ -184,7 +188,7 @@ export default function Onboarding() {
         </div>
 
         <div className="text-center mt-4">
-          <Link to="/dashboard" className="text-xs text-slate-400 hover:text-slate-600">Skip onboarding</Link>
+          <button onClick={finish} disabled={busy} className="text-xs text-slate-400 hover:text-slate-600 disabled:opacity-60">Skip onboarding</button>
         </div>
       </div>
     </div>

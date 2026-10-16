@@ -28,6 +28,14 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  const refreshUser = async () => {
+    const res = await api.get('/auth/me');
+    const refreshed = res.data.user;
+    localStorage.setItem('tl_user', JSON.stringify(refreshed));
+    setUser(refreshed);
+    return refreshed;
+  };
+
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
     localStorage.setItem('tl_token', res.data.token);
@@ -59,7 +67,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, updateUser, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, updateUser, refreshUser, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
