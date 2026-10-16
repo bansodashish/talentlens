@@ -20,6 +20,7 @@ import Scraper from './pages/Scraper';
 import CandidateSearch from './pages/CandidateSearch';
 
 import CVMatch from './pages/Screen';
+import ScreeningResult from './pages/ScreeningResult';
 import Profile from './pages/Profile';
 import Admin from './pages/Admin';
 import History from './pages/History';
@@ -102,6 +103,7 @@ export default function App() {
           {/* AI Tools */}
           <Route path="/candidate-search" element={<PrivateRoute><CandidateSearch /></PrivateRoute>} />
           <Route path="/cv-match"         element={<PrivateRoute><CVMatch /></PrivateRoute>} />
+          <Route path="/cv-match/results/:screeningId" element={<PrivateRoute><ScreeningResult /></PrivateRoute>} />
           <Route path="/scraper"          element={<Navigate to="/candidate-search" replace />} />
           <Route path="/search"           element={<Navigate to="/candidate-search" replace />} />
           <Route path="/screen"           element={<Navigate to="/cv-match" replace />} />
