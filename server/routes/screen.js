@@ -395,8 +395,8 @@ function shapeScreeningRow(r) {
 
   if (!assessment) {
     assessment = {
-      requirements: [...strengths.slice(0, 4).map(skill => ({ requirement: skill, fit: 'strong', evidence: `Matched skill: ${skill}.` })), ...gaps.slice(0, 4).map(skill => ({ requirement: skill, fit: 'not_met', evidence: `Gap identified: ${skill}.` }))],
-      reasons: strengths.slice(0, 4).map(skill => ({ claim: skill, evidence: 'Identified from the candidate CV.' })),
+      requirements: [...strengths.slice(0, 4).map(skill => ({ requirement: skill, fit: 'strong', evidence: `Matched skill: ${skill}.`, evidenceSource: 'generated_fallback' })), ...gaps.slice(0, 4).map(skill => ({ requirement: skill, fit: 'not_met', evidence: `Gap identified: ${skill}.`, evidenceSource: 'generated_fallback' }))],
+      reasons: strengths.slice(0, 4).map(skill => ({ claim: skill, evidence: 'Identified from the candidate CV.', evidenceSource: 'generated_fallback' })),
       useCases: strengths.slice(0, 3).map(skill => ({ capability: skill, useCase: `Apply this capability in the ${r.job_title || 'target'} role.` })),
       interviewQuestions: gaps.slice(0, 4).map(gap => ({ question: `What experience do you have with ${gap}?`, gap })),
     };

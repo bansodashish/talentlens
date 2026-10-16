@@ -55,7 +55,7 @@ migrate('ALTER TABLE applications ADD COLUMN ai_provider TEXT DEFAULT "local"');
 migrate('ALTER TABLE scraper_sessions ADD COLUMN platform TEXT DEFAULT "linkedin"');
 
 // Step 2 — multi-tenant fields
-migrate('ALTER TABLE users ADD COLUMN market TEXT DEFAULT "Both"');
+migrate('ALTER TABLE users ADD COLUMN market TEXT DEFAULT "Global"');
 migrate('ALTER TABLE users ADD COLUMN apify_key_enc TEXT');
 migrate('ALTER TABLE users ADD COLUMN claude_key_enc TEXT');
 migrate('ALTER TABLE users ADD COLUMN apollo_key_enc TEXT');
@@ -64,6 +64,7 @@ migrate('ALTER TABLE users ADD COLUMN openai_key_enc TEXT');
 // Step 7 — SaaS plans + onboarding
 migrate('ALTER TABLE users ADD COLUMN plan TEXT DEFAULT "basic"');
 migrate('ALTER TABLE users ADD COLUMN onboarding_complete INTEGER DEFAULT 0');
+migrate("UPDATE users SET market = 'Global' WHERE market = 'Both'");
 
 // Consolidate plans down to just 'basic' / 'pro' (previously starter/growth/enterprise).
 migrate("UPDATE users SET plan = 'pro' WHERE lower(plan) = 'enterprise'");

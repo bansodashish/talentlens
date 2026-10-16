@@ -261,7 +261,9 @@ router.put('/me', authMiddleware, async (req, res) => {
     req.user.id
   );
 
-  const updated = db.prepare('SELECT id, name, email, role, company, market, created_at, updated_at FROM users WHERE id = ?').get(req.user.id);
+  const updated = db.prepare('SELECT id, name, email, role, company, market, plan, onboarding_complete, created_at, updated_at FROM users WHERE id = ?').get(req.user.id);
+  updated.onboarding_complete = !!updated.onboarding_complete;
+  updated.plan = (updated.plan || 'basic').toLowerCase();
   updated.has_apify_key = apify_key !== undefined ? !!apify_key : !!row.apify_key_enc;
   updated.has_claude_key = claude_key !== undefined ? !!claude_key : !!row.claude_key_enc;
   updated.has_apollo_key = apollo_key !== undefined ? !!apollo_key : !!row.apollo_key_enc;
