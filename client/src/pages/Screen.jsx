@@ -143,28 +143,18 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
       {c.status !== 'pending' && !c.error && (
         <>
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
-            <p className="text-xs text-slate-400">
-              Add this candidate to your recruitment pipeline
-            </p>
+            {c.id ? <Link to={`/cv-match/results/${c.id}`} className="text-xs font-semibold text-blue-700 hover:text-blue-900">View assessment</Link> : <span />}
             {isAdded ? (
-              <span className="flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-lg">
-                <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                Added to Pipeline
-              </span>
+              <span className="text-xs font-medium text-green-700">Added to Pipeline</span>
             ) : (
               <button
                 onClick={() => onAddToPipeline?.(c)}
-                className="flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded-lg transition-colors"
+                className="text-xs font-medium text-blue-700 hover:text-blue-900"
               >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                 Add to Pipeline
               </button>
             )}
           </div>
-          <aside className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 leading-relaxed" aria-label="AI-assisted assessment disclaimer">
-            <p className="font-semibold text-slate-600">AI-assisted assessment</p>
-            <p className="mt-1">This assessment reflects information available in the CV and the requirements provided for this role. It is intended to support recruiter review, not determine hiring outcomes.</p>
-          </aside>
         </>
       )}
     </div>
@@ -322,6 +312,9 @@ function ScreeningHistory({ jobFilter, onClearJobFilter }) {
                           className="text-xs px-2 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors font-medium">
                           {expandLoading[c.id] ? '…' : expanded[c.id] ? 'Hide Results' : 'View Results'}
                         </button>
+                        <Link to={`/cv-match/results/${c.id}`} className="text-xs px-2 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors font-medium">
+                          Assessment
+                        </Link>
                         {c.status === 'Screened' && (
                           <button onClick={() => addToPipeline(c)}
                             className="text-xs px-2 py-1 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 transition-colors font-medium whitespace-nowrap">
@@ -504,6 +497,14 @@ export default function Screen() {
 
   const removeFile = (idx) => setFiles(files.filter((_, i) => i !== idx));
 
+  const showCompletedResults = (completedResults) => {
+    setResults(completedResults);
+    const successful = completedResults.filter(result => result.status === 'completed' && result.id);
+    if (completedResults.length === 1 && successful.length === 1) {
+      navigate(`/cv-match/results/${successful[0].id}`);
+    }
+  };
+
   const runScreening = async (e) => {
     e.preventDefault();
     if (!selectedJobId)         { setError('Please select an existing job.'); return; }
@@ -534,7 +535,7 @@ export default function Screen() {
       setBatchId(bId);
 
       if (data.status === 'completed') {
-        setResults(data.results || []);
+        showCompletedResults(data.results || []);
         setLoading(false);
         setProgress(0);
         autoSaveToHistory(bId, data.results || []);
@@ -549,7 +550,8 @@ export default function Screen() {
           const res = await api.get(`/screen/batch/${bId}`);
           const batch = res.data;
 
-          setResults(batch.results || []);
+          const batchResults = batch.results || [];
+          setResults(batchResults);
 
           if (batch.progress) {
             const { total, completed, failed } = batch.progress;
@@ -564,7 +566,8 @@ export default function Screen() {
             setLoading(false);
             setProgress(0);
             if (batch.status === 'completed') {
-              autoSaveToHistory(bId, batch.results || []);
+              showCompletedResults(batchResults);
+              autoSaveToHistory(bId, batchResults);
             } else {
               setError('Screening is taking longer than expected and stopped updating. Open History to check this batch once it finishes.');
             }
