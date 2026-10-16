@@ -62,6 +62,7 @@ function toScreeningShape(scored, contact, role, text, jobDescription) {
     overallScore:     overall,    // = Skills Match %
     recommendation:   recMap[scored.rating] || 'Consider',
     summary,
+    assessment: scored.assessment || { requirements: [], reasons: [], useCases: [], interviewQuestions: [] },
   };
 }
 
@@ -358,6 +359,7 @@ router.get('/history', (req, res) => {
 function shapeScreeningRow(r) {
   let strengths = [];
   let gaps = [];
+  let assessment = null;
   const keySkillsParsed = r.key_skills ? JSON.parse(r.key_skills) : [];
 
   if (r.raw_json) {
@@ -365,6 +367,7 @@ function shapeScreeningRow(r) {
       const raw = JSON.parse(r.raw_json);
       strengths = (raw.strengths || []).map(s => s.replace(/^Matched:\s*/i, ''));
       gaps = (raw.gaps || []).map(g => g.replace(/^Missing:\s*/i, ''));
+      assessment = raw.assessment || null;
     } catch (_) {}
   }
 
@@ -379,6 +382,15 @@ function shapeScreeningRow(r) {
     if (gapMatch) {
       gaps = gapMatch[1].split(',').map(g => g.trim()).filter(Boolean);
     }
+  }
+
+  if (!assessment) {
+    assessment = {
+      requirements: [...strengths.slice(0, 4).map(skill => ({ requirement: skill, fit: 'strong', evidence: `Matched skill: ${skill}.` })), ...gaps.slice(0, 4).map(skill => ({ requirement: skill, fit: 'not_met', evidence: `Gap identified: ${skill}.` }))],
+      reasons: strengths.slice(0, 4).map(skill => ({ claim: skill, evidence: 'Identified from the candidate CV.' })),
+      useCases: strengths.slice(0, 3).map(skill => ({ capability: skill, useCase: `Apply this capability in the ${r.job_title || 'target'} role.` })),
+      interviewQuestions: gaps.slice(0, 4).map(gap => ({ question: `What experience do you have with ${gap}?`, gap })),
+    };
   }
 
   return {
@@ -400,6 +412,9 @@ function shapeScreeningRow(r) {
     summary:          r.summary,
     strengths,
     gaps,
+    assessment,
+    reviewDecision: r.review_decision || null,
+    reviewedAt: r.reviewed_at || null,
     status:           r.status,
     error:            r.error_message,
     createdAt:        r.created_at,
@@ -454,6 +469,40 @@ router.get('/screening/:id', (req, res) => {
   const row = db.prepare('SELECT * FROM screenings WHERE id = ? AND created_by = ?').get(req.params.id, req.user.id);
   if (!row) return res.status(404).json({ error: 'Screening not found.' });
   res.json({ screening: shapeScreeningRow(row) });
+});
+
+router.patch('/screening/:id/decision', (req, res) => {
+  const decision = String(req.body?.decision || '').toLowerCase();
+  if (!['shortlisted', 'hold', 'rejected'].includes(decision)) {
+    return res.status(400).json({ error: 'Decision must be shortlisted, hold, or rejected.' });
+  }
+
+  const screening = db.prepare('SELECT * FROM screenings WHERE id = ? AND created_by = ?').get(req.params.id, req.user.id);
+  if (!screening) return res.status(404).json({ error: 'Screening not found.' });
+
+  let candidateId = null;
+  db.transaction(() => {
+    if (decision === 'shortlisted') {
+      const existing = screening.email
+        ? db.prepare('SELECT id FROM candidates WHERE created_by = ? AND lower(trim(email)) = lower(trim(?))').get(req.user.id, screening.email)
+        : db.prepare('SELECT id FROM candidates WHERE created_by = ? AND lower(trim(name)) = lower(trim(?))').get(req.user.id, screening.candidate_name);
+      if (existing) {
+        candidateId = existing.id;
+        db.prepare('UPDATE candidates SET pipeline_stage = ?, job_title = COALESCE(job_title, ?), updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+          .run('shortlisted', screening.job_title, candidateId);
+      } else {
+        const created = db.prepare(`
+          INSERT INTO candidates (name, email, phone, current_title, source, job_title, pipeline_stage, created_by)
+          VALUES (?, ?, ?, ?, 'resume_upload', ?, 'shortlisted', ?)
+        `).run(screening.candidate_name || 'Unnamed candidate', screening.email, screening.phone, screening.current_role, screening.job_title, req.user.id);
+        candidateId = created.lastInsertRowid;
+      }
+    }
+    db.prepare('UPDATE screenings SET review_decision = ?, reviewed_at = CURRENT_TIMESTAMP WHERE id = ?').run(decision, screening.id);
+  })();
+
+  const row = db.prepare('SELECT * FROM screenings WHERE id = ?').get(screening.id);
+  res.json({ screening: shapeScreeningRow(row), candidateId });
 });
 
 // ── GET /api/screen/candidates ────────────────────────────────────────────────

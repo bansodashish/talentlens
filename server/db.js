@@ -183,6 +183,8 @@ migrate('ALTER TABLE screenings RENAME COLUMN technology_score TO experience_sco
 // as "Role" in the History tab. Distinct from current_role, which is the
 // candidate's OWN current/most-recent job title from their résumé.
 migrate('ALTER TABLE screenings ADD COLUMN job_title TEXT');
+migrate('ALTER TABLE screenings ADD COLUMN review_decision TEXT');
+migrate('ALTER TABLE screenings ADD COLUMN reviewed_at DATETIME');
 
 // Company field on jobs (added 2026-08-31)
 migrate('ALTER TABLE jobs ADD COLUMN company TEXT');
