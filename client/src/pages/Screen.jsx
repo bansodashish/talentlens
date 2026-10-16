@@ -26,23 +26,6 @@ const REC_STYLE = {
   'Reject':      'bg-red-100 text-red-700 border-red-300',
 };
 
-// Skills-only scoring - single bar display
-const SCORE_BARS = [
-  { key: 'supplyChainScore', label: 'Skills Match', color: 'bg-blue-600' },
-];
-
-function Bar({ label, value, color }) {
-  const v = Math.max(0, Math.min(100, Number(value) || 0));
-  return (
-    <div>
-      <div className="text-[11px] text-slate-500 mb-0.5">{label}</div>
-      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-        <div className={`${color} h-full rounded-full transition-all`} style={{ width: `${v}%` }} />
-      </div>
-    </div>
-  );
-}
-
 function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
   if (c.status === 'failed' || c.error) {
     return (
@@ -55,6 +38,13 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
       </div>
     );
   }
+
+  const assessment = c.assessment || {};
+  const requirements = assessment.requirements || [];
+  const reasons = assessment.reasons || [];
+  const useCases = assessment.useCases || [];
+  const questions = assessment.interviewQuestions || [];
+  const fitStyle = { strong: 'bg-emerald-100 text-emerald-800', partial: 'bg-amber-100 text-amber-800', not_met: 'bg-rose-100 text-rose-800' };
 
   return (
     <div className="card p-5">
@@ -83,59 +73,36 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 mt-4">
-        {c.status === 'pending'
-          ? <div className="col-span-4 text-xs text-slate-400 italic">Waiting for model response…</div>
-          : SCORE_BARS.map(b => <Bar key={b.key} label={b.label} value={c[b.key]} color={b.color} />)
-        }
-      </div>
-
       {c.summary && (
         <p className="text-sm text-slate-600 mt-4 leading-relaxed">{c.summary}</p>
       )}
 
-      {(c.strengths || []).length > 0 && (
-        <div className="mt-4">
-          <p className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wide mb-2">✅ Reasons for Selection</p>
-          <div className="space-y-1.5">
-            {c.strengths.map((s, i) => (
-              <div key={i} className="flex gap-2 text-[12px]">
-                <span className="font-semibold text-emerald-700 whitespace-nowrap">{s}</span>
-                <span className="text-slate-400">→</span>
-                <span className="text-slate-600">Matched job requirement — candidate demonstrates this skill</span>
-              </div>
-            ))}
-          </div>
+      {c.status === 'pending' ? <p className="mt-4 text-sm text-slate-400 italic">Waiting for model response…</p> : <>
+        <div className="grid lg:grid-cols-2 gap-4 mt-5">
+          <section className="border border-slate-100 rounded-lg p-4">
+            <h4 className="text-sm font-semibold text-slate-900">Why we recommend</h4>
+            <div className="mt-3 space-y-3">
+              {reasons.length ? reasons.slice(0, 3).map((item, index) => <div key={`${item.claim}-${index}`}><p className="text-sm font-medium text-slate-800">{item.claim}</p><p className="mt-1 text-xs text-slate-500">{item.evidence}</p></div>) : <p className="text-sm text-slate-500">No evidence summary was captured.</p>}
+            </div>
+          </section>
+          <section className="border border-slate-100 rounded-lg p-4">
+            <h4 className="text-sm font-semibold text-slate-900">Best use cases</h4>
+            <div className="mt-3 space-y-3">
+              {useCases.length ? useCases.slice(0, 3).map((item, index) => <div key={`${item.capability}-${index}`}><p className="text-sm font-medium text-slate-800">{item.capability}</p><p className="mt-1 text-xs text-slate-500">{item.useCase}</p></div>) : <p className="text-sm text-slate-500">No role-specific use cases were captured.</p>}
+            </div>
+          </section>
         </div>
-      )}
 
-      {(c.gaps || []).length > 0 && (
-        <div className="mt-3">
-          <p className="text-[11px] font-semibold text-rose-600 uppercase tracking-wide mb-2">⚠️ Lacking Points</p>
-          <div className="space-y-1.5">
-            {c.gaps.map((g, i) => (
-              <div key={i} className="flex gap-2 text-[12px]">
-                <span className="font-semibold text-rose-600 whitespace-nowrap">{g}</span>
-                <span className="text-slate-400">→</span>
-                <span className="text-slate-600">Required by the JD but not found in the candidate's CV</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+        <section className="mt-4 border border-slate-100 rounded-lg overflow-hidden">
+          <div className="px-4 py-3 bg-slate-50 border-b border-slate-100"><h4 className="text-sm font-semibold text-slate-900">Requirement by requirement</h4></div>
+          {requirements.length ? requirements.slice(0, 6).map((item, index) => <div key={`${item.requirement}-${index}`} className="px-4 py-3 border-b last:border-b-0 border-slate-100 flex gap-3 items-start"><span className={`mt-0.5 shrink-0 px-2 py-0.5 rounded-full text-[11px] font-semibold ${fitStyle[item.fit] || fitStyle.partial}`}>{(item.fit || 'partial').replace('_', ' ')}</span><div><p className="text-sm font-medium text-slate-800">{item.requirement}</p><p className="text-xs text-slate-500 mt-1">{item.evidence}</p></div></div>) : <p className="p-4 text-sm text-slate-500">No requirement evidence was captured.</p>}
+        </section>
 
-      {(c.keySkills || []).length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-3">
-          {c.keySkills.slice(0, 12).map((s, i) => (
-            <span key={i} className="text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
-              {s}
-            </span>
-          ))}
-          {c.keySkills.length > 12 && (
-            <span className="text-[11px] text-slate-400">+{c.keySkills.length - 12}</span>
-          )}
-        </div>
-      )}
+        <section className="mt-4 border border-slate-100 rounded-lg p-4">
+          <h4 className="text-sm font-semibold text-slate-900">Ask at interview</h4>
+          {questions.length ? <ol className="mt-3 space-y-2 list-decimal list-inside text-sm text-slate-700">{questions.slice(0, 3).map((item, index) => <li key={`${item.question}-${index}`}>{item.question}<p className="ml-5 mt-1 text-xs text-slate-500">{item.gap}</p></li>)}</ol> : <p className="mt-2 text-sm text-slate-500">No follow-up gaps were identified.</p>}
+        </section>
+      </>}
 
       <p className="text-[10px] text-slate-300 mt-3"><span aria-hidden="true">📄</span> {c.fileName}</p>
 
