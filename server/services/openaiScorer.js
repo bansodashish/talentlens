@@ -117,9 +117,10 @@ function normaliseAssessment(assessment) {
       requirement: String(item.requirement || '').trim(),
       fit: ['strong', 'partial', 'not_met'].includes(item.fit) ? item.fit : 'partial',
       evidence: String(item.evidence || '').trim(),
+      evidenceSource: 'model_assessment',
     })).filter(item => item.requirement),
     reasons: safeArray(assessment?.reasons).map(item => ({
-      claim: String(item.claim || '').trim(), evidence: String(item.evidence || '').trim(),
+      claim: String(item.claim || '').trim(), evidence: String(item.evidence || '').trim(), evidenceSource: 'model_assessment',
     })).filter(item => item.claim),
     useCases: safeArray(assessment?.useCases).map(item => ({
       capability: String(item.capability || '').trim(), useCase: String(item.useCase || '').trim(),

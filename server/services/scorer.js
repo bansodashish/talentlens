@@ -459,7 +459,7 @@ function getRatingLabel(rating) {
 }
 
 function getRecommendation(rating) {
-  if (rating >= 5) return 'Highly recommended — fast-track to interview';
+  if (rating >= 5) return 'Strong Hire';
   if (rating >= 4) return 'Recommended — shortlist for recruiter review';
   if (rating >= 3) return 'Consider — review against other candidates';
   if (rating >= 2) return 'Below threshold — only consider if pipeline is thin';
@@ -469,20 +469,24 @@ function getRecommendation(rating) {
 function buildAssessment({ matchedSkills, missingSkills, requiredSkills, resumeText, roleTitle }) {
   const evidenceFor = (skill) => {
     const line = resumeText.split(/\r?\n/).find(candidate => candidate.toLowerCase().includes(skill.toLowerCase()));
-    return line ? line.trim().slice(0, 180) : `CV references ${skill}.`;
+    return line
+      ? { text: line.trim().slice(0, 180), source: 'cv_excerpt' }
+      : { text: `The CV mentions ${skill}, but no supporting line was extracted.`, source: 'generated_fallback' };
   };
   const requirements = requiredSkills.slice(0, 8).map(skill => {
     const matched = matchedSkills.includes(skill);
+    const evidence = matched ? evidenceFor(skill) : null;
     return {
       requirement: skill,
       fit: matched ? 'strong' : 'not_met',
-      evidence: matched ? evidenceFor(skill) : `No evidence of ${skill} was found in the CV.`,
+      evidence: matched ? evidence.text : `No evidence of ${skill} was found in the CV.`,
+      evidenceSource: matched ? evidence.source : 'generated_fallback',
     };
   });
-  const reasons = matchedSkills.slice(0, 4).map(skill => ({
-    claim: `Demonstrates ${skill}`,
-    evidence: evidenceFor(skill),
-  }));
+  const reasons = matchedSkills.slice(0, 4).map(skill => {
+    const evidence = evidenceFor(skill);
+    return { claim: `Demonstrates ${skill}`, evidence: evidence.text, evidenceSource: evidence.source };
+  });
   const useCases = matchedSkills.slice(0, 3).map(skill => ({
     capability: skill,
     useCase: roleTitle ? `Apply ${skill} in the ${roleTitle} role.` : `Apply ${skill} to the role's core responsibilities.`,
