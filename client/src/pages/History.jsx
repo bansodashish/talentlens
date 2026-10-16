@@ -392,7 +392,7 @@ function CandidatesTab() {
             <option value="Americas">🌎 Americas</option>
             <option value="Europe">🌍 Europe</option>
             <option value="Asia Pacific">🌏 Asia Pacific</option>
-            <option value="MENA">🕌 MENA</option>
+            <option value="MENA">📍 MENA</option>
             <option value="Africa">🌍 Africa</option>
           </select>
           <select className="input" value={status} onChange={e => setStatus(e.target.value)}>

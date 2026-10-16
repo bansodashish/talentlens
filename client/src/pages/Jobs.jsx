@@ -65,7 +65,7 @@ export default function Jobs() {
           <option value="Americas">🌎 Americas</option>
           <option value="Europe">🌍 Europe</option>
           <option value="Asia Pacific">🌏 Asia Pacific</option>
-          <option value="MENA">🕌 MENA</option>
+          <option value="MENA">📍 MENA</option>
           <option value="Africa">🌍 Africa</option>
           <option value="Both">Both</option>
         </select>

@@ -8,7 +8,7 @@ const LOCATION_OPTIONS = [
   { value: 'Germany',        label: '🌍 Germany',        market: 'Europe'   },
   { value: 'India',          label: '🌏 India',          market: 'Asia Pacific' },
   { value: 'Singapore',      label: '🌏 Singapore',      market: 'Asia Pacific' },
-  { value: 'United Arab Emirates', label: '🕌 United Arab Emirates', market: 'MENA' },
+  { value: 'United Arab Emirates', label: '📍 United Arab Emirates', market: 'MENA' },
   { value: 'Remote',         label: '🌍 Remote',         market: 'Global' },
 ];
 

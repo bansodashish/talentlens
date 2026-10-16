@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Register() {
-  const [form, setForm] = useState({ name: '', email: '', password: '', company: '', market: 'Both' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', company: '', market: 'Global' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
@@ -63,7 +63,7 @@ export default function Register() {
                 <option value="Americas">🌎 Americas</option>
                 <option value="Europe">🌍 Europe</option>
                 <option value="Asia Pacific">🌏 Asia Pacific</option>
-                <option value="MENA">🕌 MENA</option>
+                <option value="MENA">📍 MENA</option>
                 <option value="Africa">🌍 Africa</option>
               </select>
             </div>

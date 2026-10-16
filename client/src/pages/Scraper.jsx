@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../utils/api';
 
-const MARKET_FLAG = { UK: '🇬🇧', Dubai: '🇦🇪', Global: '🌍', Americas: '🌎', Europe: '🌍', 'Asia Pacific': '🌏', MENA: '🕌', Africa: '🌍' };
+const MARKET_FLAG = { UK: '🇬🇧', Dubai: '🇦🇪', Global: '🌍', Americas: '🌎', Europe: '🌍', 'Asia Pacific': '🌏', MENA: '📍', Africa: '🌍' };
 
 function ConfigBanner({ show }) {
   if (!show) return null;
