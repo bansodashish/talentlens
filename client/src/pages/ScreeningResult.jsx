@@ -122,8 +122,8 @@ export default function ScreeningResult() {
                 </div>
                 <div className="min-w-0 flex-1 space-y-3">
                   <MatchBar label="Job requirements" score={matchBreakdown.jobRequirements} />
-                  <MatchBar label="Preferred skills" score={matchBreakdown.preferredSkills} />
-                  <MatchBar label="Role and experience" score={matchBreakdown.roleMatch ?? matchBreakdown.experience} />
+                  <MatchBar label="Role match" score={matchBreakdown.roleMatch} />
+                  <MatchBar label="Experience match" score={matchBreakdown.experience} />
                 </div>
               </div>
             </aside>
