@@ -59,7 +59,12 @@ function toScreeningShape(scored, contact, role, text, jobDescription) {
   const recMap = { 5: 'Strong Hire', 4: 'Strong Hire', 3: 'Consider', 2: 'Reject', 1: 'Reject' };
   const overall = scored.score_pct;
   const skills  = Math.round((scored.details.skills || 0) * 100);
-  const title   = Math.round((scored.details.title || 0) * 100);
+  const title = Number.isFinite(scored.details.title)
+    ? Math.round(scored.details.title * 100)
+    : null;
+  const experience = Number.isFinite(scored.details.experience)
+    ? Math.round(scored.details.experience * 100)
+    : null;
 
   // Pull matched JD skills as keySkills. Local mode no longer needs manual profile keywords.
   const keySkills = (scored.details.matchedSkills || [])
@@ -84,9 +89,11 @@ function toScreeningShape(scored, contact, role, text, jobDescription) {
     jobTitle: extractJobTitle(jobDescription),
     yearsExperience: extractYears(text),
     keySkills,
-    supplyChainScore: skills,    // Skills Match
-    technologyScore:  title,
-    overallScore:     overall,    // = Skills Match %
+    supplyChainScore: skills,
+    procurementScore: null,
+    logisticsScore: title,
+    technologyScore: experience,
+    overallScore: overall,
     recommendation,
     summary,
     assessment,
@@ -191,7 +198,7 @@ async function processScreeningsBackground({ batchId, mode, jobDescription, jobT
 
       let result, raw;
       if (mode === 'local') {
-        const detectedRole = detectRole(plainText);
+        const detectedRole = detectRole(jobDescription) || detectRole(plainText);
         const local = scoreCandidate(plainText, jobDescription, detectedRole);
         const contact = extractContact(plainText);
         result = toScreeningShape(local, contact, detectedRole, plainText, jobDescription);
@@ -204,11 +211,20 @@ async function processScreeningsBackground({ batchId, mode, jobDescription, jobT
             OPENAI_TIMEOUT_MS,
             `OpenAI Luna scoring of ${file.originalname}`
           );
-          result = toScreeningShape(scored, contact, null, plainText, jobDescription);
+          const detectedRole = detectRole(jobDescription) || detectRole(plainText);
+          const quantitative = scoreCandidate(plainText, jobDescription, detectedRole);
+          scored.details = {
+            ...scored.details,
+            skills: quantitative.details.skills,
+            title: quantitative.details.title,
+            experience: quantitative.details.experience,
+            matchedSkills: quantitative.details.matchedSkills,
+          };
+          result = toScreeningShape(scored, contact, detectedRole, plainText, jobDescription);
           raw = { provider: 'openai', model: process.env.OPENAI_MODEL || 'gpt-6-luna', ...scored };
         } catch (err) {
           if (err.code !== 'OPENAI_INVALID_RESPONSE') throw err;
-          const detectedRole = detectRole(plainText);
+          const detectedRole = detectRole(jobDescription) || detectRole(plainText);
           const local = scoreCandidate(plainText, jobDescription, detectedRole);
           result = toScreeningShape(local, contact, detectedRole, plainText, jobDescription);
           raw = { mode: 'local', fallbackFrom: 'openai_invalid_response', detectedRole, ...local };
@@ -430,6 +446,13 @@ function shapeScreeningRow(r) {
     };
   }
 
+  const matchBreakdown = {
+    jobRequirements: r.must_have_score ?? null,
+    preferredSkills: r.nice_to_have_score ?? null,
+    roleMatch: r.title_match_score ?? null,
+    experience: r.experience_score ?? null,
+  };
+
   return {
     id: r.id,
     fileName: r.file_name,
@@ -445,6 +468,7 @@ function shapeScreeningRow(r) {
     logisticsScore:   r.title_match_score,
     technologyScore:  r.experience_score,
     overallScore:     r.overall_score,
+    matchBreakdown,
     recommendation:   r.recommendation,
     summary:          r.summary,
     strengths,
@@ -468,7 +492,11 @@ router.get('/batch/:batchId', (req, res) => {
   `).all(req.params.batchId, req.user.id);
   if (!rows.length) return res.status(404).json({ error: 'Batch not found.' });
 
-  const results = rows.map(shapeScreeningRow);
+  const results = rows.map((row, index) => ({
+    ...shapeScreeningRow(row),
+    rank: index + 1,
+    totalCandidates: rows.length,
+  }));
 
   const total = results.length;
   const completed = results.filter(r => r.status === 'completed').length;
@@ -506,7 +534,20 @@ router.get('/jobs', (req, res) => {
 router.get('/screening/:id', (req, res) => {
   const row = db.prepare('SELECT * FROM screenings WHERE id = ? AND created_by = ?').get(req.params.id, req.user.id);
   if (!row) return res.status(404).json({ error: 'Screening not found.' });
-  res.json({ screening: shapeScreeningRow(row) });
+  const batchRows = db.prepare(`
+    SELECT id FROM screenings
+    WHERE batch_id = ? AND created_by = ?
+    ORDER BY overall_score DESC
+  `).all(row.batch_id, req.user.id);
+  const rank = batchRows.findIndex(batchRow => batchRow.id === row.id) + 1;
+
+  res.json({
+    screening: {
+      ...shapeScreeningRow(row),
+      rank: rank || null,
+      totalCandidates: batchRows.length || null,
+    },
+  });
 });
 
 router.patch('/screening/:id/decision', (req, res) => {
