@@ -54,10 +54,42 @@ function buildSummaryEvidence(assessment, recommendation) {
   };
 }
 
+function getRecommendationForScore(score) {
+  if (score >= 80) return 'Strong Hire';
+  if (score >= 60) return 'Consider';
+  return 'Reject';
+}
+
+function getQuantitativeAnalysis(requirements, roleFit, experience) {
+  const components = [
+    { score: requirements, maximum: 50 },
+    { score: roleFit, maximum: 30 },
+    { score: experience, maximum: 20 },
+  ];
+
+  if (!components.every(({ score }) => Number.isFinite(score))) return null;
+
+  const total = components.reduce(
+    (sum, { score, maximum }) => sum + Math.round((Math.max(0, Math.min(100, score)) / 100) * maximum),
+    0
+  );
+  return { total, recommendation: getRecommendationForScore(total) };
+}
+
+function getSummaryForAnalysis(summary, quantitativeAnalysis) {
+  if (!quantitativeAnalysis) {
+    return 'Analysis incomplete: requirements, role fit, and experience could not all be assessed.';
+  }
+
+  if (String(summary || '').startsWith('Quantitative screening -')) return summary;
+
+  const gapNote = String(summary || '').match(/Key skill gaps?:\s*.+$/i)?.[0];
+  const prefix = `Quantitative screening - ${quantitativeAnalysis.recommendation} (${quantitativeAnalysis.total}/100).`;
+  return gapNote ? `${prefix} ${gapNote}` : prefix;
+}
+
 // Convert local-scorer output into the same shape the UI / DB expects.
 function toScreeningShape(scored, contact, role, text, jobDescription) {
-  const recMap = { 5: 'Strong Hire', 4: 'Strong Hire', 3: 'Consider', 2: 'Reject', 1: 'Reject' };
-  const overall = scored.score_pct;
   const skills  = Math.round((scored.details.skills || 0) * 100);
   const title = Number.isFinite(scored.details.title)
     ? Math.round(scored.details.title * 100)
@@ -65,6 +97,9 @@ function toScreeningShape(scored, contact, role, text, jobDescription) {
   const experience = Number.isFinite(scored.details.experience)
     ? Math.round(scored.details.experience * 100)
     : null;
+  const quantitativeAnalysis = getQuantitativeAnalysis(skills, title, experience);
+  const overall = quantitativeAnalysis?.total ?? null;
+  const recommendation = quantitativeAnalysis?.recommendation || 'Review needed';
 
   // Pull matched JD skills as keySkills. Local mode no longer needs manual profile keywords.
   const keySkills = (scored.details.matchedSkills || [])
@@ -72,14 +107,15 @@ function toScreeningShape(scored, contact, role, text, jobDescription) {
 
   const roleTitle = role && ALL_ROLES[role] ? ALL_ROLES[role].title : '';
   
-  // Summary focuses ONLY on skills match
   const gapNote = scored.gaps?.length
     ? ` Key skill gaps: ${scored.gaps.slice(0, 3).map(g => g.replace(/^Missing:\s*/i, '')).join(', ')}.`
     : '';
-  const summary = `Skills-based screening — ${scored.label}. ${scored.recommendation}.${gapNote}`;
+  const summary = getSummaryForAnalysis(
+    gapNote ? `Key skill gaps: ${gapNote.replace(/^ Key skill gaps:\s*/i, '')}` : '',
+    quantitativeAnalysis
+  );
 
   const assessment = scored.assessment || { requirements: [], reasons: [], useCases: [], interviewQuestions: [] };
-  const recommendation = recMap[scored.rating] || 'Consider';
 
   return {
     name: contact.name || '',
@@ -452,6 +488,12 @@ function shapeScreeningRow(r) {
     roleMatch: r.title_match_score ?? null,
     experience: r.experience_score ?? null,
   };
+  const quantitativeAnalysis = getQuantitativeAnalysis(
+    matchBreakdown.jobRequirements,
+    matchBreakdown.roleMatch,
+    matchBreakdown.experience
+  );
+  const recommendation = quantitativeAnalysis?.recommendation || 'Review needed';
 
   return {
     id: r.id,
@@ -467,14 +509,14 @@ function shapeScreeningRow(r) {
     procurementScore: r.nice_to_have_score,
     logisticsScore:   r.title_match_score,
     technologyScore:  r.experience_score,
-    overallScore:     r.overall_score,
+    overallScore:     quantitativeAnalysis?.total ?? null,
     matchBreakdown,
-    recommendation:   r.recommendation,
-    summary:          r.summary,
+    recommendation,
+    summary:          getSummaryForAnalysis(r.summary, quantitativeAnalysis),
     strengths,
     gaps,
     assessment,
-    summaryEvidence: buildSummaryEvidence(assessment, r.recommendation),
+    summaryEvidence: buildSummaryEvidence(assessment, recommendation),
     reviewDecision: r.review_decision || null,
     reviewedAt: r.reviewed_at || null,
     status:           r.status,
@@ -609,7 +651,7 @@ router.get('/candidates', (req, res) => {
   const rows = db.prepare(`
     SELECT
       s.id, s.batch_id, s.candidate_name, s.email, s.job_title,
-      s.overall_score, s.recommendation, s.created_at,
+      s.must_have_score, s.title_match_score, s.experience_score, s.created_at,
       c.id as candidate_id, c.pipeline_stage
     FROM screenings s
     LEFT JOIN candidates c
@@ -621,18 +663,25 @@ router.get('/candidates', (req, res) => {
     ORDER BY s.created_at DESC
   `).all(...params);
 
-  let candidates = rows.map(r => ({
-    id: r.id,
-    batchId: r.batch_id,
-    name: r.candidate_name || '—',
-    email: r.email || null,
-    jobTitle: r.job_title || '—',
-    matchScore: r.overall_score ?? 0,
-    recommendation: r.recommendation || null,
-    status: r.pipeline_stage ? 'In Pipeline' : 'Screened',
-    candidateId: r.candidate_id || null,
-    screenedOn: r.created_at,
-  }));
+  let candidates = rows.map(r => {
+    const quantitativeAnalysis = getQuantitativeAnalysis(
+      r.must_have_score,
+      r.title_match_score,
+      r.experience_score
+    );
+    return {
+      id: r.id,
+      batchId: r.batch_id,
+      name: r.candidate_name || '—',
+      email: r.email || null,
+      jobTitle: r.job_title || '—',
+      matchScore: quantitativeAnalysis?.total ?? null,
+      recommendation: quantitativeAnalysis?.recommendation || 'Review needed',
+      status: r.pipeline_stage ? 'In Pipeline' : 'Screened',
+      candidateId: r.candidate_id || null,
+      screenedOn: r.created_at,
+    };
+  });
 
   // Deduplicate: keep only the latest screening per candidate+job combination.
   // Guards against the same CV being uploaded and screened multiple times.

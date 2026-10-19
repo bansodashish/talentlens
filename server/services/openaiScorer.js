@@ -79,6 +79,7 @@ Analyze the resume against the job description and return ONLY valid JSON (no ma
 - Experience years and location should NOT affect the score
 - Set details.experience and details.location to 0
 - Overall score = skills match only
+- Use these recommendation bands: 80-100 Strong Hire, 60-79 Consider, below 60 Reject
 - assessment evidence must be explicitly supported by the CV. Do not invent experience, achievements, employers, or qualifications.
 - Use empty arrays when evidence is unavailable. Keep requirements and reasons focused on the job description.
 
