@@ -88,9 +88,7 @@ export default function ScreeningResult() {
   const hasQuantitativeAnalysis = quantitativeScores.every(({ score }) => Number.isFinite(score));
   const overallScore = hasQuantitativeAnalysis
     ? quantitativeScores.reduce((total, { score, maximum }) => total + Math.round((score / 100) * maximum), 0)
-    : Number.isFinite(screening.overallScore)
-      ? Math.max(0, Math.min(100, Math.round(screening.overallScore)))
-      : null;
+    : null;
 
   return (
     <div className="max-w-6xl mx-auto space-y-5 pb-10">
@@ -127,11 +125,11 @@ export default function ScreeningResult() {
             </div>
 
             <aside className="min-w-0 border-t lg:border-t-0 lg:border-l border-slate-100 pt-5 lg:pt-0 lg:pl-7">
-              <p className="text-sm font-semibold text-slate-900">{screening.recommendation === 'Strong Hire' ? 'Strong match' : screening.recommendation || 'Match review'}</p>
+              <p className="text-sm font-semibold text-slate-900">{hasQuantitativeAnalysis ? (screening.recommendation === 'Strong Hire' ? 'Strong match' : screening.recommendation || 'Match review') : 'Analysis incomplete'}</p>
               {screening.rank && screening.totalCandidates && <p className="mt-1 text-xs text-slate-500">Top {screening.rank} of {screening.totalCandidates}</p>}
               <div className="mt-4 flex items-center gap-4">
                 <div className="relative grid h-20 w-20 shrink-0 place-items-center rounded-full" style={{ background: overallScore === null ? '#e2e8f0' : `conic-gradient(#4f46e5 ${overallScore * 3.6}deg, #e2e8f0 0deg)` }}>
-                  <div className="grid h-14 w-14 place-items-center rounded-full bg-white text-lg font-bold text-slate-900">{overallScore === null ? '—' : overallScore}</div>
+                  <div className="grid h-14 w-14 place-items-center rounded-full bg-white text-sm font-bold text-slate-900">{overallScore === null ? 'N/A' : overallScore}</div>
                 </div>
                 <div className="min-w-0 flex-1 space-y-3">
                   <MatchBar label="Requirements" score={matchBreakdown.jobRequirements} maximum={50} />
@@ -139,6 +137,7 @@ export default function ScreeningResult() {
                   <MatchBar label="Experience" score={matchBreakdown.experience} maximum={20} />
                 </div>
               </div>
+              {!hasQuantitativeAnalysis && <p className="mt-3 text-xs leading-relaxed text-slate-500">A total is shown only when requirements, role fit, and experience can all be assessed.</p>}
             </aside>
           </div>
         </div>
