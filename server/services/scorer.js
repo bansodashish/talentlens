@@ -531,14 +531,15 @@ function scoreCandidate(resumeText, jobDescription, targetRole = null) {
   const missedKeywords = allKeywords.filter(kw => !findInText(kw, resumeText));
   const skillsScore = allKeywords.length > 0 ? matchedKeywords.length / allKeywords.length : 0.5;
 
-  // Experience match (extracted for display only, not scored)
+  // Experience match is shown in the quantitative breakdown but does not
+  // affect the skills-only overall score or hiring recommendation.
   const expScore = scoreExperience(resumeText, jobDescription || '');
 
   // Location match (extracted for display only, not scored)
   const location = scoreLocation(resumeText, jobDescription || '');
 
   // Title match
-  const titleScore = scoreTitleMatch(resumeText, targetRole);
+  const titleScore = roleData ? scoreTitleMatch(resumeText, targetRole) : null;
 
   // Weighted final score - SKILLS ONLY (100%)
   const finalScore = Math.min(1, skillsScore * 1.0);
@@ -575,9 +576,9 @@ function scoreCandidate(resumeText, jobDescription, targetRole = null) {
     assessment,
     details: {
       skills: Math.round(skillsScore * 100) / 100,
-      experience: 0,  // Not scored
+      experience: Math.round(expScore * 100) / 100,
       location: 0,    // Not scored
-      title: Math.round(titleScore * 100) / 100,
+      title: titleScore === null ? null : Math.round(titleScore * 100) / 100,
       matchedKeywords: matchedKeywords.length,
       totalKeywords: allKeywords.length,
       matchedSkills: matchedKeywords,

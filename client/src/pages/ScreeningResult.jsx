@@ -26,12 +26,14 @@ function MatchBar({ label, score, maximum }) {
     : null;
 
   return (
-    <div className="grid grid-cols-[7.25rem_minmax(4rem,1fr)_3rem] items-center gap-2">
-      <span className="text-xs text-slate-600 whitespace-nowrap">{label}</span>
-      <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-        {value !== null && <div className="h-full rounded-full bg-indigo-600" style={{ width: `${(value / maximum) * 100}%` }} />}
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(7rem,1.35fr)] items-center gap-2">
+      <span className="truncate text-xs text-slate-600">{label}</span>
+      <div className="grid grid-cols-[minmax(3.5rem,1fr)_2.75rem] items-center gap-2">
+        <div className="h-1.5 min-w-0 overflow-hidden rounded-full bg-slate-100">
+          {value !== null && <div className="h-full rounded-full bg-indigo-600" style={{ width: `${(value / maximum) * 100}%` }} />}
+        </div>
+        <span className="text-right text-xs font-semibold text-slate-700 whitespace-nowrap">{value === null ? '-' : `${value}/${maximum}`}</span>
       </div>
-      <span className="text-right text-xs font-semibold text-slate-700 whitespace-nowrap">{value === null ? '—' : `${value}/${maximum}`}</span>
     </div>
   );
 }
@@ -124,7 +126,7 @@ export default function ScreeningResult() {
               </div>
             </div>
 
-            <aside className="border-t lg:border-t-0 lg:border-l border-slate-100 pt-5 lg:pt-0 lg:pl-7">
+            <aside className="min-w-0 border-t lg:border-t-0 lg:border-l border-slate-100 pt-5 lg:pt-0 lg:pl-7">
               <p className="text-sm font-semibold text-slate-900">{screening.recommendation === 'Strong Hire' ? 'Strong match' : screening.recommendation || 'Match review'}</p>
               {screening.rank && screening.totalCandidates && <p className="mt-1 text-xs text-slate-500">Top {screening.rank} of {screening.totalCandidates}</p>}
               <div className="mt-4 flex items-center gap-4">
