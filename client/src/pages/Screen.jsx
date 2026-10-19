@@ -26,12 +26,6 @@ const REC_STYLE = {
   'Reject':      'bg-red-100 text-red-700 border-red-300',
 };
 
-const EVIDENCE_SOURCE_LABEL = {
-  cv_excerpt: 'CV excerpt',
-  model_assessment: 'AI assessment',
-  generated_fallback: 'Generated guidance',
-};
-
 function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
   if (c.status === 'failed' || c.error) {
     return (
@@ -45,12 +39,7 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
     );
   }
 
-  const assessment = c.assessment || {};
-  const requirements = assessment.requirements || [];
-  const reasons = assessment.reasons || [];
-  const useCases = assessment.useCases || [];
-  const questions = assessment.interviewQuestions || [];
-  const fitStyle = { strong: 'bg-emerald-100 text-emerald-800', partial: 'bg-amber-100 text-amber-800', not_met: 'bg-rose-100 text-rose-800' };
+  const summaryEvidence = c.summaryEvidence || {};
 
   return (
     <div className="card p-5">
@@ -79,34 +68,11 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
         </div>
       </div>
 
-      {c.summary && (
-        <p className="text-sm text-slate-600 mt-4 leading-relaxed">{c.summary}</p>
-      )}
-
       {c.status === 'pending' ? <p className="mt-4 text-sm text-slate-400 italic">Waiting for model response…</p> : <>
-        <div className="grid lg:grid-cols-2 gap-4 mt-5">
-          <section className="border border-slate-100 rounded-lg p-4">
-            <h4 className="text-sm font-semibold text-slate-900">Why we recommend</h4>
-            <div className="mt-3 space-y-3">
-              {reasons.length ? reasons.slice(0, 3).map((item, index) => <div key={`${item.claim}-${index}`}><p className="text-sm font-medium text-slate-800">{item.claim}</p><p className="mt-1 text-xs text-slate-500">{item.evidence}</p><p className="mt-1 text-[10px] font-medium text-slate-400">{EVIDENCE_SOURCE_LABEL[item.evidenceSource] || 'Assessment guidance'}</p></div>) : <p className="text-sm text-slate-500">No evidence summary was captured.</p>}
-            </div>
-          </section>
-          <section className="border border-slate-100 rounded-lg p-4">
-            <h4 className="text-sm font-semibold text-slate-900">Best use cases</h4>
-            <div className="mt-3 space-y-3">
-              {useCases.length ? useCases.slice(0, 3).map((item, index) => <div key={`${item.capability}-${index}`}><p className="text-sm font-medium text-slate-800">{item.capability}</p><p className="mt-1 text-xs text-slate-500">{item.useCase}</p></div>) : <p className="text-sm text-slate-500">No role-specific use cases were captured.</p>}
-            </div>
-          </section>
-        </div>
-
-        <section className="mt-4 border border-slate-100 rounded-lg overflow-hidden">
-          <div className="px-4 py-3 bg-slate-50 border-b border-slate-100"><h4 className="text-sm font-semibold text-slate-900">Requirement by requirement</h4></div>
-          {requirements.length ? requirements.slice(0, 6).map((item, index) => <div key={`${item.requirement}-${index}`} className="px-4 py-3 border-b last:border-b-0 border-slate-100 flex gap-3 items-start"><span className={`mt-0.5 shrink-0 px-2 py-0.5 rounded-full text-[11px] font-semibold ${fitStyle[item.fit] || fitStyle.partial}`}>{(item.fit || 'partial').replace('_', ' ')}</span><div><p className="text-sm font-medium text-slate-800">{item.requirement}</p><p className="text-xs text-slate-500 mt-1">{item.evidence}</p><p className="mt-1 text-[10px] font-medium text-slate-400">{EVIDENCE_SOURCE_LABEL[item.evidenceSource] || 'Assessment guidance'}</p></div></div>) : <p className="p-4 text-sm text-slate-500">No requirement evidence was captured.</p>}
-        </section>
-
         <section className="mt-4 border border-slate-100 rounded-lg p-4">
-          <h4 className="text-sm font-semibold text-slate-900">Ask at interview</h4>
-          {questions.length ? <ol className="mt-3 space-y-2 list-decimal list-inside text-sm text-slate-700">{questions.slice(0, 3).map((item, index) => <li key={`${item.question}-${index}`}>{item.question}<p className="ml-5 mt-1 text-xs text-slate-500">{item.gap}</p></li>)}</ol> : <p className="mt-2 text-sm text-slate-500">No follow-up gaps were identified.</p>}
+          <h4 className="text-sm font-semibold text-slate-900">Recruiter summary</h4>
+          <p className="mt-2 text-sm text-slate-600 leading-relaxed">{summaryEvidence.decision || c.summary || 'No concise assessment was captured.'}</p>
+          {summaryEvidence.source === 'cv_excerpt' ? <div className="mt-3 border-l-2 border-blue-400 pl-3"><p className="text-xs font-semibold text-slate-700">CV quote for {summaryEvidence.requirement}</p><blockquote className="mt-1 text-sm text-slate-600 leading-relaxed">&ldquo;{summaryEvidence.quote}&rdquo;</blockquote></div> : <p className="mt-3 text-xs text-slate-500">No supporting CV excerpt was found for this result.</p>}
         </section>
       </>}
 
@@ -116,7 +82,7 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
       {c.status !== 'pending' && !c.error && (
         <>
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
-            {c.id ? <Link to={`/cv-match/results/${c.id}`} className="text-xs font-semibold text-blue-700 hover:text-blue-900">View assessment</Link> : <span />}
+            {c.id ? <Link to={`/cv-match/results/${c.id}`} className="text-xs font-semibold text-blue-700 hover:text-blue-900">More info</Link> : <span />}
             {isAdded ? (
               <span className="text-xs font-medium text-green-700">Added to Pipeline</span>
             ) : (
