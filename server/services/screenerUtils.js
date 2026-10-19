@@ -26,8 +26,8 @@ function normalise(raw) {
 
   const recommendation = ['Strong Hire', 'Consider', 'Reject'].includes(raw.recommendation)
     ? raw.recommendation
-    : (clip(raw.overallScore) >= 75 ? 'Strong Hire'
-        : clip(raw.overallScore) >= 55 ? 'Consider'
+    : (clip(raw.overallScore) >= 80 ? 'Strong Hire'
+      : clip(raw.overallScore) >= 60 ? 'Consider'
         : 'Reject');
 
   return {

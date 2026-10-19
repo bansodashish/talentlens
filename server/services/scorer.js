@@ -458,12 +458,10 @@ function getRatingLabel(rating) {
   return labels[rating] || 'Unknown';
 }
 
-function getRecommendation(rating) {
-  if (rating >= 5) return 'Strong Hire';
-  if (rating >= 4) return 'Recommended — shortlist for recruiter review';
-  if (rating >= 3) return 'Consider — review against other candidates';
-  if (rating >= 2) return 'Below threshold — only consider if pipeline is thin';
-  return 'Not recommended — significant skill gaps';
+function getRecommendation(scorePct) {
+  if (scorePct >= 80) return 'Strong Hire';
+  if (scorePct >= 60) return 'Consider';
+  return 'Reject';
 }
 
 function buildAssessment({ matchedSkills, missingSkills, requiredSkills, resumeText, roleTitle }) {
@@ -570,7 +568,7 @@ function scoreCandidate(resumeText, jobDescription, targetRole = null) {
     score_pct: scorePct,
     rating,
     label: getRatingLabel(rating),
-    recommendation: getRecommendation(rating),
+    recommendation: getRecommendation(scorePct),
     strengths,
     gaps,
     assessment,

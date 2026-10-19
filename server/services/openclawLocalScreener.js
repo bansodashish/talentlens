@@ -60,7 +60,7 @@ Scoring rules:
 - Base ALL scores solely on how well the candidate matches the job description — ignore any domain not mentioned in the JD.
 - overallScore = holistic fit against the JD based on Skills Match, Experience and Domain Fit only.
 - technologyScore must always be 0.
-- recommendation: >=75 -> "Strong Hire", 55-74 -> "Consider", <55 -> "Reject".
+- recommendation: >=80 -> "Strong Hire", 60-79 -> "Consider", <60 -> "Reject".
 - summary: 2-3 sentences — what makes the candidate a good or poor fit for THIS specific role.
 - strengths: list of 3-6 specific skills or qualities the candidate HAS that match the JD requirements (short phrases, e.g. "5 years Terraform", "AWS certified").
 - gaps: list of 2-5 specific skills or requirements the JD asks for that the candidate is MISSING or weak on (short phrases, e.g. "No Kubernetes experience", "Missing GCP certification").

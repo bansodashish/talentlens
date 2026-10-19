@@ -379,8 +379,8 @@ function scoreCandidate({ resumeText, jobDescription, mustHave, niceToHave }) {
 
   // Recommendation thresholds
   let recommendation;
-  if (overall >= 75)      recommendation = 'Strong Hire';
-  else if (overall >= 55) recommendation = 'Consider';
+  if (overall >= 80)      recommendation = 'Strong Hire';
+  else if (overall >= 60) recommendation = 'Consider';
   else                    recommendation = 'Reject';
 
   // Summary
