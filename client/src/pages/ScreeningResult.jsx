@@ -27,6 +27,7 @@ export default function ScreeningResult() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [pipelineLoading, setPipelineLoading] = useState(false);
+  const [showMoreInfo, setShowMoreInfo] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -93,9 +94,22 @@ export default function ScreeningResult() {
         </div>
       </section>
 
-      <p className="text-sm text-slate-600 px-1">This assessment compares the job requirements with skills evidenced in the CV. Open the requirement rows to see the supporting evidence and any gaps.</p>
+      <p className="text-sm text-slate-600 px-1">
+        This assessment compares the job requirements with skills evidenced in the CV.{' '}
+        <a
+          href="#assessment-details"
+          onClick={(event) => {
+            event.preventDefault();
+            setShowMoreInfo((isVisible) => !isVisible);
+          }}
+          aria-expanded={showMoreInfo}
+          className="font-semibold text-blue-700 hover:text-blue-900"
+        >
+          More info
+        </a>
+      </p>
 
-      <div className="grid lg:grid-cols-[1.05fr_.95fr] gap-5 items-start">
+      {showMoreInfo && <div id="assessment-details" className="grid lg:grid-cols-[1.05fr_.95fr] gap-5 items-start">
         <div className="space-y-5">
           <section className="card p-5">
             <div className="flex items-center justify-between gap-3">
@@ -130,7 +144,7 @@ export default function ScreeningResult() {
             </li>)}</ol> : <p className="mt-3 text-sm text-slate-500">No specific gaps were identified for follow-up.</p>}
           </section>
         </div>
-      </div>
+      </div>}
 
       <aside className="border-t border-slate-200 pt-5 text-xs text-slate-500 leading-relaxed">AI-assisted assessment based on the CV and requirements supplied for this role. It supports recruiter review and must not determine a hiring outcome on its own.</aside>
       <Link to="/cv-match" className="text-sm text-blue-700 hover:text-blue-900 font-medium">Screen another candidate</Link>
