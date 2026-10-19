@@ -81,8 +81,8 @@ export default function ScreeningResult() {
   const jobRequirements = requirements.slice(0, 3).map(item => item.requirement).filter(Boolean);
   const matchBreakdown = screening.matchBreakdown || {};
   const quantitativeScores = [
-    { score: matchBreakdown.jobRequirements, maximum: 50 },
-    { score: matchBreakdown.roleMatch, maximum: 30 },
+    { score: matchBreakdown.jobRequirements, maximum: 60 },
+    { score: matchBreakdown.roleMatch, maximum: 20 },
     { score: matchBreakdown.experience, maximum: 20 },
   ];
   const hasQuantitativeAnalysis = quantitativeScores.every(({ score }) => Number.isFinite(score));
@@ -132,8 +132,8 @@ export default function ScreeningResult() {
                   <div className="grid h-14 w-14 place-items-center rounded-full bg-white text-sm font-bold text-slate-900">{overallScore === null ? 'N/A' : overallScore}</div>
                 </div>
                 <div className="min-w-0 flex-1 space-y-3">
-                  <MatchBar label="Requirements" score={matchBreakdown.jobRequirements} maximum={50} />
-                  <MatchBar label="Role fit" score={matchBreakdown.roleMatch} maximum={30} />
+                  <MatchBar label="Requirements" score={matchBreakdown.jobRequirements} maximum={60} />
+                  <MatchBar label="Role fit" score={matchBreakdown.roleMatch} maximum={20} />
                   <MatchBar label="Experience" score={matchBreakdown.experience} maximum={20} />
                 </div>
               </div>

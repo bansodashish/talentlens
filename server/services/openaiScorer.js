@@ -25,6 +25,29 @@ function parseScoringResponse(response) {
   }
 }
 
+function normaliseQuantitativeAnalysis(analysis) {
+  const toScore = (value, label) => {
+    if (value === null || value === undefined || value === '') {
+      const error = new Error(`OpenAI returned a missing ${label} score.`);
+      error.code = 'OPENAI_INVALID_RESPONSE';
+      throw error;
+    }
+    const score = Number(value);
+    if (!Number.isFinite(score) || score < 0 || score > 100) {
+      const error = new Error(`OpenAI returned an invalid ${label} score.`);
+      error.code = 'OPENAI_INVALID_RESPONSE';
+      throw error;
+    }
+    return Math.round(score);
+  };
+
+  return {
+    requirements: toScore(analysis?.requirements, 'requirements'),
+    roleFit: toScore(analysis?.roleFit, 'role fit'),
+    experience: toScore(analysis?.experience, 'experience'),
+  };
+}
+
 async function scoreWithOpenAI(resumeText, jobDescription, targetRole = null) {
   const { OpenAI } = require('openai');
   const client = new OpenAI({
@@ -39,7 +62,7 @@ Analyse the provided CV and job description, then return a structured JSON scori
   const userPrompt = `
 You are an expert recruitment consultant analyzing how well a resume matches a job description.
 
-**IMPORTANT: Focus ONLY on skills matching. Do NOT factor in years of experience or location in your scoring.**
+**IMPORTANT: Assess only job-related evidence from the CV. Do not infer protected characteristics or use them in the assessment.**
 
 Job Description:
 ${jobDescription.slice(0, 3000)}
@@ -65,21 +88,19 @@ Analyze the resume against the job description and return ONLY valid JSON (no ma
     "useCases": [{"capability": "string", "useCase": "string"}],
     "interviewQuestions": [{"question": "string", "gap": "string"}]
   },
-  "details": {
-    "skills": 0.0-1.0,
-    "experience": 0,
-    "location": 0,
-    "title": 0.0-1.0
+  "quantitativeAnalysis": {
+    "requirements": 0-100,
+    "roleFit": 0-100,
+    "experience": 0-100
   }
 }
 
-**Scoring criteria (SKILLS ONLY):**
-- Compare the resume's demonstrated skills against the JD's required skills
-- Score reflects percentage of required skills that are present
-- Experience years and location should NOT affect the score
-- Set details.experience and details.location to 0
-- Overall score = skills match only
-- Use these recommendation bands: 80-100 Strong Hire, 60-79 Consider, below 60 Reject
+**Quantitative scoring criteria:**
+- quantitativeAnalysis.requirements: match the CV's demonstrated hard skills, tools, qualifications, and responsibilities against the JD's required requirements. Do not award points for unproven claims.
+- quantitativeAnalysis.roleFit: match the candidate's actual roles, scope, seniority, and domain against the target role. Do not use location or protected characteristics.
+- quantitativeAnalysis.experience: compare only relevant experience evidenced in the CV against the JD's stated experience expectations. If the JD gives no experience expectation, score the demonstrated relevance and depth.
+- Return an integer from 0 to 100 for every quantitativeAnalysis field. These fields are required and must not be null.
+- The application calculates the final weighted score as Requirements 60%, Role fit 20%, Experience 20%, then applies: 80-100 Strong Hire, 60-79 Consider, below 60 Reject.
 - assessment evidence must be explicitly supported by the CV. Do not invent experience, achievements, employers, or qualifications.
 - Use empty arrays when evidence is unavailable. Keep requirements and reasons focused on the job description.
 
@@ -97,7 +118,10 @@ Extract 3-6 key strengths (matched skills) and 3-6 gaps (missing skills).
   });
 
   const result = parseScoringResponse(response);
-  // Normalise to ensure all required fields exist
+  const quantitativeAnalysis = normaliseQuantitativeAnalysis(result.quantitativeAnalysis);
+
+  // Normalise to ensure all required fields exist. The server derives the
+  // weighted total and recommendation from these three model assessments.
   return {
     score: result.score || 0,
     score_pct: result.score_pct || Math.round((result.score || 0) * 100),
@@ -107,7 +131,13 @@ Extract 3-6 key strengths (matched skills) and 3-6 gaps (missing skills).
     strengths: result.strengths || [],
     gaps: result.gaps || [],
     assessment: normaliseAssessment(result.assessment),
-    details: result.details || {},
+    details: {
+      ...(result.details || {}),
+      skills: quantitativeAnalysis.requirements / 100,
+      title: quantitativeAnalysis.roleFit / 100,
+      experience: quantitativeAnalysis.experience / 100,
+      quantitativeAnalysis,
+    },
   };
 }
 
@@ -132,4 +162,4 @@ function normaliseAssessment(assessment) {
   };
 }
 
-module.exports = { scoreWithOpenAI, parseScoringResponse };
+module.exports = { scoreWithOpenAI, parseScoringResponse, normaliseQuantitativeAnalysis };

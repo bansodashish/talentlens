@@ -62,8 +62,8 @@ function getRecommendationForScore(score) {
 
 function getQuantitativeAnalysis(requirements, roleFit, experience) {
   const components = [
-    { score: requirements, maximum: 50 },
-    { score: roleFit, maximum: 30 },
+    { score: requirements, maximum: 60 },
+    { score: roleFit, maximum: 20 },
     { score: experience, maximum: 20 },
   ];
 
@@ -242,20 +242,12 @@ async function processScreeningsBackground({ batchId, mode, jobDescription, jobT
       } else if (mode === 'openai') {
         const contact = extractContact(plainText);
         try {
+          const detectedRole = detectRole(jobDescription) || detectRole(plainText);
           const scored = await withTimeout(
-            scoreWithOpenAI(plainText, jobDescription),
+            scoreWithOpenAI(plainText, jobDescription, detectedRole),
             OPENAI_TIMEOUT_MS,
             `OpenAI Luna scoring of ${file.originalname}`
           );
-          const detectedRole = detectRole(jobDescription) || detectRole(plainText);
-          const quantitative = scoreCandidate(plainText, jobDescription, detectedRole);
-          scored.details = {
-            ...scored.details,
-            skills: quantitative.details.skills,
-            title: quantitative.details.title,
-            experience: quantitative.details.experience,
-            matchedSkills: quantitative.details.matchedSkills,
-          };
           result = toScreeningShape(scored, contact, detectedRole, plainText, jobDescription);
           raw = { provider: 'openai', model: process.env.OPENAI_MODEL || 'gpt-6-luna', ...scored };
         } catch (err) {
@@ -417,7 +409,6 @@ router.post('/resume', limitScreenings, upload.array('files', MAX_CV_FILES), asy
         ? (process.env.OPENAI_MODEL || 'gpt-6-luna')
         : 'local-scorer',
     count: files.length,
-    status: 'processing',
     results: []
   });
 });
