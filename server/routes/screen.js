@@ -30,6 +30,30 @@ const { resolveUploadsDir } = require('../utils/storagePaths');
 const OPENAI_TIMEOUT_MS = Number(process.env.OPENAI_TIMEOUT_MS || 120000);
 const MAX_CV_FILES = 20;
 
+function buildSummaryEvidence(assessment, recommendation) {
+  const requirements = assessment?.requirements || [];
+  const reasons = assessment?.reasons || [];
+  const supportedRequirement = requirements.find(item => item.fit === 'strong' && item.evidenceSource === 'cv_excerpt' && item.evidence);
+  const supportedReason = reasons.find(item => item.evidenceSource === 'cv_excerpt' && item.evidence);
+  const evidence = supportedRequirement || supportedReason;
+
+  if (!evidence) {
+    return {
+      decision: `${recommendation || 'Review needed'} based on the available assessment.`,
+      requirement: '',
+      quote: '',
+      source: 'no_cv_evidence',
+    };
+  }
+
+  return {
+    decision: `${recommendation || 'Review needed'} based on the candidate's demonstrated match for ${supportedRequirement ? supportedRequirement.requirement : supportedReason.claim.replace(/^Demonstrates\s+/i, '')}.`,
+    requirement: supportedRequirement?.requirement || supportedReason.claim.replace(/^Demonstrates\s+/i, ''),
+    quote: evidence.evidence,
+    source: 'cv_excerpt',
+  };
+}
+
 // Convert local-scorer output into the same shape the UI / DB expects.
 function toScreeningShape(scored, contact, role, text, jobDescription) {
   const recMap = { 5: 'Strong Hire', 4: 'Strong Hire', 3: 'Consider', 2: 'Reject', 1: 'Reject' };
@@ -49,6 +73,9 @@ function toScreeningShape(scored, contact, role, text, jobDescription) {
     : '';
   const summary = `Skills-based screening — ${scored.label}. ${scored.recommendation}.${gapNote}`;
 
+  const assessment = scored.assessment || { requirements: [], reasons: [], useCases: [], interviewQuestions: [] };
+  const recommendation = recMap[scored.rating] || 'Consider';
+
   return {
     name: contact.name || '',
     email: contact.email,
@@ -60,9 +87,10 @@ function toScreeningShape(scored, contact, role, text, jobDescription) {
     supplyChainScore: skills,    // Skills Match
     technologyScore:  title,
     overallScore:     overall,    // = Skills Match %
-    recommendation:   recMap[scored.rating] || 'Consider',
+    recommendation,
     summary,
-    assessment: scored.assessment || { requirements: [], reasons: [], useCases: [], interviewQuestions: [] },
+    assessment,
+    summaryEvidence: buildSummaryEvidence(assessment, recommendation),
   };
 }
 
@@ -422,6 +450,7 @@ function shapeScreeningRow(r) {
     strengths,
     gaps,
     assessment,
+    summaryEvidence: buildSummaryEvidence(assessment, r.recommendation),
     reviewDecision: r.review_decision || null,
     reviewedAt: r.reviewed_at || null,
     status:           r.status,
