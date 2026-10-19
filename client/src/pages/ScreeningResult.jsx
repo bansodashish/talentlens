@@ -20,17 +20,18 @@ const EVIDENCE_SOURCE_LABEL = {
   generated_fallback: 'Generated guidance',
 };
 
-function MatchBar({ label, score }) {
-  const hasScore = Number.isFinite(score);
-  const value = hasScore ? Math.max(0, Math.min(100, Math.round(score))) : null;
+function MatchBar({ label, score, maximum }) {
+  const value = Number.isFinite(score)
+    ? Math.max(0, Math.min(maximum, Math.round((score / 100) * maximum)))
+    : null;
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_7rem_auto] items-center gap-3">
-      <span className="text-xs text-slate-600">{label}</span>
+    <div className="grid grid-cols-[7.25rem_minmax(4rem,1fr)_3rem] items-center gap-2">
+      <span className="text-xs text-slate-600 whitespace-nowrap">{label}</span>
       <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-        {value !== null && <div className="h-full rounded-full bg-indigo-600" style={{ width: `${value}%` }} />}
+        {value !== null && <div className="h-full rounded-full bg-indigo-600" style={{ width: `${(value / maximum) * 100}%` }} />}
       </div>
-      <span className="w-20 text-right text-xs font-semibold text-slate-700">{value === null ? 'Not assessed' : `${value}/100`}</span>
+      <span className="text-right text-xs font-semibold text-slate-700 whitespace-nowrap">{value === null ? '—' : `${value}/${maximum}`}</span>
     </div>
   );
 }
@@ -76,8 +77,18 @@ export default function ScreeningResult() {
   const useCases = assessment.useCases || [];
   const interviewQuestions = assessment.interviewQuestions || [];
   const jobRequirements = requirements.slice(0, 3).map(item => item.requirement).filter(Boolean);
-  const overallScore = Number.isFinite(screening.overallScore) ? Math.max(0, Math.min(100, Math.round(screening.overallScore))) : null;
   const matchBreakdown = screening.matchBreakdown || {};
+  const quantitativeScores = [
+    { score: matchBreakdown.jobRequirements, maximum: 50 },
+    { score: matchBreakdown.roleMatch, maximum: 30 },
+    { score: matchBreakdown.experience, maximum: 20 },
+  ];
+  const hasQuantitativeAnalysis = quantitativeScores.every(({ score }) => Number.isFinite(score));
+  const overallScore = hasQuantitativeAnalysis
+    ? quantitativeScores.reduce((total, { score, maximum }) => total + Math.round((score / 100) * maximum), 0)
+    : Number.isFinite(screening.overallScore)
+      ? Math.max(0, Math.min(100, Math.round(screening.overallScore)))
+      : null;
 
   return (
     <div className="max-w-6xl mx-auto space-y-5 pb-10">
@@ -121,9 +132,9 @@ export default function ScreeningResult() {
                   <div className="grid h-14 w-14 place-items-center rounded-full bg-white text-lg font-bold text-slate-900">{overallScore === null ? '—' : overallScore}</div>
                 </div>
                 <div className="min-w-0 flex-1 space-y-3">
-                  <MatchBar label="Job requirements" score={matchBreakdown.jobRequirements} />
-                  <MatchBar label="Role match" score={matchBreakdown.roleMatch} />
-                  <MatchBar label="Experience match" score={matchBreakdown.experience} />
+                  <MatchBar label="Requirements" score={matchBreakdown.jobRequirements} maximum={50} />
+                  <MatchBar label="Role fit" score={matchBreakdown.roleMatch} maximum={30} />
+                  <MatchBar label="Experience" score={matchBreakdown.experience} maximum={20} />
                 </div>
               </div>
             </aside>
