@@ -20,24 +20,6 @@ const EVIDENCE_SOURCE_LABEL = {
   generated_fallback: 'Generated guidance',
 };
 
-function MatchBar({ label, score, maximum }) {
-  const value = Number.isFinite(score)
-    ? Math.max(0, Math.min(maximum, Math.round((score / 100) * maximum)))
-    : null;
-
-  return (
-    <div className="grid grid-cols-[minmax(0,1fr)_minmax(7rem,1.35fr)] items-center gap-2">
-      <span className="truncate text-xs text-slate-600">{label}</span>
-      <div className="grid grid-cols-[minmax(3.5rem,1fr)_2.75rem] items-center gap-2">
-        <div className="h-1.5 min-w-0 overflow-hidden rounded-full bg-slate-100">
-          {value !== null && <div className="h-full rounded-full bg-indigo-600" style={{ width: `${(value / maximum) * 100}%` }} />}
-        </div>
-        <span className="text-right text-xs font-semibold text-slate-700 whitespace-nowrap">{value === null ? '-' : `${value}/${maximum}`}</span>
-      </div>
-    </div>
-  );
-}
-
 export default function ScreeningResult() {
   const { screeningId } = useParams();
   const navigate = useNavigate();
@@ -78,20 +60,16 @@ export default function ScreeningResult() {
   const reasons = assessment.reasons || [];
   const useCases = assessment.useCases || [];
   const interviewQuestions = assessment.interviewQuestions || [];
+  const strengths = screening.strengths?.filter(Boolean).slice(0, 3) || reasons.map(item => item.claim).filter(Boolean).slice(0, 3);
+  const weaknesses = screening.gaps?.filter(Boolean).slice(0, 3) || requirements
+    .filter(item => item.fit === 'partial' || item.fit === 'not_met')
+    .map(item => item.requirement)
+    .filter(Boolean)
+    .slice(0, 3);
   const jobRequirements = requirements.slice(0, 3).map(item => item.requirement).filter(Boolean);
-  const matchBreakdown = screening.matchBreakdown || {};
-  const quantitativeScores = [
-    { score: matchBreakdown.jobRequirements, maximum: 60 },
-    { score: matchBreakdown.roleMatch, maximum: 20 },
-    { score: matchBreakdown.experience, maximum: 20 },
-  ];
-  const hasQuantitativeAnalysis = quantitativeScores.every(({ score }) => Number.isFinite(score));
-  const overallScore = hasQuantitativeAnalysis
-    ? quantitativeScores.reduce((total, { score, maximum }) => total + Math.round((score / 100) * maximum), 0)
-    : null;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-5 pb-10">
+    <div className="max-w-7xl mx-auto space-y-5 pb-10">
       {error && <div className="p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg">{error}</div>}
 
       <section className="card overflow-hidden">
@@ -105,58 +83,44 @@ export default function ScreeningResult() {
             </div>
           </div>
 
-          <div className="mt-5 grid lg:grid-cols-[minmax(0,1fr)_21rem] gap-8 items-center">
+          <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(18rem,.75fr)]">
             <div className="min-w-0">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Candidate assessment</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">Candidate overview</p>
               <h1 className="text-2xl font-bold text-slate-900 mt-1">{screening.name || screening.fileName}</h1>
               <p className="text-sm text-slate-500 mt-1">{screening.currentRole || 'Candidate'}{screening.yearsExperience ? ` • ${screening.yearsExperience} years experience` : ''}</p>
+              <p className="mt-4 text-sm leading-relaxed text-slate-700">{screening.summary || 'This candidate has been assessed against the requirements for the role. Review the detailed analysis before making a decision.'}</p>
 
               <div className="mt-5 border-t border-slate-100 pt-4">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Recruiter summary</p>
-                <p className="text-sm text-slate-700 leading-relaxed mt-2">{screening.summary || 'No summary is available for this screening.'}</p>
-              </div>
-
-              <div className="mt-5 border-t border-slate-100 pt-4">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Job requirements</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Role considered</p>
                 <p className="text-sm font-semibold text-slate-800 mt-2">{screening.jobTitle || 'Role not specified'}</p>
-                {jobRequirements.length && <ul className="mt-2 flex flex-wrap gap-2">{jobRequirements.map(requirement => <li key={requirement} className="text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded">{requirement}</li>)}</ul>}
-                <p className="text-sm text-slate-600 mt-2 line-clamp-2">{screening.jobDescription || 'No job description was retained for this screening.'}</p>
+                {jobRequirements.length > 0 && <ul className="mt-2 flex flex-wrap gap-2">{jobRequirements.map(requirement => <li key={requirement} className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-600">{requirement}</li>)}</ul>}
               </div>
             </div>
 
-            <aside className="min-w-0 border-t lg:border-t-0 lg:border-l border-slate-100 pt-5 lg:pt-0 lg:pl-7">
-              <p className="text-sm font-semibold text-slate-900">{hasQuantitativeAnalysis ? (screening.recommendation === 'Strong Hire' ? 'Strong match' : screening.recommendation || 'Match review') : 'Analysis incomplete'}</p>
-              {screening.rank && screening.totalCandidates && <p className="mt-1 text-xs text-slate-500">Top {screening.rank} of {screening.totalCandidates}</p>}
-              <div className="mt-4 flex items-center gap-4">
-                <div className="relative grid h-20 w-20 shrink-0 place-items-center rounded-full" style={{ background: overallScore === null ? '#e2e8f0' : `conic-gradient(#4f46e5 ${overallScore * 3.6}deg, #e2e8f0 0deg)` }}>
-                  <div className="grid h-14 w-14 place-items-center rounded-full bg-white text-sm font-bold text-slate-900">{overallScore === null ? 'N/A' : overallScore}</div>
-                </div>
-                <div className="min-w-0 flex-1 space-y-3">
-                  <MatchBar label="Requirements" score={matchBreakdown.jobRequirements} maximum={60} />
-                  <MatchBar label="Role fit" score={matchBreakdown.roleMatch} maximum={20} />
-                  <MatchBar label="Experience" score={matchBreakdown.experience} maximum={20} />
-                </div>
+            <aside className="grid content-start gap-4 border-t border-slate-100 pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">Strengths</p>
+                {strengths.length > 0 ? <ul className="mt-2 space-y-2">{strengths.map((strength, index) => <li key={`${strength}-${index}`} className="text-sm leading-relaxed text-slate-700">{strength}</li>)}</ul> : <p className="mt-2 text-sm leading-relaxed text-slate-500">No specific strengths were captured for this screening.</p>}
               </div>
-              {!hasQuantitativeAnalysis && <p className="mt-3 text-xs leading-relaxed text-slate-500">A total is shown only when requirements, role fit, and experience can all be assessed.</p>}
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-700">Weaknesses to clarify</p>
+                {weaknesses.length > 0 ? <ul className="mt-2 space-y-2">{weaknesses.map((weakness, index) => <li key={`${weakness}-${index}`} className="text-sm leading-relaxed text-slate-700">{weakness}</li>)}</ul> : <p className="mt-2 text-sm leading-relaxed text-slate-500">No material weaknesses were captured for this screening.</p>}
+              </div>
             </aside>
           </div>
         </div>
       </section>
 
-      <p className="text-sm text-slate-600 px-1">
-        This assessment compares the job requirements with skills evidenced in the CV.{' '}
-        <a
-          href="#assessment-details"
-          onClick={(event) => {
-            event.preventDefault();
-            setShowMoreInfo((isVisible) => !isVisible);
-          }}
-          aria-expanded={showMoreInfo}
-          className="font-semibold text-blue-700 hover:text-blue-900"
-        >
-          More info
-        </a>
-      </p>
+      <button
+        type="button"
+        onClick={() => setShowMoreInfo((isVisible) => !isVisible)}
+        aria-expanded={showMoreInfo}
+        aria-controls="assessment-details"
+        className="w-full rounded-lg bg-blue-600 px-5 py-5 text-left text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 md:px-7 md:py-6"
+      >
+        <span className="block text-lg font-semibold">{showMoreInfo ? 'Hide Full Screening Analysis' : 'Explore Full Screening Analysis'}</span>
+        <span className="mt-1 block max-w-2xl text-sm leading-relaxed text-blue-100">Review CV evidence, requirement coverage, role-specific use cases, and interview questions before progressing this candidate.</span>
+      </button>
 
       {showMoreInfo && <div id="assessment-details" className="grid lg:grid-cols-[1.05fr_.95fr] gap-5 items-start">
         <div className="space-y-5">
