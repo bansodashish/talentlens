@@ -81,11 +81,12 @@ function getSummaryForAnalysis(summary, quantitativeAnalysis) {
     return 'Analysis incomplete: requirements, role fit, and experience could not all be assessed.';
   }
 
-  if (String(summary || '').startsWith('Quantitative screening -')) return summary;
+  const cleanedSummary = String(summary || '')
+    .replace(/^Quantitative screening\s*-\s*(?:Strong Hire|Consider|Reject)\s*\(\s*\d+\s*\/\s*100\s*\)\.\s*/i, '')
+    .replace(/^Key skill gaps?:\s*/i, '')
+    .trim();
 
-  const gapNote = String(summary || '').match(/Key skill gaps?:\s*.+$/i)?.[0];
-  const prefix = `Quantitative screening - ${quantitativeAnalysis.recommendation} (${quantitativeAnalysis.total}/100).`;
-  return gapNote ? `${prefix} ${gapNote}` : prefix;
+  return cleanedSummary || 'Review needed based on the available assessment.';
 }
 
 // Convert local-scorer output into the same shape the UI / DB expects.

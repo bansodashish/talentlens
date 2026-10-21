@@ -68,7 +68,7 @@ export default function ScreeningResult() {
     .slice(0, 3);
   const jobRequirements = requirements.slice(0, 3).map(item => item.requirement).filter(Boolean);
   const summary = screening.summary?.replace(
-    /^(?:Strong Hire|Consider|Reject)\s*\(\s*\d+\s*\/\s*100\s*\)\.\s*(?:Key skill gaps:\s*)?/i,
+    /^(?:Quantitative screening\s*-\s*)?(?:Strong Hire|Consider|Reject)\s*\(\s*\d+\s*\/\s*100\s*\)\.\s*(?:Key skill gaps:\s*)?/i,
     '',
   ).trim();
 
@@ -98,16 +98,10 @@ export default function ScreeningResult() {
               <h2 className="font-semibold text-slate-900">Candidate Summary</h2>
               <p className="mt-3 text-sm leading-relaxed text-slate-700">{summary || 'This candidate has been assessed against the requirements for the role. Review the detailed analysis before making a decision.'}</p>
 
-              {(strengths.length > 0 || weaknesses.length > 0) && <div className="mt-5 grid gap-5 border-t border-slate-100 pt-4 sm:grid-cols-2">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">Strengths</p>
-                  {strengths.length > 0 ? <ul className="mt-2 space-y-2">{strengths.map((strength, index) => <li key={`${strength}-${index}`} className="text-sm leading-relaxed text-slate-700">{strength}</li>)}</ul> : <p className="mt-2 text-sm leading-relaxed text-slate-500">No specific strengths were captured.</p>}
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-700">Weaknesses to clarify</p>
-                  {weaknesses.length > 0 ? <ul className="mt-2 space-y-2">{weaknesses.map((weakness, index) => <li key={`${weakness}-${index}`} className="text-sm leading-relaxed text-slate-700">{weakness}</li>)}</ul> : <p className="mt-2 text-sm leading-relaxed text-slate-500">No material weaknesses were captured.</p>}
-                </div>
-              </div>}
+              {(strengths.length > 0 || weaknesses.length > 0) && <ul className="mt-4 space-y-2 border-t border-slate-100 pt-4">
+                {strengths.map((strength, index) => <li key={`strength-${strength}-${index}`} className="text-sm leading-relaxed text-slate-700">{strength}</li>)}
+                {weaknesses.map((weakness, index) => <li key={`weakness-${weakness}-${index}`} className="text-sm leading-relaxed text-slate-700">{weakness}</li>)}
+              </ul>}
 
               <div className="mt-5 border-t border-slate-100 pt-4">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Role considered</p>
@@ -127,7 +121,7 @@ export default function ScreeningResult() {
                 aria-controls="assessment-details"
                 className="mt-5 w-full rounded-lg bg-blue-600 px-5 py-5 text-left text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
-                <span className="block text-lg font-semibold">{showMoreInfo ? 'Hide Full Screening Analysis' : 'Explore Full Screening Analysis'}</span>
+                <span className="block text-lg font-semibold">Explore Full Screening Analysis</span>
                 <span className="mt-1 block text-sm leading-relaxed text-blue-100">View skills, CV evidence, and experience gaps.</span>
               </button>
             </aside>
