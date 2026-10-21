@@ -67,6 +67,10 @@ export default function ScreeningResult() {
     .filter(Boolean)
     .slice(0, 3);
   const jobRequirements = requirements.slice(0, 3).map(item => item.requirement).filter(Boolean);
+  const summary = screening.summary?.replace(
+    /^(?:Strong Hire|Consider|Reject)\s*\(\s*\d+\s*\/\s*100\s*\)\.\s*(?:Key skill gaps:\s*)?/i,
+    '',
+  ).trim();
 
   return (
     <div className="max-w-7xl mx-auto space-y-5 pb-10">
@@ -83,44 +87,53 @@ export default function ScreeningResult() {
             </div>
           </div>
 
-          <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(18rem,.75fr)]">
-            <div className="min-w-0">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Candidate overview</p>
-              <h1 className="text-2xl font-bold text-slate-900 mt-1">{screening.name || screening.fileName}</h1>
-              <p className="text-sm text-slate-500 mt-1">{screening.currentRole || 'Candidate'}{screening.yearsExperience ? ` • ${screening.yearsExperience} years experience` : ''}</p>
-              <p className="mt-4 text-sm leading-relaxed text-slate-700">{screening.summary || 'This candidate has been assessed against the requirements for the role. Review the detailed analysis before making a decision.'}</p>
+          <div className="mt-5">
+            <p className="text-xs uppercase tracking-wide text-slate-400">Candidate overview</p>
+            <h1 className="text-2xl font-bold text-slate-900 mt-1">{screening.name || screening.fileName}</h1>
+            <p className="text-sm text-slate-500 mt-1">{screening.currentRole || 'Candidate'}{screening.yearsExperience ? ` • ${screening.yearsExperience} years experience` : ''}</p>
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,.65fr)]">
+            <section className="rounded-lg border border-slate-100 p-5">
+              <h2 className="font-semibold text-slate-900">Candidate Summary</h2>
+              <p className="mt-3 text-sm leading-relaxed text-slate-700">{summary || 'This candidate has been assessed against the requirements for the role. Review the detailed analysis before making a decision.'}</p>
+
+              {(strengths.length > 0 || weaknesses.length > 0) && <div className="mt-5 grid gap-5 border-t border-slate-100 pt-4 sm:grid-cols-2">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">Strengths</p>
+                  {strengths.length > 0 ? <ul className="mt-2 space-y-2">{strengths.map((strength, index) => <li key={`${strength}-${index}`} className="text-sm leading-relaxed text-slate-700">{strength}</li>)}</ul> : <p className="mt-2 text-sm leading-relaxed text-slate-500">No specific strengths were captured.</p>}
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-700">Weaknesses to clarify</p>
+                  {weaknesses.length > 0 ? <ul className="mt-2 space-y-2">{weaknesses.map((weakness, index) => <li key={`${weakness}-${index}`} className="text-sm leading-relaxed text-slate-700">{weakness}</li>)}</ul> : <p className="mt-2 text-sm leading-relaxed text-slate-500">No material weaknesses were captured.</p>}
+                </div>
+              </div>}
 
               <div className="mt-5 border-t border-slate-100 pt-4">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Role considered</p>
                 <p className="text-sm font-semibold text-slate-800 mt-2">{screening.jobTitle || 'Role not specified'}</p>
                 {jobRequirements.length > 0 && <ul className="mt-2 flex flex-wrap gap-2">{jobRequirements.map(requirement => <li key={requirement} className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-600">{requirement}</li>)}</ul>}
               </div>
-            </div>
+            </section>
 
-            <aside className="grid content-start gap-4 border-t border-slate-100 pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">Strengths</p>
-                {strengths.length > 0 ? <ul className="mt-2 space-y-2">{strengths.map((strength, index) => <li key={`${strength}-${index}`} className="text-sm leading-relaxed text-slate-700">{strength}</li>)}</ul> : <p className="mt-2 text-sm leading-relaxed text-slate-500">No specific strengths were captured for this screening.</p>}
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-700">Weaknesses to clarify</p>
-                {weaknesses.length > 0 ? <ul className="mt-2 space-y-2">{weaknesses.map((weakness, index) => <li key={`${weakness}-${index}`} className="text-sm leading-relaxed text-slate-700">{weakness}</li>)}</ul> : <p className="mt-2 text-sm leading-relaxed text-slate-500">No material weaknesses were captured for this screening.</p>}
-              </div>
+            <aside className="rounded-lg border border-slate-100 bg-slate-50/70 p-5">
+              <h2 className="font-semibold text-slate-900">Assessment Overview</h2>
+              <span className={`mt-4 inline-flex px-3 py-1.5 rounded-full border text-sm font-semibold ${RECOMMENDATION_STYLE[screening.recommendation] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>{screening.recommendation || 'Review needed'}</span>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600">Review the candidate's CV evidence and clarify key requirements before making a decision.</p>
+              <button
+                type="button"
+                onClick={() => setShowMoreInfo((isVisible) => !isVisible)}
+                aria-expanded={showMoreInfo}
+                aria-controls="assessment-details"
+                className="mt-5 w-full rounded-lg bg-blue-600 px-5 py-5 text-left text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
+                <span className="block text-lg font-semibold">{showMoreInfo ? 'Hide Full Screening Analysis' : 'Explore Full Screening Analysis'}</span>
+                <span className="mt-1 block text-sm leading-relaxed text-blue-100">View skills, CV evidence, and experience gaps.</span>
+              </button>
             </aside>
           </div>
         </div>
       </section>
-
-      <button
-        type="button"
-        onClick={() => setShowMoreInfo((isVisible) => !isVisible)}
-        aria-expanded={showMoreInfo}
-        aria-controls="assessment-details"
-        className="w-full rounded-lg bg-blue-600 px-5 py-5 text-left text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 md:px-7 md:py-6"
-      >
-        <span className="block text-lg font-semibold">{showMoreInfo ? 'Hide Full Screening Analysis' : 'Explore Full Screening Analysis'}</span>
-        <span className="mt-1 block max-w-2xl text-sm leading-relaxed text-blue-100">Review CV evidence, requirement coverage, role-specific use cases, and interview questions before progressing this candidate.</span>
-      </button>
 
       {showMoreInfo && <div id="assessment-details" className="grid lg:grid-cols-[1.05fr_.95fr] gap-5 items-start">
         <div className="space-y-5">
