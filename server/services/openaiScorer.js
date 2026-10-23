@@ -80,6 +80,7 @@ Analyze the resume against the job description and return ONLY valid JSON (no ma
   "rating": 1-5,
   "label": "Excellent match|Strong match|Good match|Moderate match|Weak match",
   "recommendation": "one sentence recommendation",
+  "summary": "2-4 sentence recruiter-ready candidate overview",
   "strengths": ["strength 1", "strength 2", ...],
   "gaps": ["gap 1", "gap 2", ...],
   "assessment": {
@@ -103,8 +104,8 @@ Analyze the resume against the job description and return ONLY valid JSON (no ma
 - The application calculates the final weighted score as Requirements 60%, Role fit 20%, Experience 20%, then applies: 80-100 Strong Hire, 60-79 Consider, below 60 Reject.
 - assessment evidence must be explicitly supported by the CV. Do not invent experience, achievements, employers, or qualifications.
 - Use empty arrays when evidence is unavailable. Keep requirements and reasons focused on the job description.
-
-Extract 3-6 key strengths (matched skills) and 3-6 gaps (missing skills).
+- summary must explain the candidate's role-specific fit, include their strongest CV-supported evidence, and identify the most important areas to clarify. Write plain prose without headings, scores, recommendation labels, or protected-characteristic inferences.
+- Extract 3-6 key strengths (matched skills) and 3-6 gaps (missing skills).
 `.trim();
 
   const response = await client.chat.completions.create({
@@ -128,6 +129,7 @@ Extract 3-6 key strengths (matched skills) and 3-6 gaps (missing skills).
     rating: result.rating || 1,
     label: result.label || 'Unknown',
     recommendation: result.recommendation || '',
+    summary: String(result.summary || '').trim(),
     strengths: result.strengths || [],
     gaps: result.gaps || [],
     assessment: normaliseAssessment(result.assessment),

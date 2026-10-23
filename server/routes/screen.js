@@ -76,17 +76,39 @@ function getQuantitativeAnalysis(requirements, roleFit, experience) {
   return { total, recommendation: getRecommendationForScore(total) };
 }
 
-function getSummaryForAnalysis(summary, quantitativeAnalysis) {
-  if (!quantitativeAnalysis) {
-    return 'Analysis incomplete: requirements, role fit, and experience could not all be assessed.';
-  }
-
+function composeHRSummary({ summary, strengths, gaps, assessment, jobTitle }) {
+  const cleanItem = value => String(value || '')
+    .replace(/^(?:Matched|Missing):\s*/i, '')
+    .replace(/\.$/, '')
+    .trim();
+  const uniqueItems = values => [...new Set(values.map(cleanItem).filter(Boolean))].slice(0, 3);
+  const supportedStrengths = uniqueItems([
+    ...(strengths || []),
+    ...(assessment?.reasons || []).map(item => item.claim),
+  ]);
+  const clarificationAreas = uniqueItems([
+    ...(gaps || []),
+    ...(assessment?.requirements || [])
+      .filter(item => item.fit === 'partial' || item.fit === 'not_met')
+      .map(item => item.requirement),
+  ]);
   const cleanedSummary = String(summary || '')
     .replace(/^Quantitative screening\s*-\s*(?:Strong Hire|Consider|Reject)\s*\(\s*\d+\s*\/\s*100\s*\)\.\s*/i, '')
     .replace(/^Key skill gaps?:\s*/i, '')
+    .replace(/\b(?:Strong Hire|Consider|Reject)\s*\(\s*\d+\s*\/\s*100\s*\)\.?\s*/gi, '')
     .trim();
+  const role = jobTitle ? ` for the ${jobTitle} role` : '';
+  const overview = cleanedSummary && !/^analysis incomplete|^review needed/i.test(cleanedSummary)
+    ? cleanedSummary
+    : `The CV shows evidence relevant${role}.`;
+  const strengthSentence = supportedStrengths.length
+    ? ` Demonstrated strengths include ${supportedStrengths.join(', ')}.`
+    : '';
+  const clarificationSentence = clarificationAreas.length
+    ? ` Areas to clarify include ${clarificationAreas.join(', ')}.`
+    : ' Further discussion should confirm the depth of experience against the role requirements.';
 
-  return cleanedSummary || 'Review needed based on the available assessment.';
+  return `${overview}${strengthSentence}${clarificationSentence}`.replace(/\s+/g, ' ').trim();
 }
 
 // Convert local-scorer output into the same shape the UI / DB expects.
@@ -108,15 +130,14 @@ function toScreeningShape(scored, contact, role, text, jobDescription) {
 
   const roleTitle = role && ALL_ROLES[role] ? ALL_ROLES[role].title : '';
   
-  const gapNote = scored.gaps?.length
-    ? ` Key skill gaps: ${scored.gaps.slice(0, 3).map(g => g.replace(/^Missing:\s*/i, '')).join(', ')}.`
-    : '';
-  const summary = getSummaryForAnalysis(
-    gapNote ? `Key skill gaps: ${gapNote.replace(/^ Key skill gaps:\s*/i, '')}` : '',
-    quantitativeAnalysis
-  );
-
   const assessment = scored.assessment || { requirements: [], reasons: [], useCases: [], interviewQuestions: [] };
+  const summary = composeHRSummary({
+    summary: scored.summary,
+    strengths: scored.strengths || keySkills,
+    gaps: scored.gaps,
+    assessment,
+    jobTitle: extractJobTitle(jobDescription),
+  });
 
   return {
     name: contact.name || '',
@@ -504,7 +525,13 @@ function shapeScreeningRow(r) {
     overallScore:     quantitativeAnalysis?.total ?? null,
     matchBreakdown,
     recommendation,
-    summary:          getSummaryForAnalysis(r.summary, quantitativeAnalysis),
+    summary:          composeHRSummary({
+      summary: r.summary,
+      strengths,
+      gaps,
+      assessment,
+      jobTitle: r.job_title,
+    }),
     strengths,
     gaps,
     assessment,
