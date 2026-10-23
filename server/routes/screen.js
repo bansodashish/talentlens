@@ -96,6 +96,7 @@ function composeHRSummary({ summary, strengths, gaps, assessment, jobTitle }) {
     .replace(/^Quantitative screening\s*-\s*(?:Strong Hire|Consider|Reject)\s*\(\s*\d+\s*\/\s*100\s*\)\.\s*/i, '')
     .replace(/^Key skill gaps?:\s*/i, '')
     .replace(/\b(?:Strong Hire|Consider|Reject)\s*\(\s*\d+\s*\/\s*100\s*\)\.?\s*/gi, '')
+    .replace(/\s*(?:Demonstrated strengths include|Areas to clarify include|Weaknesses to clarify include)\s+[^.]*\./gi, '')
     .trim();
   const role = jobTitle ? ` for the ${jobTitle} role` : '';
   const overview = cleanedSummary && !/^analysis incomplete|^review needed/i.test(cleanedSummary)
@@ -105,7 +106,7 @@ function composeHRSummary({ summary, strengths, gaps, assessment, jobTitle }) {
     ? ` Demonstrated strengths include ${supportedStrengths.join(', ')}.`
     : '';
   const clarificationSentence = clarificationAreas.length
-    ? ` Areas to clarify include ${clarificationAreas.join(', ')}.`
+    ? ` Weaknesses to clarify include ${clarificationAreas.join(', ')}.`
     : ' Further discussion should confirm the depth of experience against the role requirements.';
 
   return `${overview}${strengthSentence}${clarificationSentence}`.replace(/\s+/g, ' ').trim();
