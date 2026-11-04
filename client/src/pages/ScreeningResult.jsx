@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import api from '../utils/api';
+import { getStrengthsAndGaps, getCvEvidence } from '../utils/screeningEvidence';
 
 const RECOMMENDATION_STYLE = {
   'Strong Hire': 'bg-emerald-100 text-emerald-800 border-emerald-200',
@@ -60,21 +61,9 @@ export default function ScreeningResult() {
   const reasons = assessment.reasons || [];
   const useCases = assessment.useCases || [];
   const interviewQuestions = assessment.interviewQuestions || [];
-  const savedStrengths = screening.strengths?.filter(Boolean) || [];
-  const savedGaps = screening.gaps?.filter(Boolean) || [];
-  const strengths = (savedStrengths.length ? savedStrengths : reasons.map(item => item.claim).filter(Boolean)).slice(0, 3);
-  const weaknesses = (savedGaps.length ? savedGaps : requirements
-    .filter(item => item.fit === 'partial' || item.fit === 'not_met')
-    .map(item => item.requirement)
-    .filter(Boolean)).slice(0, 3);
+  const { strengths, weaknesses } = getStrengthsAndGaps(screening);
   const jobRequirements = requirements.slice(0, 3).map(item => item.requirement).filter(Boolean);
-  const seenEvidence = new Set();
-  const cvEvidence = [...requirements, ...reasons].filter(item => {
-    const text = typeof item.evidence === 'string' ? item.evidence.trim() : '';
-    if (item.evidenceSource !== 'cv_excerpt' || !text || seenEvidence.has(text) || /\b[^\s@]+@[^\s@]+\.[^\s@]+\b|(?:\+?\d[\d\s().-]{7,}\d)/.test(text)) return false;
-    seenEvidence.add(text);
-    return true;
-  }).slice(0, 3);
+  const cvEvidence = getCvEvidence(screening);
   const summary = screening.summary?.replace(
     /^(?:Quantitative screening\s*-\s*)?(?:Strong Hire|Consider|Reject)\s*\(\s*\d+\s*\/\s*100\s*\)\.\s*(?:Key skill gaps:\s*)?/i,
     '',
