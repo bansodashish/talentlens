@@ -21,6 +21,7 @@ const { authMiddleware } = require('../middleware/auth');
 const { limitScreenings } = require('../middleware/planLimits');
 const { parseCV }        = require('../services/cvParser');
 const { scoreWithOpenAI } = require('../services/openaiScorer');
+const { composeHRSummary } = require('../services/screeningSummary');
 const { scoreCandidate, detectRole, ALL_ROLES, extractContact, extractYears } = require('../services/scorer');
 const { extractJobTitle } = require('../utils/extractJobTitle');
 const { resolveUploadsDir } = require('../utils/storagePaths');
@@ -74,42 +75,6 @@ function getQuantitativeAnalysis(requirements, roleFit, experience) {
     0
   );
   return { total, recommendation: getRecommendationForScore(total) };
-}
-
-function composeHRSummary({ summary, strengths, gaps, assessment, jobTitle }) {
-  const cleanItem = value => String(value || '')
-    .replace(/^(?:Matched|Missing):\s*/i, '')
-    .replace(/\.$/, '')
-    .trim();
-  const uniqueItems = values => [...new Set(values.map(cleanItem).filter(Boolean))].slice(0, 3);
-  const supportedStrengths = uniqueItems([
-    ...(strengths || []),
-    ...(assessment?.reasons || []).map(item => item.claim),
-  ]);
-  const clarificationAreas = uniqueItems([
-    ...(gaps || []),
-    ...(assessment?.requirements || [])
-      .filter(item => item.fit === 'partial' || item.fit === 'not_met')
-      .map(item => item.requirement),
-  ]);
-  const cleanedSummary = String(summary || '')
-    .replace(/^Quantitative screening\s*-\s*(?:Strong Hire|Consider|Reject)\s*\(\s*\d+\s*\/\s*100\s*\)\.\s*/i, '')
-    .replace(/^Key skill gaps?:\s*/i, '')
-    .replace(/\b(?:Strong Hire|Consider|Reject)\s*\(\s*\d+\s*\/\s*100\s*\)\.?\s*/gi, '')
-    .replace(/\s*(?:Demonstrated strengths include|Areas to clarify include|Weaknesses to clarify include)\s+[^.]*\./gi, '')
-    .trim();
-  const role = jobTitle ? ` for the ${jobTitle} role` : '';
-  const overview = cleanedSummary && !/^analysis incomplete|^review needed/i.test(cleanedSummary)
-    ? cleanedSummary
-    : `The CV shows evidence relevant${role}.`;
-  const strengthSentence = supportedStrengths.length
-    ? ` Demonstrated strengths include ${supportedStrengths.join(', ')}.`
-    : '';
-  const clarificationSentence = clarificationAreas.length
-    ? ` Weaknesses to clarify include ${clarificationAreas.join(', ')}.`
-    : ' Further discussion should confirm the depth of experience against the role requirements.';
-
-  return `${overview}${strengthSentence}${clarificationSentence}`.replace(/\s+/g, ' ').trim();
 }
 
 // Convert local-scorer output into the same shape the UI / DB expects.
