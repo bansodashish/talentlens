@@ -5,7 +5,7 @@
  */
 
 const TIMEOUT_MS = Number(process.env.OPENAI_TIMEOUT_MS || 120000);
-const MAX_COMPLETION_TOKENS = Number(process.env.OPENAI_MAX_COMPLETION_TOKENS || 2000);
+const MAX_COMPLETION_TOKENS = Number(process.env.OPENAI_MAX_COMPLETION_TOKENS || 2600);
 
 function parseScoringResponse(response) {
   const choice = response?.choices?.[0];
@@ -80,7 +80,7 @@ Analyze the resume against the job description and return ONLY valid JSON (no ma
   "rating": 1-5,
   "label": "Excellent match|Strong match|Good match|Moderate match|Weak match",
   "recommendation": "one sentence recommendation",
-  "summary": "4-6 sentence recruiter-ready candidate overview",
+  "summary": "6-8 sentence recruiter-ready candidate overview",
   "strengths": ["strength 1", "strength 2", ...],
   "gaps": ["gap 1", "gap 2", ...],
   "assessment": {
@@ -103,7 +103,7 @@ Analyze the resume against the job description and return ONLY valid JSON (no ma
 - Return an integer from 0 to 100 for every quantitativeAnalysis field. These fields are required and must not be null.
 - The application calculates the final weighted score as Requirements 60%, Role fit 20%, Experience 20%, then applies: 80-100 Strong Hire, 60-79 Consider, below 60 Reject.
 - Provide equally detailed, specific analysis for Strong Hire, Consider, and Reject; a high score is not a substitute for an explanation.
-- In summary, explain the candidate's fit for this particular job, connect their most relevant CV-supported experience and skills to the job's responsibilities, and identify the most important uncertainties or requirements to clarify. Use 4-6 substantive sentences rather than a list of keywords. Write plain prose without headings, scores, recommendation labels, or protected-characteristic inferences.
+- In summary, explain the candidate's fit for this particular job, connect their most relevant CV-supported experience and skills to the job's responsibilities, and identify the most important uncertainties or requirements to clarify. Use 6-8 substantive sentences rather than a list of keywords. Cover: (1) overall fit for the specific role, (2) the strongest CV-supported evidence with the technologies or scope actually demonstrated, (3) how that experience maps to the job's key responsibilities, (4) any seniority, domain or environment match, and (5) the most important uncertainties or requirements to clarify. Never return fewer than 5 sentences. Write plain prose without headings, scores, recommendation labels, bullet points, or protected-characteristic inferences.
 - For each important job requirement, assessment.requirements should explain the fit and cite specific CV evidence; where evidence is missing, say it is not shown in the CV, not that the candidate lacks the skill.
 - assessment.reasons should explain why specific CV evidence matters for this role. assessment.useCases should describe realistic role-relevant applications of demonstrated capabilities without claiming the candidate has performed them. assessment.interviewQuestions should help verify important uncertainties or the depth of demonstrated experience, including for strong candidates.
 - strengths and gaps must be specific descriptive phrases, not isolated keywords. Include only supported strengths and meaningful uncertainties; do not invent gaps to fill a quota.
