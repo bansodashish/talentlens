@@ -19,6 +19,7 @@ const renderResult = recommendation => {
         { requirement: 'GitLab', fit: 'not_met', evidence: 'No GitLab evidence', evidenceSource: 'generated_fallback' },
       ],
       reasons: [{ claim: 'Kubernetes', evidence: 'Built Kubernetes platforms', evidenceSource: 'cv_excerpt' }],
+      interviewQuestions: [{ question: 'How did you use GitLab?' }],
     },
   } } });
   render(<MemoryRouter initialEntries={['/results/1']}><Routes><Route path="/results/:screeningId" element={<ScreeningResult />} /></Routes></MemoryRouter>);
@@ -33,7 +34,9 @@ test.each(['Strong Hire', 'Consider', 'Reject'])('%s shows a narrative and keeps
   expect(screen.getByText('Built production infrastructure. The scope of delivery needs clarification.')).toBeInTheDocument();
   expect(screen.queryByText('Strengths')).not.toBeInTheDocument();
   expect(screen.queryByText('Areas to clarify')).not.toBeInTheDocument();
-  expect(screen.queryByText('Built Kubernetes platforms')).not.toBeInTheDocument();
+  expect(screen.getByText('CV excerpt: "Built Kubernetes platforms"')).toBeInTheDocument();
+  expect(screen.getByText('Areas to clarify: GitLab.')).toBeInTheDocument();
+  expect(screen.getByText('Interview follow-up: How did you use GitLab?')).toBeInTheDocument();
   expect(screen.queryByText('Contact test@example.com')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /Explore Full Screening Analysis/i }));
   expect(screen.getAllByText('Built Kubernetes platforms')).toHaveLength(2);

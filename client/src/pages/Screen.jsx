@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
+import { getSummaryDetails } from '../utils/screeningEvidence';
 
 // Persist in-progress/completed screening state across page navigation —
 // results and the JD are otherwise lost the moment this component unmounts.
@@ -40,6 +41,8 @@ export function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
   }
 
   const summaryEvidence = c.summaryEvidence || {};
+  const summary = c.summary || summaryEvidence.decision || 'No concise assessment was captured.';
+  const summaryDetails = getSummaryDetails(c, summary, 2);
 
   return (
     <div className="card p-5">
@@ -72,7 +75,8 @@ export function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
         <section className="mt-4 border border-slate-100 rounded-lg p-4 space-y-3">
           <div>
             <h4 className="text-sm font-semibold text-slate-900">Recruiter summary</h4>
-            <p className="mt-2 whitespace-pre-line text-sm text-slate-600 leading-relaxed">{c.summary || summaryEvidence.decision || 'No concise assessment was captured.'}</p>
+            <p className="mt-2 whitespace-pre-line text-sm text-slate-600 leading-relaxed">{summary}</p>
+            {summaryDetails.map((detail, index) => <p key={index} className="mt-2 text-sm text-slate-600 leading-relaxed">{detail}</p>)}
           </div>
         </section>
       </>}
