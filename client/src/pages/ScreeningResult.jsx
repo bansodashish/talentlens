@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import api from '../utils/api';
+import { getSummaryDetails } from '../utils/screeningEvidence';
 
 const RECOMMENDATION_STYLE = {
   'Strong Hire': 'bg-emerald-100 text-emerald-800 border-emerald-200',
@@ -65,6 +66,7 @@ export default function ScreeningResult() {
     /^(?:Quantitative screening\s*-\s*)?(?:Strong Hire|Consider|Reject)\s*\(\s*\d+\s*\/\s*100\s*\)\.\s*(?:Key skill gaps:\s*)?/i,
     '',
   ).trim();
+  const summaryDetails = getSummaryDetails(screening, summary);
 
   return (
     <div className="max-w-7xl mx-auto space-y-5 pb-10">
@@ -91,6 +93,7 @@ export default function ScreeningResult() {
             <section className="rounded-lg border border-slate-100 p-5">
               <h2 className="font-semibold text-slate-900">Candidate Summary</h2>
               <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-slate-700">{summary || 'This candidate has been assessed against the requirements for the role. Review the detailed analysis before making a decision.'}</p>
+              {summaryDetails.map((detail, index) => <p key={index} className="mt-3 text-sm leading-relaxed text-slate-700">{detail}</p>)}
 
               <div className="mt-5 border-t border-slate-100 pt-4">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Role considered</p>
