@@ -79,8 +79,8 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
           </div>
 
           {(strengths.length > 0 || weaknesses.length > 0) && <div className="grid gap-3 border-t border-slate-100 pt-3 sm:grid-cols-2">
-            {strengths.length > 0 && <div><p className="text-xs font-semibold uppercase text-slate-500">Strengths</p><ul className="mt-1 space-y-1">{strengths.map((s, i) => <li key={i} className="text-xs text-slate-600">• {s}</li>)}</ul></div>}
-            {weaknesses.length > 0 && <div><p className="text-xs font-semibold uppercase text-slate-500">Areas to clarify</p><ul className="mt-1 space-y-1">{weaknesses.map((w, i) => <li key={i} className="text-xs text-slate-600">• {w}</li>)}</ul></div>}
+            {strengths.length > 0 && <div><p className="text-xs font-semibold uppercase text-slate-500">Strengths</p><ul className="mt-1 space-y-1">{strengths.map((s, i) => <li key={i} className="text-xs text-slate-600 capitalize">• {s}</li>)}</ul></div>}
+            {weaknesses.length > 0 && <div><p className="text-xs font-semibold uppercase text-slate-500">Areas to clarify</p><ul className="mt-1 space-y-1">{weaknesses.map((w, i) => <li key={i} className="text-xs text-slate-600 capitalize">• {w}</li>)}</ul></div>}
           </div>}
 
           {cvEvidence.length > 0
