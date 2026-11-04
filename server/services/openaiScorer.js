@@ -70,7 +70,7 @@ ${jobDescription.slice(0, 3000)}
 Resume:
 ${resumeText.slice(0, 4000)}
 
-Target Role: ${targetRole || 'Not specified'}
+Inferred role hint: ${targetRole || 'Not specified'} (may be inaccurate; the job description takes precedence)
 
 Analyze the resume against the job description and return ONLY valid JSON (no markdown, no commentary):
 
@@ -80,7 +80,7 @@ Analyze the resume against the job description and return ONLY valid JSON (no ma
   "rating": 1-5,
   "label": "Excellent match|Strong match|Good match|Moderate match|Weak match",
   "recommendation": "one sentence recommendation",
-  "summary": "2-4 sentence recruiter-ready candidate overview",
+  "summary": "4-6 sentence recruiter-ready candidate overview",
   "strengths": ["strength 1", "strength 2", ...],
   "gaps": ["gap 1", "gap 2", ...],
   "assessment": {
@@ -102,10 +102,12 @@ Analyze the resume against the job description and return ONLY valid JSON (no ma
 - quantitativeAnalysis.experience: compare only relevant experience evidenced in the CV against the JD's stated experience expectations. If the JD gives no experience expectation, score the demonstrated relevance and depth.
 - Return an integer from 0 to 100 for every quantitativeAnalysis field. These fields are required and must not be null.
 - The application calculates the final weighted score as Requirements 60%, Role fit 20%, Experience 20%, then applies: 80-100 Strong Hire, 60-79 Consider, below 60 Reject.
-- assessment evidence must be explicitly supported by the CV. Do not invent experience, achievements, employers, or qualifications.
-- Use empty arrays when evidence is unavailable. Keep requirements and reasons focused on the job description.
-- summary must explain the candidate's role-specific fit, include their strongest CV-supported evidence, and identify the most important areas to clarify. Write plain prose without headings, scores, recommendation labels, or protected-characteristic inferences.
-- Extract 3-6 key strengths (matched skills) and 3-6 gaps (missing skills).
+- Provide equally detailed, specific analysis for Strong Hire, Consider, and Reject; a high score is not a substitute for an explanation.
+- In summary, explain the candidate's fit for this particular job, connect their most relevant CV-supported experience and skills to the job's responsibilities, and identify the most important uncertainties or requirements to clarify. Use 4-6 substantive sentences rather than a list of keywords. Write plain prose without headings, scores, recommendation labels, or protected-characteristic inferences.
+- For each important job requirement, assessment.requirements should explain the fit and cite specific CV evidence; where evidence is missing, say it is not shown in the CV, not that the candidate lacks the skill.
+- assessment.reasons should explain why specific CV evidence matters for this role. assessment.useCases should describe realistic role-relevant applications of demonstrated capabilities without claiming the candidate has performed them. assessment.interviewQuestions should help verify important uncertainties or the depth of demonstrated experience, including for strong candidates.
+- strengths and gaps must be specific descriptive phrases, not isolated keywords. Include only supported strengths and meaningful uncertainties; do not invent gaps to fill a quota.
+- All evidence must be explicitly supported by the CV. Do not invent experience, achievements, employers, qualifications, or facts about the candidate. Use empty arrays when appropriate and keep the assessment focused on the job description.
 `.trim();
 
   const response = await client.chat.completions.create({
