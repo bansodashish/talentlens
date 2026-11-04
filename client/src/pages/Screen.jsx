@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
+import { getStrengthsAndGaps, getCvEvidence } from '../utils/screeningEvidence';
 
 // Persist in-progress/completed screening state across page navigation —
 // results and the JD are otherwise lost the moment this component unmounts.
@@ -40,6 +41,8 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
   }
 
   const summaryEvidence = c.summaryEvidence || {};
+  const { strengths, weaknesses } = getStrengthsAndGaps(c);
+  const cvEvidence = getCvEvidence(c, 2);
 
   return (
     <div className="card p-5">
@@ -69,10 +72,23 @@ function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
       </div>
 
       {c.status === 'pending' ? <p className="mt-4 text-sm text-slate-400 italic">Waiting for model response…</p> : <>
-        <section className="mt-4 border border-slate-100 rounded-lg p-4">
-          <h4 className="text-sm font-semibold text-slate-900">Recruiter summary</h4>
-          <p className="mt-2 text-sm text-slate-600 leading-relaxed">{summaryEvidence.decision || c.summary || 'No concise assessment was captured.'}</p>
-          {summaryEvidence.source === 'cv_excerpt' ? <div className="mt-3 border-l-2 border-blue-400 pl-3"><p className="text-xs font-semibold text-slate-700">CV quote for {summaryEvidence.requirement}</p><blockquote className="mt-1 text-sm text-slate-600 leading-relaxed">&ldquo;{summaryEvidence.quote}&rdquo;</blockquote></div> : <p className="mt-3 text-xs text-slate-500">No supporting CV excerpt was found for this result.</p>}
+        <section className="mt-4 border border-slate-100 rounded-lg p-4 space-y-3">
+          <div>
+            <h4 className="text-sm font-semibold text-slate-900">Recruiter summary</h4>
+            <p className="mt-2 text-sm text-slate-600 leading-relaxed">{c.summary || summaryEvidence.decision || 'No concise assessment was captured.'}</p>
+          </div>
+
+          {(strengths.length > 0 || weaknesses.length > 0) && <div className="grid gap-3 border-t border-slate-100 pt-3 sm:grid-cols-2">
+            {strengths.length > 0 && <div><p className="text-xs font-semibold uppercase text-slate-500">Strengths</p><ul className="mt-1 space-y-1">{strengths.map((s, i) => <li key={i} className="text-xs text-slate-600">• {s}</li>)}</ul></div>}
+            {weaknesses.length > 0 && <div><p className="text-xs font-semibold uppercase text-slate-500">Areas to clarify</p><ul className="mt-1 space-y-1">{weaknesses.map((w, i) => <li key={i} className="text-xs text-slate-600">• {w}</li>)}</ul></div>}
+          </div>}
+
+          {cvEvidence.length > 0
+            ? <div className="space-y-2 border-t border-slate-100 pt-3">
+                <p className="text-xs font-semibold uppercase text-slate-500">CV evidence</p>
+                {cvEvidence.map((item, i) => <div key={i} className="border-l-2 border-blue-400 pl-3"><p className="text-xs font-semibold text-slate-700">{item.requirement || item.claim}</p><blockquote className="mt-0.5 text-xs text-slate-600 leading-relaxed">&ldquo;{item.evidence}&rdquo;</blockquote></div>)}
+              </div>
+            : <p className="border-t border-slate-100 pt-3 text-xs text-slate-500">No supporting CV excerpt was found for this result.</p>}
         </section>
       </>}
 
