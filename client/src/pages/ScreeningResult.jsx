@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import api from '../utils/api';
-import { getStrengthsAndGaps, getCvEvidence } from '../utils/screeningEvidence';
 
 const RECOMMENDATION_STYLE = {
   'Strong Hire': 'bg-emerald-100 text-emerald-800 border-emerald-200',
@@ -61,9 +60,7 @@ export default function ScreeningResult() {
   const reasons = assessment.reasons || [];
   const useCases = assessment.useCases || [];
   const interviewQuestions = assessment.interviewQuestions || [];
-  const { strengths, weaknesses } = getStrengthsAndGaps(screening);
   const jobRequirements = requirements.slice(0, 3).map(item => item.requirement).filter(Boolean);
-  const cvEvidence = getCvEvidence(screening);
   const summary = screening.summary?.replace(
     /^(?:Quantitative screening\s*-\s*)?(?:Strong Hire|Consider|Reject)\s*\(\s*\d+\s*\/\s*100\s*\)\.\s*(?:Key skill gaps:\s*)?/i,
     '',
@@ -93,14 +90,7 @@ export default function ScreeningResult() {
           <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,.65fr)]">
             <section className="rounded-lg border border-slate-100 p-5">
               <h2 className="font-semibold text-slate-900">Candidate Summary</h2>
-              <p className="mt-3 text-sm leading-relaxed text-slate-700">{summary || 'This candidate has been assessed against the requirements for the role. Review the detailed analysis before making a decision.'}</p>
-
-              {(strengths.length > 0 || weaknesses.length > 0) && <div className="mt-4 grid gap-4 border-t border-slate-100 pt-4 sm:grid-cols-2">
-                {strengths.length > 0 && <div><h3 className="text-xs font-semibold uppercase text-slate-500">Strengths</h3><ul className="mt-2 space-y-2">{strengths.map((strength, index) => <li key={`strength-${strength}-${index}`} className="text-sm leading-relaxed text-slate-700 capitalize">{strength}</li>)}</ul></div>}
-                {weaknesses.length > 0 && <div><h3 className="text-xs font-semibold uppercase text-slate-500">Areas to clarify</h3><ul className="mt-2 space-y-2">{weaknesses.map((weakness, index) => <li key={`weakness-${weakness}-${index}`} className="text-sm leading-relaxed text-slate-700 capitalize">{weakness}</li>)}</ul></div>}
-              </div>}
-
-              {cvEvidence.length > 0 && <div className="mt-5 border-t border-slate-100 pt-4"><h3 className="text-xs font-semibold uppercase text-slate-500">CV evidence</h3><ul className="mt-2 space-y-3">{cvEvidence.map((item, index) => <li key={`${item.evidence}-${index}`}><p className="text-sm font-medium text-slate-800">{item.requirement || item.claim}</p><p className="mt-1 text-sm leading-relaxed text-slate-600">{item.evidence}</p></li>)}</ul></div>}
+              <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-slate-700">{summary || 'This candidate has been assessed against the requirements for the role. Review the detailed analysis before making a decision.'}</p>
 
               <div className="mt-5 border-t border-slate-100 pt-4">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Role considered</p>
