@@ -114,7 +114,7 @@ export default function ScreeningResult() {
         <div className="space-y-5">
           <section className="card p-5">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="font-semibold text-slate-900">Why we recommend {screening.name || 'this candidate'}</h2>
+              <h2 className="font-semibold text-slate-900">Key reasons behind our assessment</h2>
               <span className="text-[11px] font-semibold text-slate-400">{reasons.length} reasons</span>
             </div>
             {reasons.length ? <div className="mt-4 space-y-3">{reasons.map((item, index) => <div key={`${item.claim}-${index}`} className="border border-slate-100 bg-slate-50/70 rounded-lg p-3">
@@ -125,14 +125,14 @@ export default function ScreeningResult() {
           <section className="card overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100"><h2 className="font-semibold text-slate-900">Requirement by requirement</h2></div>
             {requirements.length ? <div className="divide-y divide-slate-100">{requirements.map((item, index) => <div key={`${item.requirement}-${index}`} className="px-5 py-3 grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] gap-3 items-start">
-              <p className="text-sm font-medium text-slate-800">{item.requirement}</p><div><p className="text-sm text-slate-600">{item.evidence}</p><p className="text-[11px] font-medium text-slate-400 mt-1">{EVIDENCE_SOURCE_LABEL[item.evidenceSource] || 'Assessment guidance'}</p></div><span className={`shrink-0 text-[11px] px-2 py-1 rounded font-semibold ${FIT_STYLE[item.fit] || FIT_STYLE.partial}`}>{(item.fit || 'partial').replace('_', ' ')}</span>
+              <p className="text-sm font-medium text-slate-800">{item.requirement}</p><div><p className="text-sm text-slate-600">{item.evidence}</p><p className="text-[11px] font-medium text-slate-400 mt-1">{EVIDENCE_SOURCE_LABEL[item.evidenceSource] || 'Assessment guidance'}</p></div><span className={`shrink-0 text-[11px] px-2 py-1 rounded font-semibold ${FIT_STYLE[item.fit] || 'bg-slate-100 text-slate-700'}`}>{FIT_STYLE[item.fit] ? item.fit.replace('_', ' ') : 'Not assessed'}</span>
             </div>)}</div> : <p className="p-5 text-sm text-slate-500">No requirement-level evidence was captured for this screening.</p>}
           </section>
         </div>
 
         <div className="space-y-5">
           <section className="card p-5">
-            <h2 className="font-semibold text-slate-900">Best use cases</h2>
+            <h2 className="font-semibold text-slate-900">Potential value to company</h2>
             {useCases.length ? <div className="mt-4 space-y-3">{useCases.map((item, index) => <div key={`${item.capability}-${index}`} className="border border-slate-100 rounded-lg p-3">
               <p className="text-sm font-semibold text-slate-800">{item.capability}</p><p className="text-sm text-slate-600 leading-relaxed mt-1">{item.useCase}</p>
             </div>)}</div> : <p className="mt-3 text-sm text-slate-500">No role-specific use cases were captured.</p>}

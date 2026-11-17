@@ -41,6 +41,9 @@ test.each(['Strong Hire', 'Consider', 'Reject'])('%s shows the full analysis imm
   expect(screen.getAllByText('Built Kubernetes platforms')).toHaveLength(2);
   expect(screen.getByText('No GitLab evidence')).toBeInTheDocument();
   expect(screen.getByText('Manage production deployments')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Key reasons behind our assessment' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Potential value to company' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Requirement by requirement' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Ask at interview' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /Explore Full Screening Analysis/i })).not.toBeInTheDocument();
 });
@@ -48,12 +51,13 @@ test.each(['Strong Hire', 'Consider', 'Reject'])('%s shows the full analysis imm
 test('handles a saved assessment without CV excerpts or strength and gap lists', async () => {
   api.get.mockResolvedValue({ data: { screening: {
     name: 'Another Candidate', jobTitle: 'Engineer', recommendation: 'Consider',
-    strengths: [], gaps: [], assessment: { requirements: [{ requirement: 'Automation', fit: 'partial' }], reasons: [{ claim: 'Platform experience' }] },
+    strengths: [], gaps: [], assessment: { requirements: [{ requirement: 'Automation', fit: null }], reasons: [{ claim: 'Platform experience' }] },
   } } });
   render(<MemoryRouter initialEntries={['/results/2']}><Routes><Route path="/results/:screeningId" element={<ScreeningResult />} /></Routes></MemoryRouter>);
   await waitFor(() => expect(screen.getByText('Another Candidate')).toBeInTheDocument());
   expect(screen.queryByText('CV evidence')).not.toBeInTheDocument();
   expect(screen.getByText('Platform experience')).toBeInTheDocument();
   expect(screen.getAllByText('Automation').length).toBeGreaterThan(0);
+  expect(screen.getByText('Not assessed')).toBeInTheDocument();
   expect(screen.getByText('No role-specific use cases were captured.')).toBeInTheDocument();
 });
