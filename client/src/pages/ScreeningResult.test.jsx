@@ -61,3 +61,9 @@ test('handles a saved assessment without CV excerpts or strength and gap lists',
   expect(screen.getByText('Not assessed')).toBeInTheDocument();
   expect(screen.getByText('No role-specific use cases were captured.')).toBeInTheDocument();
 });
+
+test('warns when saved evidence was unreadable', async () => {
+  api.get.mockResolvedValue({ data: { screening: { name: 'Candidate', unreliableEvidence: true, assessment: {} } } });
+  render(<MemoryRouter initialEntries={['/results/2']}><Routes><Route path="/results/:screeningId" element={<ScreeningResult />} /></Routes></MemoryRouter>);
+  expect(await screen.findByRole('alert')).toHaveTextContent('assessment may be unreliable');
+});

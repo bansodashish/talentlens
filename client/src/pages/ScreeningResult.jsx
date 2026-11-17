@@ -19,6 +19,7 @@ const EVIDENCE_SOURCE_LABEL = {
   cv_excerpt: 'CV excerpt',
   model_assessment: 'AI assessment',
   generated_fallback: 'Generated guidance',
+  unavailable: 'Evidence unavailable',
 };
 
 export default function ScreeningResult() {
@@ -70,6 +71,7 @@ export default function ScreeningResult() {
   return (
     <div className="max-w-7xl mx-auto space-y-5 pb-10">
       {error && <div className="p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg">{error}</div>}
+      {screening.unreliableEvidence && <div role="alert" className="p-3 text-sm text-amber-900 bg-amber-50 border border-amber-300 rounded-lg">Some extracted CV text was unreadable. This assessment may be unreliable; upload a readable CV and screen it again.</div>}
 
       <section className="card overflow-hidden">
         <div className="p-5 md:p-6">
