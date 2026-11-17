@@ -27,7 +27,7 @@ const REC_STYLE = {
   'Reject':      'bg-red-100 text-red-700 border-red-300',
 };
 
-export function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
+export function ResultCard({ c, onAddToPipeline, isAdded }) {
   if (c.status === 'failed' || c.error) {
     return (
       <div className="card p-4 border-l-4 border-red-400">
@@ -48,14 +48,8 @@ export function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
     <div className="card p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
-            {rank}
-          </div>
           <div className="min-w-0">
             <h3 className="font-semibold text-slate-800 truncate">{c.name || c.fileName}</h3>
-            <p className="text-xs text-slate-500 mt-0.5 truncate">
-              {c.currentRole || '—'}
-            </p>
             <p className="text-xs text-slate-400 mt-0.5 truncate">
               {c.email && <span>✉ {c.email}</span>}
               {c.phone && <span className="ml-2">📞 {c.phone}</span>}
@@ -86,8 +80,8 @@ export function ResultCard({ rank, c, onAddToPipeline, isAdded }) {
       {/* Add to Pipeline */}
       {c.status !== 'pending' && !c.error && (
         <>
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
-            {c.id ? <Link to={`/cv-match/results/${c.id}`} className="text-xs font-semibold text-blue-700 hover:text-blue-900">More info</Link> : <span />}
+          <div className="mt-4 pt-3 border-t border-slate-100 flex flex-col items-end gap-3">
+            {c.id && <Link to={`/cv-match/results/${c.id}`} className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">View Full Analysis</Link>}
             {isAdded ? (
               <span className="text-xs font-medium text-green-700">Added to Pipeline</span>
             ) : (
@@ -257,7 +251,7 @@ function ScreeningHistory({ jobFilter, onClearJobFilter }) {
                           {expandLoading[c.id] ? '…' : expanded[c.id] ? 'Hide Results' : 'View Results'}
                         </button>
                         <Link to={`/cv-match/results/${c.id}`} className="text-xs px-2 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors font-medium">
-                          Assessment
+                          View Full Analysis
                         </Link>
                         {c.status === 'Screened' && (
                           <button onClick={() => addToPipeline(c)}
@@ -903,7 +897,6 @@ export default function Screen() {
             {results.map((c, i) => (
               <ResultCard
                 key={c.id || i}
-                rank={i + 1}
                 c={c}
                 onAddToPipeline={addToPipeline}
                 isAdded={addedToPipeline.has(c.email || c.name || c.fileName)}

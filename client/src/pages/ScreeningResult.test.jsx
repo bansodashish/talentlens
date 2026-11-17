@@ -1,6 +1,6 @@
 import React from 'react';
 import '@testing-library/jest-dom';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import ScreeningResult from './ScreeningResult';
 import api from '../utils/api';
@@ -19,13 +19,14 @@ const renderResult = recommendation => {
         { requirement: 'GitLab', fit: 'not_met', evidence: 'No GitLab evidence', evidenceSource: 'generated_fallback' },
       ],
       reasons: [{ claim: 'Kubernetes', evidence: 'Built Kubernetes platforms', evidenceSource: 'cv_excerpt' }],
+      useCases: [{ capability: 'Deployment', useCase: 'Manage production deployments' }],
       interviewQuestions: [{ question: 'How did you use GitLab?' }],
     },
   } } });
   render(<MemoryRouter initialEntries={['/results/1']}><Routes><Route path="/results/:screeningId" element={<ScreeningResult />} /></Routes></MemoryRouter>);
 };
 
-test.each(['Strong Hire', 'Consider', 'Reject'])('%s shows a narrative and keeps evidence in the expanded analysis', async recommendation => {
+test.each(['Strong Hire', 'Consider', 'Reject'])('%s shows the full analysis immediately', async recommendation => {
   renderResult(recommendation);
   await waitFor(() => expect(screen.getByText('Test Candidate')).toBeInTheDocument());
   expect(screen.queryByText('Demand Planner')).not.toBeInTheDocument();
@@ -37,10 +38,11 @@ test.each(['Strong Hire', 'Consider', 'Reject'])('%s shows a narrative and keeps
   expect(screen.getByText('CV excerpt: "Built Kubernetes platforms"')).toBeInTheDocument();
   expect(screen.getByText('Areas to clarify: GitLab.')).toBeInTheDocument();
   expect(screen.getByText('Interview follow-up: How did you use GitLab?')).toBeInTheDocument();
-  expect(screen.queryByText('Contact test@example.com')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /Explore Full Screening Analysis/i }));
   expect(screen.getAllByText('Built Kubernetes platforms')).toHaveLength(2);
   expect(screen.getByText('No GitLab evidence')).toBeInTheDocument();
+  expect(screen.getByText('Manage production deployments')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Ask at interview' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Explore Full Screening Analysis/i })).not.toBeInTheDocument();
 });
 
 test('handles a saved assessment without CV excerpts or strength and gap lists', async () => {
@@ -51,7 +53,7 @@ test('handles a saved assessment without CV excerpts or strength and gap lists',
   render(<MemoryRouter initialEntries={['/results/2']}><Routes><Route path="/results/:screeningId" element={<ScreeningResult />} /></Routes></MemoryRouter>);
   await waitFor(() => expect(screen.getByText('Another Candidate')).toBeInTheDocument());
   expect(screen.queryByText('CV evidence')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /Explore Full Screening Analysis/i }));
   expect(screen.getByText('Platform experience')).toBeInTheDocument();
   expect(screen.getAllByText('Automation').length).toBeGreaterThan(0);
+  expect(screen.getByText('No role-specific use cases were captured.')).toBeInTheDocument();
 });
