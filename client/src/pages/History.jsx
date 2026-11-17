@@ -776,7 +776,7 @@ function ScreeningsTab() {
                           to={`/cv-match/results/${c.id}`}
                           className="text-xs px-2 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors font-medium"
                         >
-                          Assessment
+                          View Full Analysis
                         </Link>
                         {c.status === 'Screened' && (
                           <button

@@ -28,7 +28,6 @@ export default function ScreeningResult() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [pipelineLoading, setPipelineLoading] = useState(false);
-  const [showMoreInfo, setShowMoreInfo] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -106,22 +105,12 @@ export default function ScreeningResult() {
               <h2 className="font-semibold text-slate-900">Assessment Overview</h2>
               <span className={`mt-4 inline-flex px-3 py-1.5 rounded-full border text-sm font-semibold ${RECOMMENDATION_STYLE[screening.recommendation] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>{screening.recommendation || 'Review needed'}</span>
               <p className="mt-3 text-sm leading-relaxed text-slate-600">Review the candidate's CV evidence and clarify key requirements before making a decision.</p>
-              <button
-                type="button"
-                onClick={() => setShowMoreInfo((isVisible) => !isVisible)}
-                aria-expanded={showMoreInfo}
-                aria-controls="assessment-details"
-                className="mt-5 w-full rounded-lg bg-blue-600 px-5 py-5 text-left text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              >
-                <span className="block text-lg font-semibold">Explore Full Screening Analysis</span>
-                <span className="mt-1 block text-sm leading-relaxed text-blue-100">View skills, CV evidence, and experience gaps.</span>
-              </button>
             </aside>
           </div>
         </div>
       </section>
 
-      {showMoreInfo && <div id="assessment-details" className="grid lg:grid-cols-[1.05fr_.95fr] gap-5 items-start">
+      <div id="assessment-details" className="grid lg:grid-cols-[1.05fr_.95fr] gap-5 items-start">
         <div className="space-y-5">
           <section className="card p-5">
             <div className="flex items-center justify-between gap-3">
@@ -156,7 +145,7 @@ export default function ScreeningResult() {
             </li>)}</ol> : <p className="mt-3 text-sm text-slate-500">No specific gaps were identified for follow-up.</p>}
           </section>
         </div>
-      </div>}
+      </div>
 
       <aside className="border-t border-slate-200 pt-5 text-xs text-slate-500 leading-relaxed">AI-assisted assessment based on the CV and requirements supplied for this role. It supports recruiter review and must not determine a hiring outcome on its own.</aside>
       <Link to="/cv-match" className="text-sm text-blue-700 hover:text-blue-900 font-medium">Screen another candidate</Link>
