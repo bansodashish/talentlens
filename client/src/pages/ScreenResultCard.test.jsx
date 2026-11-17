@@ -37,3 +37,8 @@ test('handles pending, failed, missing ID and already-added results', () => {
   expect(screen.queryByRole('link', { name: 'View Full Analysis' })).not.toBeInTheDocument();
   expect(screen.getByText('Added to Pipeline')).toBeInTheDocument();
 });
+
+test('warns when saved CV evidence is unreliable', () => {
+  render(<MemoryRouter><ResultCard c={{ name: 'Candidate', unreliableEvidence: true }} /></MemoryRouter>);
+  expect(screen.getByRole('alert')).toHaveTextContent('assessment may be unreliable');
+});

@@ -66,6 +66,7 @@ export function ResultCard({ c, onAddToPipeline, isAdded }) {
       </div>
 
       {c.status === 'pending' ? <p className="mt-4 text-sm text-slate-400 italic">Waiting for model response…</p> : <>
+        {c.unreliableEvidence && <p role="alert" className="mt-4 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">Some extracted CV text was unreadable. This assessment may be unreliable; upload a readable CV and screen it again.</p>}
         <section className="mt-4 border border-slate-100 rounded-lg p-4 space-y-3">
           <div>
             <h4 className="text-sm font-semibold text-slate-900">Recruiter summary</h4>
@@ -778,7 +779,7 @@ export default function Screen() {
               <p className="text-xs text-slate-500 mt-0.5">Run additional batches for the same job. Your screening history is saved automatically.</p>
             </div>
           </div>
-          <p className="text-sm text-slate-500 mb-3">Supported formats: PDF, DOCX, DOC and TXT. Maximum 15 MB per file.</p>
+          <p className="text-sm text-slate-500 mb-3">Supported formats: text-based PDF, DOCX and UTF-8 TXT. Convert older DOC files to DOCX or PDF. Maximum 15 MB per file.</p>
           <div
             className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 cursor-pointer transition-colors"
             onClick={() => fileInputRef.current?.click()}
