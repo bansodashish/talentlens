@@ -106,7 +106,7 @@ export default function ScreeningResult() {
             <aside className="rounded-lg border border-slate-100 bg-slate-50/70 p-5">
               <h2 className="font-semibold text-slate-900">Assessment Overview</h2>
               <span className={`mt-4 inline-flex px-3 py-1.5 rounded-full border text-sm font-semibold ${RECOMMENDATION_STYLE[screening.recommendation] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>{screening.recommendation || 'Review needed'}</span>
-              <p className="mt-3 text-sm leading-relaxed text-slate-600">Review the candidate's CV evidence and clarify key requirements before making a decision.</p>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600">{screening.recommendation === 'Review needed' ? 'A reliable requirement assessment is unavailable. Screen a readable CV again before making a decision.' : "Review the candidate's CV evidence and clarify key requirements before making a decision."}</p>
             </aside>
           </div>
         </div>

@@ -67,3 +67,10 @@ test('warns when saved evidence was unreadable', async () => {
   render(<MemoryRouter initialEntries={['/results/2']}><Routes><Route path="/results/:screeningId" element={<ScreeningResult />} /></Routes></MemoryRouter>);
   expect(await screen.findByRole('alert')).toHaveTextContent('assessment may be unreliable');
 });
+
+test('explains why an unreliable assessment needs review', async () => {
+  api.get.mockResolvedValue({ data: { screening: { name: 'Candidate', recommendation: 'Review needed', assessment: { requirements: [{ requirement: 'Kubernetes', fit: null }] } } } });
+  render(<MemoryRouter initialEntries={['/results/2']}><Routes><Route path="/results/:screeningId" element={<ScreeningResult />} /></Routes></MemoryRouter>);
+  expect(await screen.findByText(/A reliable requirement assessment is unavailable/)).toBeInTheDocument();
+  expect(screen.getByText('Not assessed')).toBeInTheDocument();
+});
