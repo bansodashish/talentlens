@@ -11,7 +11,6 @@ const mainNav = [
   { path: '/jobs',       label: 'Jobs' },
   { path: '/cv-match',   label: 'Screening' },
   { path: '/pipeline',   label: 'Pipeline' },
-  { path: '/candidates', label: 'Candidates' },
 ];
 
 function NavLink({ path, label, onClick, navText, navActiveBg, disabled }) {
@@ -268,7 +267,7 @@ export default function Layout({ children }) {
           </div>
 
           {/* Mobile hamburger */}
-          <button onClick={() => setMobileOpen(o => !o)} className="md:hidden p-2 rounded-lg hover:bg-black/5"
+          <button onClick={() => setMobileOpen(o => !o)} aria-label="Toggle navigation" aria-expanded={mobileOpen} className="md:hidden p-2 rounded-lg hover:bg-black/5"
             style={{ color: navText }}>
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
